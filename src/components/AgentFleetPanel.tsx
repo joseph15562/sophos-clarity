@@ -41,6 +41,7 @@ import {
   agentCustomerGroupTitle,
 } from "@/lib/agent-customer-bucket";
 import { resolveCustomerName } from "@/lib/customer-name";
+import { gradeFromScore } from "@/lib/fleet-command-data";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -211,6 +212,31 @@ function recomputeFromRaw(submission: Submission): { score: number; grade: strin
     recomputeCache.set(cacheKey, null);
     return null;
   }
+}
+
+/** Same headline score as each agent row: latest submission recompute, else `last_score`. */
+function headerScoreForAgent(
+  agent: Agent,
+  submissionMap: Record<string, Submission | null>,
+): number | null {
+  const sub = submissionMap[agent.id];
+  const recomputed = sub ? recomputeFromRaw(sub) : null;
+  const raw = recomputed?.score ?? agent.last_score;
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function customerGroupHealthSummary(
+  tenantAgents: Agent[],
+  submissionMap: Record<string, Submission | null>,
+): { score: number; grade: string } | null {
+  const scores = tenantAgents
+    .map((a) => headerScoreForAgent(a, submissionMap))
+    .filter((s): s is number => s != null);
+  if (scores.length === 0) return null;
+  const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  return { score: avg, grade: gradeFromScore(avg) };
 }
 
 function AgentSummaryCard({
@@ -954,6 +980,7 @@ export function AgentFleetPanel({
               a.last_seen_at &&
               Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000,
           ).length;
+          const groupHealth = customerGroupHealthSummary(tenantAgents, submissionMap);
 
           return (
             <div key={groupKey}>
@@ -977,6 +1004,29 @@ export function AgentFleetPanel({
                   <span className="whitespace-nowrap text-[9px] text-muted-foreground">
                     {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}
                   </span>
+                  {groupHealth ? (
+                    <span
+                      className={`whitespace-nowrap text-[9px] font-bold tabular-nums ${
+                        groupHealth.score >= 75
+                          ? "text-[#007A5A] dark:text-[#00F2B3]"
+                          : groupHealth.score >= 50
+                            ? "text-[#F29400]"
+                            : "text-[#EA0022]"
+                      }`}
+                      title={`Average security score across ${tenantAgents.length} firewall${
+                        tenantAgents.length !== 1 ? "s" : ""
+                      } (uses latest submission or last stored score per device)`}
+                    >
+                      {groupHealth.score}/{groupHealth.grade}
+                    </span>
+                  ) : (
+                    <span
+                      className="whitespace-nowrap text-[9px] text-muted-foreground tabular-nums"
+                      title="No security scores yet — expand a firewall or wait for connector submissions"
+                    >
+                      —
+                    </span>
+                  )}
                   {onlineCount > 0 && (
                     <span className="whitespace-nowrap rounded bg-[#008F69]/[0.12] px-1.5 py-0.5 text-[9px] font-medium text-[#007A5A] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]">
                       {onlineCount} online

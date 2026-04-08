@@ -544,6 +544,12 @@ function ChangelogPageInner() {
                 data function excludes archived rows so customers do not see them.
               </li>
               <li>
+                <strong className="text-foreground">Client portal — HA firewalls</strong>:{" "}
+                <strong className="text-foreground">Firewall overview</strong> merges Sophos Central
+                HA peers into one row (shared cluster id, or same hostname and model with two
+                distinct serials), listing both serial numbers.
+              </li>
+              <li>
                 <strong className="text-foreground">Workspace pages — bottom spacing</strong>: hub
                 screens (Customers, Mission control, Fleet, Insights, Central, Drift, Playbooks,
                 API, Trust, Updates, Activity log, saved reports, and Assess) add padding above the
@@ -581,6 +587,11 @@ function ChangelogPageInner() {
                 from Fleet, Customers, Central, and other hub pages, clicking the org name opens{" "}
                 <strong className="text-foreground">Workspace Controls</strong> in place (no jump to
                 Assess). Assess still uses the same drawer with full assessment context.
+              </li>
+              <li>
+                <strong className="text-foreground">Fleet — customer row health</strong>: collapsed
+                MSP/customer groups show average score/grade (same source as each firewall row:
+                latest submission recompute or last stored score), or — when no scores exist.
               </li>
               <li>
                 <strong className="text-foreground">Fleet — Agent Status (7 days)</strong>: a daily

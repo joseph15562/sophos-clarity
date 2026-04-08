@@ -99,6 +99,161 @@ function extractFindingsRich(fullAnalysis: unknown): PortalFindingRich[] {
   });
 }
 
+function normSerialPortal(s: unknown): string {
+  return String(s ?? "").trim().toLowerCase();
+}
+
+function stripPortalHaMergeMeta(
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...row };
+  delete next._mergeClusterId;
+  return next;
+}
+
+function mergePortalHaFirewallGroup(
+  group: Record<string, unknown>[],
+): Record<string, unknown> {
+  const sorted = [...group].sort((a, b) =>
+    normSerialPortal(a.serialNumber).localeCompare(
+      normSerialPortal(b.serialNumber),
+    )
+  );
+
+  const serials: string[] = [];
+  for (const r of sorted) {
+    const sn = String(r.serialNumber ?? "").trim();
+    if (
+      sn && !serials.some((x) => normSerialPortal(x) === normSerialPortal(sn))
+    ) {
+      serials.push(sn);
+    }
+    const extras = r.serialNumbers as string[] | undefined;
+    if (Array.isArray(extras)) {
+      for (const ex of extras) {
+        const t = String(ex).trim();
+        if (
+          t &&
+          !serials.some((x) => normSerialPortal(x) === normSerialPortal(t))
+        ) {
+          serials.push(t);
+        }
+      }
+    }
+  }
+
+  const scores = sorted
+    .map((r) => Number(r.score))
+    .filter((s) => Number.isFinite(s) && s > 0);
+  const score = scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    : (sorted[0].score as number | null);
+
+  const resolvedGrade = score != null && score > 0
+    ? gradeFromNumericScore(score)
+    : ((sorted[0].grade as string | null) ?? null);
+
+  const dates = sorted
+    .map((r) => String(r.lastAssessed ?? ""))
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const lastAssessed = dates[0] ?? sorted[0].lastAssessed ?? null;
+
+  let findingsRich: unknown = sorted[0].findingsRich;
+  for (const r of sorted) {
+    const fr = r.findingsRich;
+    if (
+      Array.isArray(fr) &&
+      fr.length >
+        (Array.isArray(findingsRich) ? (findingsRich as unknown[]).length : 0)
+    ) {
+      findingsRich = fr;
+    }
+  }
+
+  const fwIdParts = sorted
+    .map((r) => String(r.agentId ?? "").replace(/^cf:/, ""))
+    .filter((id) => id.length > 0 && !id.includes("+"))
+    .sort();
+  const agentId = fwIdParts.length > 0
+    ? `cf:ha:${fwIdParts.join("+")}`
+    : String(sorted[0].agentId ?? "cf:ha");
+
+  const first = sorted[0];
+  const row: Record<string, unknown> = {
+    ...first,
+    agentId,
+    hostname: first.hostname,
+    label: first.label,
+    model: first.model,
+    serialNumber: serials[0] ?? (first.serialNumber as string | null),
+    serialNumbers: serials.length > 1 ? serials : undefined,
+    score: score ?? null,
+    grade: resolvedGrade,
+    lastAssessed,
+    findingsRich: findingsRich ?? first.findingsRich,
+  };
+
+  delete row._mergeClusterId;
+  return row;
+}
+
+/**
+ * Merge HA peers: same hostname + model with distinct serials (ignore cluster_json — ids often
+ * differ per node).
+ */
+function mergeHaPortalFirewallRows(
+  rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  if (rows.length === 0) return [];
+  const cleaned = rows.map((r) => stripPortalHaMergeMeta({ ...r }));
+
+  const buckets = new Map<string, Record<string, unknown>[]>();
+  for (const r of cleaned) {
+    const host = normHost(String(r.hostname ?? r.label ?? ""));
+    const model = String(r.model ?? "").trim().toLowerCase();
+    const key = host && model
+      ? `hm:${host}|${model}`
+      : `single:${String(r.agentId ?? crypto.randomUUID())}`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key)!.push(r);
+  }
+
+  const out: Record<string, unknown>[] = [];
+  for (const [, bucket] of buckets) {
+    const serialList: string[] = [];
+    for (const br of bucket) {
+      const sn = String(br.serialNumber ?? "").trim();
+      if (
+        sn &&
+        !serialList.some((x) => normSerialPortal(x) === normSerialPortal(sn))
+      ) {
+        serialList.push(sn);
+      }
+      const extras = br.serialNumbers as string[] | undefined;
+      if (Array.isArray(extras)) {
+        for (const ex of extras) {
+          const t = String(ex).trim();
+          if (
+            t &&
+            !serialList.some((x) => normSerialPortal(x) === normSerialPortal(t))
+          ) {
+            serialList.push(t);
+          }
+        }
+      }
+    }
+    const mergeAsHa = bucket.length >= 2 && serialList.length >= 2;
+    const mergeDupes = bucket.length >= 2 && serialList.length === 1;
+    if (mergeAsHa || mergeDupes) {
+      out.push(mergePortalHaFirewallGroup(bucket));
+    } else {
+      out.push(...bucket);
+    }
+  }
+  return out;
+}
+
 export async function handlePortalDataRequest(req: Request): Promise<Response> {
   const cors = getCorsHeaders(req);
 
@@ -197,7 +352,7 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
       "detailed_findings",
     );
 
-    const cacheKey = `portal_data:v2:${orgId}:${
+    const cacheKey = `portal_data:v4:${orgId}:${
       encodeURIComponent(tenantName ?? "")
     }:${includeDetailedFindings ? "d" : "s"}`;
     const cached = await redisGet(cacheKey);
@@ -520,6 +675,10 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
         }
         firewallBreakdown.push(row);
       }
+
+      const mergedFirewalls = mergeHaPortalFirewallRows(firewallBreakdown);
+      firewallBreakdown.length = 0;
+      firewallBreakdown.push(...mergedFirewalls);
 
       firewallBreakdown.sort((a, b) =>
         String(a.label ?? "").localeCompare(String(b.label ?? ""), undefined, {

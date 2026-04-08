@@ -54,6 +54,7 @@ import { saveAs } from "file-saver";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { buildReportHtml } from "@/lib/report-html";
 import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
+import { mergePortalHaFirewallsForDisplay } from "@/lib/portal-firewall-ha-merge";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00F2B3] dark:text-[#00F2B3]",
@@ -213,6 +214,8 @@ interface PortalFirewall {
   /** Hostname / identity for matching assessments (when present). */
   hostname?: string | null;
   serialNumber: string | null;
+  /** HA pair: both appliance serials when the portal merged peers (see portal-data). */
+  serialNumbers?: string[] | null;
   model: string | null;
   score: number | null;
   grade: string | null;
@@ -278,6 +281,13 @@ function normalizePortalSavedReports(raw: unknown): PortalSavedReportPackage[] {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function portalFirewallSerialLines(fw: PortalFirewall): string[] {
+  const fromArr = fw.serialNumbers?.filter((s) => String(s).trim()) ?? [];
+  if (fromArr.length > 0) return fromArr.map((s) => String(s).trim());
+  const one = fw.serialNumber?.trim();
+  return one ? [one] : [];
+}
 
 // ── Gauge ──
 
@@ -769,6 +779,11 @@ export default function ClientPortal() {
 
   const accentColor = branding?.accentColor ?? "#2006F7";
 
+  const displayPortalFirewalls = useMemo(
+    () => mergePortalHaFirewallsForDisplay(portalFirewalls),
+    [portalFirewalls],
+  );
+
   // Check if user is already authenticated
   useEffect(() => {
     supabase.auth
@@ -1022,8 +1037,8 @@ export default function ClientPortal() {
 
   const mergedRichFindings = useMemo((): MergedRichFinding[] | null => {
     const rows: MergedRichFinding[] = [];
-    const showFirewall = portalFirewalls.length >= 1;
-    for (const fw of portalFirewalls) {
+    const showFirewall = displayPortalFirewalls.length >= 1;
+    for (const fw of displayPortalFirewalls) {
       const rich = fw.findingsRich;
       if (!rich?.length) continue;
       for (const f of rich) {
@@ -1036,7 +1051,7 @@ export default function ClientPortal() {
       }
     }
     return rows.length > 0 ? rows : null;
-  }, [portalFirewalls]);
+  }, [displayPortalFirewalls]);
 
   const handleFeedbackSubmit = () => {
     toast.success("Thank you", { description: "Your feedback has been submitted." });
@@ -1196,9 +1211,9 @@ export default function ClientPortal() {
 
   const summaryScore =
     portalAggregate.score ??
-    (portalFirewalls.length > 0
+    (displayPortalFirewalls.length > 0
       ? (() => {
-          const nums = portalFirewalls
+          const nums = displayPortalFirewalls
             .map((f) => f.score)
             .filter((s): s is number => s != null && s > 0);
           return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
@@ -1209,7 +1224,8 @@ export default function ClientPortal() {
 
   const summaryGrade =
     portalAggregate.grade ??
-    (portalAggregate.score != null || portalFirewalls.some((f) => f.score != null && f.score > 0)
+    (portalAggregate.score != null ||
+    displayPortalFirewalls.some((f) => f.score != null && f.score > 0)
       ? summaryScore >= 85
         ? "A"
         : summaryScore >= 70
@@ -1376,10 +1392,10 @@ export default function ClientPortal() {
               (() => {
                 const aggScore = summaryScore;
                 const aggGrade = summaryGrade;
-                const fwWithScore = portalFirewalls.filter(
+                const fwWithScore = displayPortalFirewalls.filter(
                   (f) => f.score != null && f.score > 0,
                 ).length;
-                const fwTotal = portalFirewalls.length;
+                const fwTotal = displayPortalFirewalls.length;
                 return (
                   <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6 sm:p-8 space-y-5">
                     <div className="space-y-3">
@@ -1483,7 +1499,7 @@ export default function ClientPortal() {
               })()}
 
             {/* Per-Firewall Breakdown */}
-            {sectionVisible("score") && portalFirewalls.length >= 1 && (
+            {sectionVisible("score") && displayPortalFirewalls.length >= 1 && (
               <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
                   <h2 className="text-lg font-display font-bold text-foreground">
@@ -1518,7 +1534,7 @@ export default function ClientPortal() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {portalFirewalls.map((fw) => (
+                      {displayPortalFirewalls.map((fw) => (
                         <TableRow
                           key={fw.agentId}
                           className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
@@ -1529,11 +1545,14 @@ export default function ClientPortal() {
                           <TableCell>
                             <div>
                               <span className="font-medium text-foreground">{fw.label}</span>
-                              {fw.serialNumber && (
-                                <span className="block text-xs text-muted-foreground">
-                                  SN: {fw.serialNumber}
+                              {portalFirewallSerialLines(fw).map((sn) => (
+                                <span
+                                  key={sn}
+                                  className="block text-xs text-muted-foreground font-mono"
+                                >
+                                  SN: {sn}
                                 </span>
-                              )}
+                              ))}
                             </div>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -1706,7 +1725,7 @@ export default function ClientPortal() {
                             <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
                               Finding
                             </TableHead>
-                            {portalFirewalls.length > 1 && (
+                            {displayPortalFirewalls.length > 1 && (
                               <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
                                 Firewall
                               </TableHead>
@@ -1716,7 +1735,7 @@ export default function ClientPortal() {
                         <TableBody>
                           {filteredRichFindings.map((f) => {
                             const open = expandedFindingIds.has(f.rowKey);
-                            const colSpan = portalFirewalls.length > 1 ? 4 : 3;
+                            const colSpan = displayPortalFirewalls.length > 1 ? 4 : 3;
                             return (
                               <Fragment key={f.rowKey}>
                                 <TableRow
@@ -1755,7 +1774,7 @@ export default function ClientPortal() {
                                   <TableCell className="text-sm text-foreground">
                                     {f.title}
                                   </TableCell>
-                                  {portalFirewalls.length > 1 && (
+                                  {displayPortalFirewalls.length > 1 && (
                                     <TableCell className="text-sm text-muted-foreground">
                                       {f.firewallLabel ?? "—"}
                                     </TableCell>
