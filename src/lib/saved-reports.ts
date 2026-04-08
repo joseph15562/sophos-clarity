@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { supabaseWithAbort } from "@/lib/supabase-with-abort";
 import type { Json } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "./analyse-config";
+import { resolveCustomerName } from "./customer-name";
 import { computeRiskScore } from "./risk-score";
 
 export interface SavedReportEntry {
@@ -247,6 +248,14 @@ export async function saveReportCloud(
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
+  const { data: orgRow } = await supabase
+    .from("organisations")
+    .select("name")
+    .eq("id", orgId)
+    .maybeSingle();
+  const orgDisplayName = String(orgRow?.name ?? "");
+  const resolvedCustomer = resolveCustomerName(customerName, orgDisplayName);
+
   const reportType: "full" | "pre-ai" = reports.length > 0 ? "full" : "pre-ai";
   const analysisSummary = buildAnalysisSummary(analysisResults);
 
@@ -255,7 +264,7 @@ export async function saveReportCloud(
     .insert({
       org_id: orgId,
       created_by: user.user.id,
-      customer_name: customerName || "Unnamed",
+      customer_name: resolvedCustomer,
       environment: environment || "",
       report_type: reportType,
       reports: reports as unknown as Json,
@@ -268,7 +277,7 @@ export async function saveReportCloud(
 
   const result = {
     id: data.id,
-    customerName: customerName || "Unnamed",
+    customerName: resolvedCustomer,
     environment: environment || "",
     reportType,
     reports,
@@ -287,7 +296,7 @@ export async function saveReportCloud(
       const payload = {
         event: "report.saved",
         org_id: orgId,
-        customer_name: customerName || "Unnamed",
+        customer_name: resolvedCustomer,
         environment: environment || "",
         report_count: reports.length,
         saved_at: new Date().toISOString(),

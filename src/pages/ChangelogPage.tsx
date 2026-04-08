@@ -541,10 +541,12 @@ function ChangelogPageInner() {
                 duplicate MSP logo in the document body is hidden when the navy header already shows
                 it (subtitle text stays). Word exports stay landscape with{" "}
                 <strong className="text-foreground">autofit</strong> tables for five or fewer
-                columns and a wider first column for larger tables. In the live document preview
-                (and any <code className="text-xs">.doc-section</code> shell), the MSP branding logo
-                uses a bounded flex slot so large intrinsic SVG/raster dimensions cannot blow out
-                the layout, and images from report markdown are capped (
+                columns and a wider first column for larger tables (unless the first header is a row
+                index like <code className="text-xs">#</code> / No / Index — then column 1 stays
+                narrow and the next column gets the extra width for names). In the live document
+                preview (and any <code className="text-xs">.doc-section</code> shell), the MSP
+                branding logo uses a bounded flex slot so large intrinsic SVG/raster dimensions
+                cannot blow out the layout, and images from report markdown are capped (
                 <code className="text-xs">max-width: 100%</code>,{" "}
                 <code className="text-xs">max-height</code> clamp).{" "}
                 <code className="text-xs">buildReportHtml</code> now removes{" "}
@@ -636,9 +638,34 @@ function ChangelogPageInner() {
                 <code className="text-xs">POST /api/send-saved-library-report</code> (org JWT + row
                 ownership check, Resend). API router uses the last{" "}
                 <code className="text-xs">/api/</code> segment in the pathname so varied gateways
-                still match routes. Demo/sample rows stay non-actionable; the dialog still links to{" "}
-                <strong className="text-foreground">Scheduled reports</strong> for recurring
-                delivery.
+                still match routes. Guests still see illustrative sample rows (non-actionable);
+                signed-in organisations see only cloud-saved packages or an empty library.
+              </li>
+              <li>
+                <strong className="text-foreground">Report Centre — signed-in library</strong>: when
+                you belong to an organisation, the main library no longer fills with demo companies
+                when <code className="text-xs">saved_reports</code> is empty — you get a clear empty
+                state and real rows only after saving from Assess. Load failures show a toast
+                instead of leaving misleading samples. Scheduled reports shows a short empty hint
+                with a link to Settings when nothing is configured.
+              </li>
+              <li>
+                <strong className="text-foreground">Saved reports + client portal</strong>: cloud
+                saves now store <code className="text-xs">customer_name</code> using the same{" "}
+                <code className="text-xs">resolveCustomerName</code> rules as the rest of the app
+                (placeholders like <em>(This tenant)</em> map to the organisation display name) so
+                portal filtering matches. Org-wide portals (no{" "}
+                <code className="text-xs">tenant_name</code> on{" "}
+                <code className="text-xs">portal_config</code>) load saved reports from{" "}
+                <code className="text-xs">portal-data</code> instead of always showing an empty
+                list. Signed-in visitors on legacy{" "}
+                <code className="text-xs">/portal/&lt;org-uuid&gt;</code> links no longer hit a
+                broken <code className="text-xs">maybeSingle()</code> when several portal configs
+                exist; the active tenant comes from{" "}
+                <code className="text-xs">portal_config.tenant_name</code> when present (or{" "}
+                <code className="text-xs">?customer=</code> when multiple). Portal fetches skip the
+                browser cache; Edge cache TTL is shorter so new saves appear sooner. Re-save older
+                packages if they were stored under a mismatched customer label before this change.
               </li>
               <li>
                 <strong className="text-foreground">Report Centre — archives</strong>: archive and

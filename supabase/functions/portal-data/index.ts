@@ -352,7 +352,7 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
       "detailed_findings",
     );
 
-    const cacheKey = `portal_data:v4:${orgId}:${
+    const cacheKey = `portal_data:v5:${orgId}:${
       encodeURIComponent(tenantName ?? "")
     }:${includeDetailedFindings ? "d" : "s"}`;
     const cached = await redisGet(cacheKey);
@@ -874,6 +874,45 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
           }
         }
       }
+
+      // Org-wide portal (no tenant_name): still surface saved reports for the resolved customer
+      const histCustomerRaw = String(
+        (scoreHistory[0] as Record<string, unknown> | undefined)
+          ?.customer_name ??
+          "",
+      );
+      const displayTenantOrgWide = resolveCustomerName(
+        histCustomerRaw,
+        orgDisplayName,
+      );
+
+      const { data: srRowsOrgWide } = await admin
+        .from("saved_reports")
+        .select(
+          "id, customer_name, environment, report_type, reports, analysis_summary, created_at",
+        )
+        .eq("org_id", orgId)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      savedReportPackages =
+        ((srRowsOrgWide ?? []) as Array<Record<string, unknown>>)
+          .filter((row) =>
+            resolveCustomerName(
+              String(row.customer_name ?? ""),
+              orgDisplayName,
+            ) === displayTenantOrgWide
+          )
+          .map((row) => ({
+            id: row.id,
+            customer_name: row.customer_name,
+            environment: row.environment ?? "",
+            report_type: row.report_type ?? "full",
+            created_at: row.created_at,
+            reports: Array.isArray(row.reports) ? row.reports : [],
+            analysis_summary: row.analysis_summary ?? {},
+          }));
     }
 
     // 3. Build branding object
@@ -924,14 +963,15 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
     }
 
     const body = JSON.stringify(payload);
-    await redisSet(cacheKey, body, 45);
+    // Short TTL so new saves show on the portal without a long stale window.
+    await redisSet(cacheKey, body, 12);
 
     return new Response(body, {
       status: 200,
       headers: {
         ...cors,
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=60",
+        "Cache-Control": "public, max-age=15",
       },
     });
   } catch (err) {

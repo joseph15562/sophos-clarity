@@ -870,6 +870,7 @@ export default function ClientPortal() {
         const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
         const resp = await fetch(url, {
           signal: fetchAc.signal,
+          cache: "no-store",
           headers: {
             apikey: anonKey,
             Authorization: `Bearer ${anonKey}`,
@@ -926,14 +927,37 @@ export default function ClientPortal() {
           new URLSearchParams(window.location.search).get("customer") ??
           history[0]?.customer_name ??
           "Customer";
-        setCustomerName(name);
 
-        // Load portal config for branding
-        const { data: config } = await supabase
+        const { data: orgRowAuth } = await supabase
+          .from("organisations")
+          .select("name")
+          .eq("id", resolvedOrgId)
+          .maybeSingle();
+        const orgNmAuth = String(orgRowAuth?.name ?? "");
+        setOrganizationName(orgNmAuth);
+
+        const customerQuery = new URLSearchParams(window.location.search).get("customer");
+
+        // Load portal config(s): multi-tenant orgs have one row per customer — avoid maybeSingle() errors.
+        const { data: portalConfigRows } = await supabase
           .from("portal_config")
           .select("*")
-          .eq("org_id", resolvedOrgId)
-          .maybeSingle();
+          .eq("org_id", resolvedOrgId);
+
+        const configs = portalConfigRows ?? [];
+        const pickPortalConfig = (): (typeof configs)[number] | null => {
+          if (configs.length === 0) return null;
+          if (configs.length === 1) return configs[0];
+          if (customerQuery?.trim()) {
+            const want = resolveCustomerName(customerQuery.trim(), orgNmAuth);
+            const hit = configs.find(
+              (c) => resolveCustomerName(c.tenant_name ?? "", orgNmAuth) === want,
+            );
+            if (hit) return hit;
+          }
+          return configs[0];
+        };
+        const config = pickPortalConfig();
 
         if (config) {
           setBranding({
@@ -957,14 +981,11 @@ export default function ClientPortal() {
           );
         }
 
-        const { data: orgRowAuth } = await supabase
-          .from("organisations")
-          .select("name")
-          .eq("id", resolvedOrgId)
-          .maybeSingle();
-        const orgNmAuth = String(orgRowAuth?.name ?? "");
-        setOrganizationName(orgNmAuth);
-        const resolvedCustomer = resolveCustomerName(name, orgNmAuth);
+        const resolvedCustomer =
+          config?.tenant_name != null && String(config.tenant_name).trim() !== ""
+            ? resolveCustomerName(config.tenant_name, orgNmAuth)
+            : resolveCustomerName(name, orgNmAuth);
+        setCustomerName(resolvedCustomer);
 
         const { data: srAuth } = await supabase
           .from("saved_reports")
@@ -972,6 +993,7 @@ export default function ClientPortal() {
             "id, customer_name, environment, report_type, reports, analysis_summary, created_at",
           )
           .eq("org_id", resolvedOrgId)
+          .is("archived_at", null)
           .order("created_at", { ascending: false })
           .limit(80);
 

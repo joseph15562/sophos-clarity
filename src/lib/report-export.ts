@@ -88,15 +88,56 @@ const DOCX_TABLE_HEADER_TEXT = "FFFFFF";
 const DOCX_TABLE_ZEBRA = "EDF2F9";
 const DOCX_TABLE_GRID = "94A3B8";
 
-/** Landscape table grid: first column wider for titles / rule names; remainder split evenly. */
-function computeDocxFixedColumnWidths(cellCount: number, gridTotal: number): number[] {
+/** Twips for row-index column when header is `#` / No / Index (2–3 digit row numbers). */
+const DOCX_INDEX_COL_TWIPS = 640;
+
+function isLikelyIndexColumnHeader(headerCell: string): boolean {
+  const t = headerCell.trim();
+  if (!t) return false;
+  if (/^#+$/.test(t)) return true;
+  if (/^(no\.?|n[°º]\.?|idx\.?|index|row|rank|item)$/i.test(t)) return true;
+  return false;
+}
+
+function splitRemainderEvenly(restTotal: number, nCols: number): number[] {
+  if (nCols <= 0) return [];
+  const base = Math.floor(restTotal / nCols);
+  const rem = restTotal - base * nCols;
+  return Array.from({ length: nCols }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
+/**
+ * Landscape fixed table grid: first column wide for titles unless it is clearly a row index (`#`).
+ * When narrow, the “primary text” width bonus moves to column 2 (e.g. rule name).
+ * @internal Exported for unit tests.
+ */
+export function computeDocxTableFixedColumnWidths(
+  cellCount: number,
+  gridTotal: number,
+  opts?: { headerFirstCell?: string; firstColBodySamples?: string[] },
+): number[] {
   if (cellCount <= 1) return [gridTotal];
-  const firstW = Math.min(Math.floor(gridTotal * 0.32), 4800);
-  const restTotal = gridTotal - firstW;
-  const nRest = cellCount - 1;
-  const base = Math.floor(restTotal / nRest);
-  const rem = restTotal - base * nRest;
-  return [firstW, ...Array.from({ length: nRest }, (_, i) => base + (i < rem ? 1 : 0))];
+
+  const header = opts?.headerFirstCell?.trim() ?? "";
+  const samples = opts?.firstColBodySamples ?? [];
+  const narrowFirst =
+    isLikelyIndexColumnHeader(header) ||
+    (cellCount >= 8 && samples.length >= 3 && samples.every((s) => /^\d{1,6}$/.test(s.trim())));
+
+  if (!narrowFirst) {
+    const firstW = Math.min(Math.floor(gridTotal * 0.32), 4800);
+    const restTotal = gridTotal - firstW;
+    return [firstW, ...splitRemainderEvenly(restTotal, cellCount - 1)];
+  }
+
+  const indexW = Math.min(DOCX_INDEX_COL_TWIPS, Math.max(400, gridTotal - 2000));
+  const afterIndex = gridTotal - indexW;
+  if (cellCount === 2) {
+    return [indexW, afterIndex];
+  }
+  const secondW = Math.min(Math.floor(afterIndex * 0.34), 5200);
+  const tailTotal = afterIndex - secondW;
+  return [indexW, secondW, ...splitRemainderEvenly(tailTotal, cellCount - 2)];
 }
 
 function buildDocxTable(tableLines: string[]): Table {
@@ -109,7 +150,14 @@ function buildDocxTable(tableLines: string[]): Table {
   /** Twip grid for landscape body — wide firewall rule tables need room to wrap, not squeeze. */
   const gridTotal = 13_000;
   const useAutofit = cellCount <= 5;
-  const columnWidths = useAutofit ? undefined : computeDocxFixedColumnWidths(cellCount, gridTotal);
+  const headerCells = dataRows[0] ? parseTableRow(dataRows[0]) : [];
+  const firstColBodySamples = dataRows.slice(1, 5).map((line) => parseTableRow(line)[0] ?? "");
+  const columnWidths = useAutofit
+    ? undefined
+    : computeDocxTableFixedColumnWidths(cellCount, gridTotal, {
+        headerFirstCell: headerCells[0] ?? "",
+        firstColBodySamples,
+      });
 
   const cellMargins =
     cellCount > 12

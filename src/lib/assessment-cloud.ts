@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "./analyse-config";
+import { resolveCustomerName } from "./customer-name";
 import { computeRiskScore } from "./risk-score";
 import type { AssessmentSnapshot } from "./assessment-history";
 
@@ -33,12 +34,20 @@ export async function saveAssessmentCloud(
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
+  const { data: orgRow } = await supabase
+    .from("organisations")
+    .select("name")
+    .eq("id", orgId)
+    .maybeSingle();
+  const orgDisplayName = String(orgRow?.name ?? "");
+  const resolvedCustomer = resolveCustomerName(customerName, orgDisplayName);
+
   const { data, error } = await supabase
     .from("assessments")
     .insert({
       org_id: orgId,
       created_by: user.user.id,
-      customer_name: customerName || "Unnamed",
+      customer_name: resolvedCustomer,
       environment: environment || "Unknown",
       firewalls: firewalls as unknown as Json,
       overall_score: overallScore,
@@ -52,7 +61,7 @@ export async function saveAssessmentCloud(
   return {
     id: data.id,
     timestamp: new Date(data.created_at).getTime(),
-    customerName: customerName || "Unnamed",
+    customerName: resolvedCustomer,
     environment: environment || "Unknown",
     firewalls,
     overallScore,

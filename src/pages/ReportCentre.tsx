@@ -323,8 +323,9 @@ function ReportCentreInner() {
   const location = useLocation();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [reports, setReports] = useState<ReportLibraryRow[]>(DEMO_REPORTS);
-  const [schedules, setSchedules] = useState<ReportCentreSchedule[]>(DEMO_SCHEDULES);
+  /** Guest/demo fills this in `useEffect`; signed-in orgs load cloud rows or stay empty. */
+  const [reports, setReports] = useState<ReportLibraryRow[]>([]);
+  const [schedules, setSchedules] = useState<ReportCentreSchedule[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Partial<ReportLibraryRow>>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<ReportLibraryRow | null>(null);
@@ -560,8 +561,7 @@ function ReportCentreInner() {
           });
           setReports(mapped);
         } else {
-          // Keep sample rows when the org has no saved reports yet (same as guest UX).
-          setReports(DEMO_REPORTS);
+          setReports([]);
         }
 
         if (storedSchedules.length > 0) {
@@ -590,10 +590,13 @@ function ReportCentreInner() {
           });
           setSchedules(mappedSchedules);
         } else {
-          setSchedules(DEMO_SCHEDULES);
+          setSchedules([]);
         }
       } catch (err) {
         console.warn("[ReportCentre] load failed", err);
+        toast.error("Could not load saved reports. Check your connection and try again.");
+        setReports([]);
+        setSchedules([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1115,8 +1118,12 @@ function ReportCentreInner() {
                   <EmptyState
                     className="py-12"
                     icon={<FileText className="h-6 w-6 text-muted-foreground/50" />}
-                    title="No reports generated yet"
-                    description="Run an assessment and generate your first report."
+                    title="No saved reports in your library"
+                    description={
+                      org?.id
+                        ? "Save a report from the Assess preview toolbar, or generate one here — saved packages sync to this list for your organisation."
+                        : "Run an assessment and generate your first report."
+                    }
                     action={
                       <Button asChild size="sm" className="rounded-lg">
                         <Link to="/">Go to Assess</Link>
@@ -1340,51 +1347,67 @@ function ReportCentreInner() {
 
               {scheduleOpen && (
                 <div className="mt-2 space-y-2">
-                  <div className="hidden sm:grid grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_auto] gap-4 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                    <span>Customer</span>
-                    <span>Template</span>
-                    <span>Frequency</span>
-                    <span>Next run</span>
-                    <span className="text-right">Active</span>
-                  </div>
-
-                  {schedules.map((s) => (
-                    <div
-                      key={s.id}
-                      className="grid grid-cols-1 sm:grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_auto] gap-2 sm:gap-4 items-center rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-4 py-3"
-                    >
-                      <span className="text-sm font-medium">{s.customer}</span>
-                      <span className="text-xs text-muted-foreground">{s.template}</span>
-                      <span>
-                        <span className="inline-flex items-center rounded-md border border-border/60 bg-card/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                          {s.frequency}
-                        </span>
-                      </span>
-                      <span className="text-xs text-muted-foreground">{s.nextRun}</span>
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => toggleSchedule(s.id)}
-                          className={cn(
-                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors",
-                            s.active
-                              ? "border-[#00F2B3]/30 bg-[#00F2B3]/20"
-                              : "border-border/60 bg-card/60",
-                          )}
-                          title={s.active ? "Deactivate" : "Activate"}
-                        >
-                          <span
-                            className={cn(
-                              "inline-block h-4 w-4 rounded-full transition-transform shadow-sm",
-                              s.active
-                                ? "translate-x-[22px] bg-[#00F2B3]"
-                                : "translate-x-[3px] bg-muted-foreground/40",
-                            )}
-                          />
-                        </button>
-                      </div>
+                  {schedules.length === 0 && org?.id ? (
+                    <div className="rounded-xl border border-dashed border-border/60 bg-card/30 px-4 py-8 text-center text-sm text-muted-foreground space-y-2">
+                      <p>No scheduled reports configured for this organisation yet.</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-[#00EDFF]"
+                        onClick={openScheduledReportsInManagement}
+                      >
+                        Open Scheduled reports in Settings
+                      </Button>
                     </div>
-                  ))}
+                  ) : (
+                    <>
+                      <div className="hidden sm:grid grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_auto] gap-4 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                        <span>Customer</span>
+                        <span>Template</span>
+                        <span>Frequency</span>
+                        <span>Next run</span>
+                        <span className="text-right">Active</span>
+                      </div>
+
+                      {schedules.map((s) => (
+                        <div
+                          key={s.id}
+                          className="grid grid-cols-1 sm:grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_auto] gap-2 sm:gap-4 items-center rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-4 py-3"
+                        >
+                          <span className="text-sm font-medium">{s.customer}</span>
+                          <span className="text-xs text-muted-foreground">{s.template}</span>
+                          <span>
+                            <span className="inline-flex items-center rounded-md border border-border/60 bg-card/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {s.frequency}
+                            </span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">{s.nextRun}</span>
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => toggleSchedule(s.id)}
+                              className={cn(
+                                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors",
+                                s.active
+                                  ? "border-[#00F2B3]/30 bg-[#00F2B3]/20"
+                                  : "border-border/60 bg-card/60",
+                              )}
+                              title={s.active ? "Deactivate" : "Activate"}
+                            >
+                              <span
+                                className={cn(
+                                  "inline-block h-4 w-4 rounded-full transition-transform shadow-sm",
+                                  s.active
+                                    ? "translate-x-[22px] bg-[#00F2B3]"
+                                    : "translate-x-[3px] bg-muted-foreground/40",
+                                )}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </section>
