@@ -270,7 +270,7 @@ function ReportSummaryHeader({
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2.5">
               {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => {
                 const count = severityCounts[s];
                 if (count === 0) return null;
@@ -393,7 +393,7 @@ function ReportSummaryHeader({
                 <p className="text-lg font-bold text-foreground">{avgScore}%</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2.5">
               {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => {
                 const count = severityCounts[s];
                 if (count === 0) return null;
@@ -1080,7 +1080,7 @@ function ReportContent({
               )}
             </div>
           )}
-          {html && <SafeHtml html={html} />}
+          {html && <SafeHtml html={html} className="report-body-html" />}
 
           {isLoading && markdown && (
             <div className="flex items-center gap-2 text-muted-foreground mt-4">

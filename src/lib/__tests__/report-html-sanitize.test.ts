@@ -34,14 +34,15 @@ describe("buildReportHtml – XSS sanitization", () => {
   });
 
   it("strips style tags that could hijack page appearance", () => {
-    const md = '## Report\n\n<style>body { display: none }</style>';
+    const md = "## Report\n\n<style>body { display: none }</style>";
     const html = buildReportHtml(md);
     expect(html).not.toContain("<style");
     expect(html).not.toContain("display: none");
   });
 
   it("preserves safe markdown rendering (headings, bold, lists)", () => {
-    const md = "## Firewall Review\n\n**Critical:** 3 findings\n\n- Rule overlap\n- No IPS\n- Logging disabled";
+    const md =
+      "## Firewall Review\n\n**Critical:** 3 findings\n\n- Rule overlap\n- No IPS\n- Logging disabled";
     const html = buildReportHtml(md);
     expect(html).toContain("<h2");
     expect(html).toContain("Firewall Review");
@@ -60,10 +61,22 @@ describe("buildReportHtml – XSS sanitization", () => {
 
   it("appends a sanitized footer when provided", () => {
     const md = "## Summary\n\nAll clear.";
-    const html = buildReportHtml(md, { footer: 'Generated · 5 sections <script>alert(1)</script>' });
+    const html = buildReportHtml(md, {
+      footer: "Generated · 5 sections <script>alert(1)</script>",
+    });
     expect(html).toContain("<footer");
     expect(html).toContain("5 sections");
     expect(html).not.toContain("<script>");
+  });
+
+  it("strips img width, height, and style so report CSS can constrain display size", () => {
+    const md =
+      '## Cover\n\n<img src="https://example.com/x.png" width="2000" height="2000" style="width:100%">';
+    const html = buildReportHtml(md);
+    expect(html).toContain("<img");
+    expect(html).not.toContain('width="2000"');
+    expect(html).not.toContain('height="2000"');
+    expect(html).not.toContain("style=");
   });
 
   it("returns empty string for empty input", () => {

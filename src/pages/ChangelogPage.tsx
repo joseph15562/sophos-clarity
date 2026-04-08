@@ -538,7 +538,13 @@ function ChangelogPageInner() {
                 bounded flex slot so large intrinsic SVG/raster dimensions cannot blow out the
                 layout, and images from report markdown are capped (
                 <code className="text-xs">max-width: 100%</code>,{" "}
-                <code className="text-xs">max-height</code> clamp).
+                <code className="text-xs">max-height</code> clamp).{" "}
+                <code className="text-xs">buildReportHtml</code> now removes{" "}
+                <code className="text-xs">img</code> width/height/style before sanitize (and drops{" "}
+                <code className="text-xs">style</code> on all nodes), and the rendered body uses{" "}
+                <code className="text-xs">report-body-html</code> with unlayered{" "}
+                <code className="text-xs">!important</code> caps so model HTML cannot override
+                sizing.
               </li>
               <li>
                 <strong className="text-foreground">Report library — quick email</strong>: the row

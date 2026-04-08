@@ -274,7 +274,7 @@ const SharedReport = () => {
             )}
             {/* Report body: no prose class so it matches main doc styling exactly */}
             <div ref={reportContentRef}>
-              <SafeHtml html={html} />
+              <SafeHtml html={html} className="report-body-html" />
             </div>
           </div>
         </div>

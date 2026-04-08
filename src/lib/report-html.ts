@@ -25,6 +25,25 @@ export const PURIFY_CONFIG: PurifyConfig = {
   FORBID_ATTR: ["onerror", "onclick", "onload", "onmouseover", "onfocus", "onblur"],
 };
 
+/** Strips sizing the model often emits on images/SVG — it beats our CSS if left on the element. */
+function stripReportMediaSizing(root: HTMLElement) {
+  root.querySelectorAll("img").forEach((el) => {
+    el.removeAttribute("width");
+    el.removeAttribute("height");
+    el.removeAttribute("style");
+  });
+  root.querySelectorAll("svg").forEach((el) => {
+    el.removeAttribute("width");
+    el.removeAttribute("height");
+    el.removeAttribute("style");
+  });
+}
+
+const REPORT_HTML_SANITIZE: PurifyConfig = {
+  ...PURIFY_CONFIG,
+  FORBID_ATTR: [...(PURIFY_CONFIG.FORBID_ATTR ?? []), "style"],
+};
+
 /**
  * Split single-line markdown tables into one line per row so marked can parse them.
  * Only split when the line contains a separator (|---|) AND at most 2 row boundaries (" | | "),
@@ -97,13 +116,14 @@ export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptio
   const rawHtml = marked.parse(normalized, { async: false }) as string;
   const headings = extractTocHeadings(markdown);
   let out: string;
-  if (headings.length > 0 && typeof document !== "undefined") {
+  if (typeof document !== "undefined") {
     const wrap = document.createElement("div");
     wrap.innerHTML = rawHtml;
     const headingEls = wrap.querySelectorAll("h2, h3");
     headingEls.forEach((el, i) => {
       if (headings[i]) el.id = headings[i].id;
     });
+    stripReportMediaSizing(wrap);
     out = wrap.innerHTML;
   } else {
     out = rawHtml;
@@ -111,5 +131,5 @@ export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptio
   if (options?.footer?.trim()) {
     out += `<footer class="report-footer report-meta text-[10px] text-muted-foreground mt-8 pt-4 border-t border-border">${DOMPurify.sanitize(options.footer)}</footer>`;
   }
-  return DOMPurify.sanitize(out, PURIFY_CONFIG) as string;
+  return DOMPurify.sanitize(out, REPORT_HTML_SANITIZE) as string;
 }

@@ -290,7 +290,7 @@ function SavedReportViewerInner() {
             )}
 
             <div ref={reportContentRef}>
-              <SafeHtml html={html} />
+              <SafeHtml html={html} className="report-body-html" />
             </div>
           </div>
         </div>
