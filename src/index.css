@@ -631,18 +631,19 @@
     display: none !important;
   }
   /* A4 format and clear to read when printing report from app */
+  /* Match report print shell: A4 landscape when printing from the app (e.g. Cmd+P on Assess) */
   @page {
-    size: A4;
+    size: 297mm 210mm;
     margin: 12mm;
   }
   body {
-    max-width: 186mm;
+    max-width: 273mm; /* A4 landscape printable width @ 12mm side margins */
     margin: 0 auto;
     font-size: 11pt;
     line-height: 1.45;
   }
   .doc-section {
-    max-width: 186mm;
+    max-width: 273mm;
     margin: 0 auto;
   }
   .doc-section table {

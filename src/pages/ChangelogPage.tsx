@@ -544,7 +544,9 @@ function ChangelogPageInner() {
                 <code className="text-xs">style</code> on all nodes), and the rendered body uses{" "}
                 <code className="text-xs">report-body-html</code> with unlayered{" "}
                 <code className="text-xs">!important</code> caps so model HTML cannot override
-                sizing.
+                sizing. Print HTML uses a top-level <code className="text-xs">@page</code> rule (
+                <code className="text-xs">297mm 210mm</code>) so Safari picks up A4 landscape; the
+                main app print stylesheet matches for Cmd+P on report views.
               </li>
               <li>
                 <strong className="text-foreground">Report library — quick email</strong>: the row

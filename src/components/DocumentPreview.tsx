@@ -883,7 +883,7 @@ function ReportContent({
               className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-pdf"
               data-testid="export-download-pdf"
-              title="Opens print preview in a new tab. Choose Save as PDF. If the dialog has orientation or layout, pick Landscape to match the export."
+              title="Opens print preview in a new tab. Choose Save as PDF. The page requests A4 landscape; if Safari still shows Portrait, select Landscape in the print dialog."
             >
               <Download className="h-4 w-4 shrink-0" /> Download PDF
             </Button>
