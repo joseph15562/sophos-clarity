@@ -1216,6 +1216,12 @@ function EvidenceVerification({
           </span>
         )}
       </div>
+      <p className="text-[10px] text-muted-foreground/85 mt-2 leading-snug">
+        Counts above come from the parsed upload. Firewall rule tables in the narrative are
+        AI-generated and may show fewer than {stats.totalRules} rows if generation stopped early
+        (time or rate limits) — use <span className="font-medium text-foreground">Retry</span> on
+        the report if the table looks short or broken.
+      </p>
       {filteredFindings.length > 0 && (
         <ul className="mt-2 pt-2 border-t border-border space-y-1.5 max-h-48 overflow-y-auto text-[11px] list-none pl-0">
           {filteredFindings.map((f) => (

@@ -64,47 +64,53 @@ function isLikelySeparatorRow(line: string): boolean {
 }
 
 /**
- * When the AI stream stops mid-row, the last markdown line often has fewer `|` than the table
- * header. Marked still emits a &lt;tr&gt; with missing cells — looks like a "broken" row. Drop
- * that trailing line so the table ends at the last complete row.
+ * When the AI stream stops mid-row, that line often has fewer `|` than the table header. Marked
+ * still emits a &lt;tr&gt; with missing cells — looks like a "broken" row. Drop trailing incomplete
+ * **data** rows from the **last GFM table in the document** (not only when the file ends on a table;
+ * the model often adds a heading or paragraph after a bad row).
  */
 export function trimIncompleteMarkdownTableTail(markdown: string): string {
   const lines = markdown.split("\n");
-  let end = lines.length - 1;
-  while (end >= 0 && lines[end].trim() === "") end--;
-  if (end < 0) return markdown;
+  let i = lines.length - 1;
+  while (i >= 0 && lines[i].trim() === "") i--;
+  if (i < 0) return markdown;
 
-  const lastLine = lines[end].trim();
-  if (!lastLine.startsWith("|")) return markdown;
+  // Last non-empty line might be prose; walk backward to the last contiguous `|...|` block.
+  let end = i;
+  while (end >= 0 && !lines[end].trim().startsWith("|")) {
+    end--;
+    while (end >= 0 && lines[end].trim() === "") end--;
+  }
+  if (end < 0 || !lines[end].trim().startsWith("|")) return markdown;
 
   let start = end;
-  while (start >= 0 && lines[start].trim().startsWith("|")) start--;
-  start++;
+  while (start > 0 && lines[start - 1].trim().startsWith("|")) start--;
 
-  const tableLines = lines.slice(start, end + 1).map((l) => l.trim());
-  if (tableLines.length < 2) return markdown;
+  const segment = lines.slice(start, end + 1);
+  if (segment.length < 2) return markdown;
 
-  const header = tableLines[0];
-  const headerPipes = countPipes(header);
+  const headerTrim = segment[0].trim();
+  const headerPipes = countPipes(headerTrim);
   if (headerPipes < 2) return markdown;
 
   let dataStart = 1;
-  if (tableLines.length > 1 && isLikelySeparatorRow(tableLines[1])) {
+  if (segment.length > 1 && isLikelySeparatorRow(segment[1].trim())) {
     dataStart = 2;
   }
 
-  const dataRows = tableLines.slice(dataStart);
-  if (dataRows.length === 0) return markdown;
-
-  const lastData = dataRows[dataRows.length - 1];
-  if (isLikelySeparatorRow(lastData)) return markdown;
-
-  const lastPipes = countPipes(lastData);
-  if (lastPipes < headerPipes) {
-    lines.splice(end, 1);
-    return lines.join("\n");
+  const working = [...segment];
+  while (working.length > dataStart) {
+    const lastTrim = working[working.length - 1].trim();
+    if (isLikelySeparatorRow(lastTrim)) break;
+    if (countPipes(lastTrim) < headerPipes) {
+      working.pop();
+    } else {
+      break;
+    }
   }
-  return markdown;
+
+  if (working.length === segment.length) return markdown;
+  return [...lines.slice(0, start), ...working, ...lines.slice(end + 1)].join("\n");
 }
 
 export function normalizeMarkdownTables(md: string): string {

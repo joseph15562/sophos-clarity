@@ -589,9 +589,13 @@ function ChangelogPageInner() {
                 before that budget and sends a <code className="text-xs">firecomply</code> SSE
                 marker so the UI shows a partial-output warning instead of looking finished.
                 Override with <code className="text-xs">PARSE_CONFIG_STREAM_BUDGET_MS</code> on paid
-                projects. Preview (when generation has finished) and exports also drop a trailing
-                markdown table row when it has fewer columns than the header — typical when the
-                stream stops mid-row — so you do not see a half-empty &quot;broken&quot; row.
+                projects. Preview (when generation has finished) and exports trim the{" "}
+                <em>last contiguous</em> markdown table block: any trailing data rows with fewer
+                columns than the header are removed even when a heading or summary follows the table
+                (not only when the file ends on the table) — typical when the stream stops mid-row.
+                The Evidence Verification strip still shows totals from the parsed upload; if the
+                narrative firewall table lists fewer rules than that count, generation likely ended
+                early — use <strong className="text-foreground">Retry</strong>.
                 <strong className="text-foreground"> Rate limits</strong>:{" "}
                 <code className="text-xs">parse-config</code> now counts assistant vs report
                 completions separately (higher cap on chat) and returns clearer 429 text

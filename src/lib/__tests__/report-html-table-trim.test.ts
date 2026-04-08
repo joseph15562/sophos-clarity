@@ -26,6 +26,25 @@ describe("trimIncompleteMarkdownTableTail", () => {
     const md = ["| x | y | z |", "| - | - | - |", "| a | b | c |"].join("\n");
     expect(trimIncompleteMarkdownTableTail(md)).toBe(md);
   });
+
+  it("trims last table block when headings or prose follow (not EOF table)", () => {
+    const md = [
+      "## Firewall Rules",
+      "",
+      "| a | b |",
+      "| - | - |",
+      "| 1 | ok |",
+      "| 2 | cut",
+      "",
+      "## Summary",
+      "",
+      "Narrative text.",
+    ].join("\n");
+    const out = trimIncompleteMarkdownTableTail(md);
+    expect(out).not.toContain("| 2 | cut");
+    expect(out).toContain("## Summary");
+    expect(out).toContain("Narrative text.");
+  });
 });
 
 describe("buildReportHtml stripIncompleteTableTail", () => {
