@@ -625,6 +625,14 @@ serve(async (req) => {
     const reasoningEffort = reasoningOverride ||
       (chat ? "none" : compliance ? "medium" : "low");
 
+    const reportMaxOutputTokens = (() => {
+      if (chat) return undefined;
+      const raw = Deno.env.get("GEMINI_REPORT_MAX_OUTPUT_TOKENS");
+      const parsed = raw ? parseInt(raw, 10) : 32_768;
+      if (Number.isNaN(parsed) || parsed < 1024) return 32_768;
+      return Math.min(parsed, 65_536);
+    })();
+
     const doRequest = (selectedModel: string) =>
       fetch(
         "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -644,6 +652,9 @@ serve(async (req) => {
             temperature: 0.1,
             reasoning_effort: reasoningEffort,
             stream_options: { include_usage: true },
+            ...(reportMaxOutputTokens != null
+              ? { max_tokens: reportMaxOutputTokens }
+              : {}),
           }),
         },
       );

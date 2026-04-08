@@ -553,13 +553,27 @@ export async function streamConfigParse({
     onStatus,
     onError,
     externalSignal,
+    {
+      /** Long reports can pause between visible tokens while the model still streams metadata chunks. */
+      sseInactivityMs: REPORT_SSE_INACTIVITY_MS,
+    },
   );
 }
 
-const SSE_INACTIVITY_MS = 90_000; // If no new content for 90s after we've started receiving, treat stream as done so UI doesn't stay on "Still generating..."
+/** Chat: short replies; inactivity = no SSE activity at all. */
+const SSE_INACTIVITY_MS = 90_000;
 
-const INACTIVITY_MESSAGE =
-  "Generation stopped after 90 seconds with no new content. The report below may be partial — you can export it or retry.";
+/** Reports: allow longer gaps between text tokens (model may emit usage / empty deltas only). */
+const REPORT_SSE_INACTIVITY_MS = 180_000;
+
+function inactivityMessage(ms: number): string {
+  const sec = Math.round(ms / 1000);
+  return `Generation stopped after ${sec} seconds with no stream activity. The report below may be partial — you can export it or retry.`;
+}
+
+type ConsumeSSEStreamOptions = {
+  sseInactivityMs?: number;
+};
 
 async function consumeSSEStream(
   body: ReadableStream<Uint8Array>,
@@ -568,11 +582,16 @@ async function consumeSSEStream(
   onStatus?: (status: string) => void,
   onError?: (error: string) => void,
   externalSignal?: AbortSignal,
+  options?: ConsumeSSEStreamOptions,
 ) {
+  const sseInactivityMs = options?.sseInactivityMs ?? SSE_INACTIVITY_MS;
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let hasReceivedContent = false;
+  /** True after we have emitted at least one non-empty text delta (avoids killing the stream before first tokens). */
+  let hasStreamedText = false;
+  let lengthFinishWarned = false;
   let inactivityDone = false;
   let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   let userAbortDone = false;
@@ -602,9 +621,9 @@ async function consumeSSEStream(
       inactivityDone = true;
       reader.cancel();
       onStatus?.("");
-      onError?.(INACTIVITY_MESSAGE);
+      onError?.(inactivityMessage(sseInactivityMs));
       onDone();
-    }, SSE_INACTIVITY_MS);
+    }, sseInactivityMs);
   }
 
   try {
@@ -634,10 +653,25 @@ async function consumeSSEStream(
         }
 
         try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
+          const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+          const choice = parsed.choices?.[0] as Record<string, unknown> | undefined;
+          const delta = choice?.delta as Record<string, unknown> | undefined;
+          const content = delta?.content as string | undefined;
+          const finishReason = (choice?.finish_reason ?? delta?.finish_reason) as
+            | string
+            | undefined;
+          if (finishReason === "length" && !lengthFinishWarned) {
+            lengthFinishWarned = true;
+            onError?.(
+              "The model hit its output limit — the report stopped early. Try generating an individual firewall report, fewer frameworks, or use Retry.",
+            );
+          }
+          if (typeof content === "string" && content.length > 0) {
             onDelta(content);
+            hasStreamedText = true;
+            scheduleInactivityTimeout();
+          } else if (hasStreamedText && Array.isArray(parsed.choices)) {
+            // Gemini often sends empty `delta.content` chunks (e.g. usage); still means the stream is alive.
             scheduleInactivityTimeout();
           }
         } catch (err) {

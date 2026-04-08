@@ -571,6 +571,21 @@ function ChangelogPageInner() {
                 falls back to the existing HTML print tab.
               </li>
               <li>
+                <strong className="text-foreground">
+                  AI report generation — fewer mid-report stops
+                </strong>
+                : the client only started resetting its inactivity watchdog on visible text tokens,
+                but Gemini often sends stream events with empty text (usage/metadata) while
+                generation continues — that could cancel a long report after a big table (e.g.
+                Findings cut off after the first bullet). The stream now keeps the watchdog alive
+                after text has started whenever any <code className="text-xs">choices</code> chunk
+                arrives, uses a longer idle window for reports than chat, and shows a specific
+                message when the model ends with an output-length cap. The{" "}
+                <code className="text-xs">parse-config</code> function requests a higher default{" "}
+                <code className="text-xs">max_tokens</code> for reports (tune with{" "}
+                <code className="text-xs">GEMINI_REPORT_MAX_OUTPUT_TOKENS</code>).
+              </li>
+              <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}
                 markdown like <code className="text-xs">![alt](data:image/png;base64,…)</code> is
                 decoded and embedded as a real image in the <code className="text-xs">.docx</code>{" "}
