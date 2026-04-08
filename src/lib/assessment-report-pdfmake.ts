@@ -13,6 +13,88 @@ marked.setOptions({ gfm: true, breaks: false });
 const MAX_MARKDOWN_CHARS = 450_000;
 const MAX_TABLE_BODY_ROWS = 200;
 
+/** pdfmake accepts these data-URI schemes; WebP etc. stay in markdown (may print as text). */
+const DATA_IMAGE_URI_RE = /^data:image\/(png|jpeg|jpg|gif);base64,/i;
+
+export type MarkdownOrDataUriImage = { kind: "md"; text: string } | { kind: "image"; uri: string };
+
+/**
+ * Split markdown so `![alt](data:image/png;base64,...)` (arbitrary length) can be rendered with
+ * pdfmake `{ image }`. marked + our inline walker drop/ignore image tokens, and huge URLs may not
+ * tokenize as images — leaving raw `![]()` in the PDF.
+ */
+export function splitMarkdownDataUriImages(markdown: string): MarkdownOrDataUriImage[] {
+  const parts: MarkdownOrDataUriImage[] = [];
+  let i = 0;
+  const n = markdown.length;
+
+  const pushMd = (start: number, end: number) => {
+    if (end > start) parts.push({ kind: "md", text: markdown.slice(start, end) });
+  };
+
+  while (i < n) {
+    const img = markdown.indexOf("![", i);
+    if (img < 0) {
+      pushMd(i, n);
+      break;
+    }
+    pushMd(i, img);
+    const closeBracket = markdown.indexOf("]", img + 2);
+    if (closeBracket < 0) {
+      i = img + 2;
+      continue;
+    }
+    const afterBracket = closeBracket + 1;
+    if (afterBracket >= n || markdown[afterBracket] !== "(") {
+      i = img + 2;
+      continue;
+    }
+    const closeParen = markdown.indexOf(")", afterBracket + 1);
+    if (closeParen < 0) {
+      i = img + 2;
+      continue;
+    }
+    const uri = markdown.slice(afterBracket + 1, closeParen);
+    if (DATA_IMAGE_URI_RE.test(uri)) {
+      const lineStart = img === 0 ? 0 : markdown.lastIndexOf("\n", img - 1) + 1;
+      const beforeImg = markdown.slice(lineStart, img);
+      // Only treat as a pdfmake image at line start (after spaces). Inline/table images stay in MD.
+      if (/^[ \t]*$/.test(beforeImg)) {
+        parts.push({ kind: "image", uri });
+        i = closeParen + 1;
+      } else {
+        pushMd(img, closeParen + 1);
+        i = closeParen + 1;
+      }
+    } else {
+      pushMd(img, closeParen + 1);
+      i = closeParen + 1;
+    }
+  }
+
+  const merged: MarkdownOrDataUriImage[] = [];
+  for (const p of parts) {
+    if (p.kind === "md" && p.text === "") continue;
+    const last = merged[merged.length - 1];
+    if (p.kind === "md" && last?.kind === "md") {
+      last.text += p.text;
+    } else {
+      merged.push(p.kind === "md" ? { kind: "md", text: p.text } : { kind: "image", uri: p.uri });
+    }
+  }
+  return merged;
+}
+
+function dataUriToPdfImage(uri: string): Content {
+  return {
+    image: uri,
+    width: 200,
+    maxHeight: 56,
+    alignment: "left",
+    margin: [0, 0, 0, 12],
+  };
+}
+
 export type MarkdownReportPdfOptions = {
   title: string;
   /** e.g. customer name, company, date — shown under title */
@@ -279,11 +361,8 @@ export function buildMarkdownReportPdfDocDefinition(
   markdown: string,
   options: MarkdownReportPdfOptions,
 ): TDocumentDefinitions {
-  const normalized = trimIncompleteMarkdownTableTail(
-    normalizeMarkdownTables(markdown.slice(0, MAX_MARKDOWN_CHARS)),
-  );
-  const tokens = marked.lexer(normalized) as Token[];
-  const body = blocksToContent(tokens);
+  const sliced = markdown.slice(0, MAX_MARKDOWN_CHARS);
+  const pieces = splitMarkdownDataUriImages(sliced);
 
   const cover: Content[] = [
     { text: options.title, style: "coverTitle" },
@@ -295,12 +374,39 @@ export function buildMarkdownReportPdfDocDefinition(
     { text: " ", margin: [0, 0, 0, 16] },
   ];
 
+  let idx = 0;
+  const body: Content[] = [];
+  while (idx < pieces.length && pieces[idx].kind === "image") {
+    body.push(dataUriToPdfImage((pieces[idx] as { kind: "image"; uri: string }).uri));
+    idx++;
+  }
+
+  let coverInserted = false;
+  for (; idx < pieces.length; idx++) {
+    const part = pieces[idx];
+    if (!coverInserted && part.kind === "md" && part.text.trim().length > 0) {
+      body.push(...cover);
+      coverInserted = true;
+    }
+    if (part.kind === "image") {
+      body.push(dataUriToPdfImage(part.uri));
+    } else {
+      const normalized = trimIncompleteMarkdownTableTail(normalizeMarkdownTables(part.text));
+      if (normalized.trim().length > 0) {
+        body.push(...blocksToContent(marked.lexer(normalized) as Token[]));
+      }
+    }
+  }
+  if (!coverInserted) {
+    body.push(...cover);
+  }
+
   return {
     info: { title: options.title },
     pageSize: "A4",
     pageOrientation: "landscape",
     pageMargins: [40, 48, 40, 52],
-    content: [...cover, ...body],
+    content: body,
     styles: {
       coverTitle: {
         fontSize: 18,

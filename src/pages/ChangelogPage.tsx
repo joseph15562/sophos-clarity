@@ -566,7 +566,10 @@ function ChangelogPageInner() {
                 preview), shared report links, Report Centre saved viewer, and the client portal now
                 saves an <strong className="text-foreground">A4 landscape</strong>{" "}
                 <code className="text-xs">.pdf</code> built in-browser via pdfmake from the report
-                markdown (headings, lists, GFM tables, basic inline emphasis). No system print
+                markdown (headings, lists, GFM tables, basic inline emphasis). Line-start{" "}
+                <code className="text-xs">![alt](data:image/png|jpeg|gif;base64,…)</code> logos from
+                the cover markdown are converted to real pdfmake images (not dumped as raw
+                markdown/base64 text). Inline or table-cell images stay in markdown. No system print
                 dialog or Safari orientation toggle is required. If pdf generation fails, the app
                 falls back to the existing HTML print tab.
               </li>
