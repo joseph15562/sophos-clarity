@@ -609,7 +609,13 @@ function ChangelogPageInner() {
                 <code className="text-xs">parse-config</code> request immediately on HTTP 429 (that
                 only burned quota); the Edge function uses a single short backoff to Gemini instead
                 of two long waits; the report retry loop skips automatic re-runs on quota /
-                rate-limit messages so you are not spammed with duplicate failures.
+                rate-limit messages so you are not spammed with duplicate failures. After the
+                primary model is still rate-limited, <code className="text-xs">parse-config</code>{" "}
+                tries the configured fallback Gemini model (often a separate quota bucket). Reports
+                default to <code className="text-xs">reasoning_effort: low</code> (including
+                compliance) to ease token pressure. The preview disables{" "}
+                <strong className="text-foreground">Retry</strong> for ~65s after a Google Gemini
+                rate-limit message so the next attempt is less likely to fail immediately.
               </li>
               <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}

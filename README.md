@@ -175,7 +175,7 @@ The app will be available at `http://localhost:8080`.
 | `ALLOWED_ORIGIN`                  | No       | CORS origin restriction for edge functions                                                                                                                |
 | `CENTRAL_ENCRYPTION_KEY`          | No       | Encryption key for Sophos Central integration                                                                                                             |
 
-**Gemini quotas:** Google’s **free / low-quota** tiers apply **strict per-minute limits**; you can still get HTTP **429** in short bursts even when an AI Studio usage chart looks fine. The app does **not** auto-retry 429 on the client (that only burns quota). Enabling billing on the API key’s project raises throughput. **FireComply** also applies separate per-user limits on **completed** runs in `parse-config` (reports vs assistant are counted separately).
+**Gemini quotas:** Google’s **free / low-quota** tiers apply **strict per-minute limits**; you can still get HTTP **429** in short bursts even when an AI Studio usage chart looks fine. The app does **not** auto-retry 429 on the client (that only burns quota); after a limit, **Retry** stays disabled for ~65s, and the Edge function may try a **fallback model** if configured. **MSP production use** should enable **billing** on the Google Cloud project that owns `GEMINI_API_KEY`. **FireComply** also applies separate per-user limits on **completed** runs in `parse-config` (reports vs assistant are counted separately).
 
 ### Commands
 

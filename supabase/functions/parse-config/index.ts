@@ -632,8 +632,8 @@ serve(async (req) => {
     const primaryModel = chat ? chatModel : reportModel;
 
     const reasoningOverride = Deno.env.get("GEMINI_REASONING_EFFORT");
-    const reasoningEffort = reasoningOverride ||
-      (chat ? "none" : compliance ? "medium" : "low");
+    /** Default `low` for all reports (incl. compliance) to ease TPM pressure on Google free tiers. */
+    const reasoningEffort = reasoningOverride || (chat ? "none" : "low");
 
     const reportMaxOutputTokens = (() => {
       if (chat) return undefined;
@@ -688,9 +688,35 @@ serve(async (req) => {
       response = await doRequest(primaryModel);
     }
 
+    // Primary still 429: try fallback model (Google often tracks quota per model).
+    if (
+      !response.ok &&
+      response.status === 429 &&
+      fallbackModel !== primaryModel &&
+      usedModel === primaryModel
+    ) {
+      const pauseSec = 2;
+      logJson("info", "parse_config_429_try_fallback_model", {
+        primaryModel,
+        fallbackModel,
+        pauseSec,
+      });
+      await new Promise((r) => setTimeout(r, pauseSec * 1000));
+      usedModel = fallbackModel;
+      response = await doRequest(fallbackModel);
+      if (response.status === 429) {
+        logJson("info", "parse_config_429_fallback_short_retry", {
+          fallbackModel,
+        });
+        await new Promise((r) => setTimeout(r, 12_000));
+        response = await doRequest(fallbackModel);
+      }
+    }
+
     if (
       !response.ok && response.status !== 429 && response.status !== 402 &&
-      fallbackModel !== primaryModel
+      fallbackModel !== primaryModel &&
+      usedModel === primaryModel
     ) {
       logJson("info", "parse_config_model_fallback", {
         primaryModel,
@@ -726,7 +752,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             error:
-              "Google Gemini rate limit. Free and low-quota tiers use strict per-minute limits; bursts often fail even when a usage chart looks quiet. Wait at least 60 seconds before retrying, avoid starting several reports back-to-back, or enable billing in Google AI Studio for the API key’s project.",
+              "Google Gemini rate limit (all models tried). Free and low-quota tiers use strict per-minute limits; bursts often fail even when a usage chart looks quiet. Wait at least 60 seconds before using Retry, avoid several reports in a row, or enable billing in Google AI Studio for the API key’s project.",
           }),
           {
             status: 429,

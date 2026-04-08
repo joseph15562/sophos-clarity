@@ -26,6 +26,10 @@ export interface FlowStatusCardProps {
   showTrustLink?: boolean;
   onRetry?: () => void;
   retryLabel?: string;
+  /** When true, Retry is disabled (e.g. Gemini RPM cooldown). */
+  retryDisabled?: boolean;
+  /** Shown under the retry button when `retryDisabled` */
+  retryDisabledHint?: ReactNode;
   className?: string;
 }
 
@@ -45,6 +49,8 @@ export function FlowStatusCard({
   showTrustLink = true,
   onRetry,
   retryLabel = "Try again",
+  retryDisabled = false,
+  retryDisabledHint,
   className,
 }: FlowStatusCardProps) {
   if (variant === "loading") {
@@ -124,11 +130,20 @@ export function FlowStatusCard({
         </div>
       </div>
       {onRetry && (
-        <div className="pl-6">
-          <Button size="sm" variant="outline" onClick={onRetry} className="gap-1.5">
+        <div className="pl-6 space-y-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onRetry}
+            disabled={retryDisabled}
+            className="gap-1.5"
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             {retryLabel}
           </Button>
+          {retryDisabled && retryDisabledHint ? (
+            <p className="text-[10px] text-muted-foreground max-w-md">{retryDisabledHint}</p>
+          ) : null}
         </div>
       )}
     </div>

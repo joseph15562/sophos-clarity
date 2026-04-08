@@ -56,6 +56,10 @@ import {
 import JSZip from "jszip";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { FlowStatusCard } from "@/components/FlowStatusCard";
+import {
+  GEMINI_RATE_LIMIT_RETRY_COOLDOWN_SEC,
+  isGoogleGeminiRateLimitMessage,
+} from "@/lib/gemini-rate-limit-ui";
 
 export type ReportEntry = {
   id: string;
@@ -764,7 +768,23 @@ function ReportContent({
   const [shareExpiresAt, setShareExpiresAt] = useState("");
   const [shareError, setShareError] = useState("");
   const [extractedOpen, setExtractedOpen] = useState(false);
+  const [geminiCooldownRemaining, setGeminiCooldownRemaining] = useState(0);
   const exportTheme: ReportExportTheme = isDark ? "dark" : "light";
+
+  useEffect(() => {
+    if (!isFailed || !isGoogleGeminiRateLimitMessage(errorMessage)) {
+      setGeminiCooldownRemaining(0);
+      return;
+    }
+    let remaining = GEMINI_RATE_LIMIT_RETRY_COOLDOWN_SEC;
+    setGeminiCooldownRemaining(remaining);
+    const id = window.setInterval(() => {
+      remaining -= 1;
+      setGeminiCooldownRemaining(Math.max(0, remaining));
+      if (remaining <= 0) window.clearInterval(id);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isFailed, errorMessage]);
 
   const activeResult = reportLabel && analysisResults ? analysisResults[reportLabel] : undefined;
   const html = useMemo(() => {
@@ -862,8 +882,19 @@ function ReportContent({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2 no-print">
         {isFailed && (
-          <Button variant="destructive" onClick={onRetry} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Retry
+          <Button
+            variant="destructive"
+            onClick={onRetry}
+            disabled={geminiCooldownRemaining > 0}
+            className="gap-2"
+            title={
+              geminiCooldownRemaining > 0
+                ? `Wait ${geminiCooldownRemaining}s — immediate retries usually hit the same Gemini limit`
+                : undefined
+            }
+          >
+            <RefreshCw className="h-4 w-4" />{" "}
+            {geminiCooldownRemaining > 0 ? `Retry (${geminiCooldownRemaining}s)` : "Retry"}
           </Button>
         )}
         {markdown && !isLoading && !isFailed && (
@@ -1032,7 +1063,17 @@ function ReportContent({
                 description="The AI or edge service could not finish this report. Try again, or generate individual firewall reports first if the estate is large."
                 errorDetail={errorMessage}
                 onRetry={onRetry}
-                retryLabel="Retry generation"
+                retryLabel={
+                  geminiCooldownRemaining > 0
+                    ? `Retry in ${geminiCooldownRemaining}s`
+                    : "Retry generation"
+                }
+                retryDisabled={geminiCooldownRemaining > 0}
+                retryDisabledHint={
+                  geminiCooldownRemaining > 0
+                    ? "Google’s free tier often rejects back-to-back requests. Waiting ~65s before retry usually works better than clicking immediately. For production volume, enable billing on the Gemini API key’s Google Cloud project."
+                    : undefined
+                }
               />
             </div>
           )}
@@ -1049,8 +1090,15 @@ function ReportContent({
                     "Generation was interrupted. The content below may be incomplete."}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={onRetry} className="gap-1.5 shrink-0">
-                <RefreshCw className="h-3 w-3" /> Retry
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onRetry}
+                disabled={geminiCooldownRemaining > 0}
+                className="gap-1.5 shrink-0"
+              >
+                <RefreshCw className="h-3 w-3" />{" "}
+                {geminiCooldownRemaining > 0 ? `Retry (${geminiCooldownRemaining}s)` : "Retry"}
               </Button>
             </div>
           )}
