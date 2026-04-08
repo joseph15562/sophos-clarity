@@ -51,6 +51,62 @@ const REPORT_HTML_SANITIZE: PurifyConfig = {
  * cells (e.g. firewall rules), which would contain many " | | " and get broken.
  */
 /** Exported for PDF / other parsers that must match {@link buildReportHtml} table handling. */
+function countPipes(line: string): number {
+  return (line.match(/\|/g) ?? []).length;
+}
+
+function isLikelySeparatorRow(line: string): boolean {
+  const t = line.trim();
+  if (!t.startsWith("|")) return false;
+  const withoutEdges = t.replace(/^\|/, "").replace(/\|\s*$/, "");
+  if (!withoutEdges.includes("-")) return false;
+  return /^[\s\-:|]+$/.test(withoutEdges);
+}
+
+/**
+ * When the AI stream stops mid-row, the last markdown line often has fewer `|` than the table
+ * header. Marked still emits a &lt;tr&gt; with missing cells — looks like a "broken" row. Drop
+ * that trailing line so the table ends at the last complete row.
+ */
+export function trimIncompleteMarkdownTableTail(markdown: string): string {
+  const lines = markdown.split("\n");
+  let end = lines.length - 1;
+  while (end >= 0 && lines[end].trim() === "") end--;
+  if (end < 0) return markdown;
+
+  const lastLine = lines[end].trim();
+  if (!lastLine.startsWith("|")) return markdown;
+
+  let start = end;
+  while (start >= 0 && lines[start].trim().startsWith("|")) start--;
+  start++;
+
+  const tableLines = lines.slice(start, end + 1).map((l) => l.trim());
+  if (tableLines.length < 2) return markdown;
+
+  const header = tableLines[0];
+  const headerPipes = countPipes(header);
+  if (headerPipes < 2) return markdown;
+
+  let dataStart = 1;
+  if (tableLines.length > 1 && isLikelySeparatorRow(tableLines[1])) {
+    dataStart = 2;
+  }
+
+  const dataRows = tableLines.slice(dataStart);
+  if (dataRows.length === 0) return markdown;
+
+  const lastData = dataRows[dataRows.length - 1];
+  if (isLikelySeparatorRow(lastData)) return markdown;
+
+  const lastPipes = countPipes(lastData);
+  if (lastPipes < headerPipes) {
+    lines.splice(end, 1);
+    return lines.join("\n");
+  }
+  return markdown;
+}
+
 export function normalizeMarkdownTables(md: string): string {
   const rowBoundary = " | | ";
   return md
@@ -105,6 +161,11 @@ export function extractTocHeadings(md: string): { id: string; text: string; leve
 export type BuildReportHtmlOptions = {
   /** Optional footer line for traceability (e.g. "Generated from Sophos FireComply · N sections, M rules"). */
   footer?: string;
+  /**
+   * When true (default), removes a trailing table row with fewer `|` than the header (stream cut mid-row).
+   * Set false while the client is still receiving streaming tokens so a row in progress is not removed.
+   */
+  stripIncompleteTableTail?: boolean;
 };
 
 /**
@@ -113,9 +174,12 @@ export type BuildReportHtmlOptions = {
  */
 export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptions): string {
   if (!markdown) return "";
-  const normalized = normalizeMarkdownTables(markdown);
-  const rawHtml = marked.parse(normalized, { async: false }) as string;
-  const headings = extractTocHeadings(markdown);
+  let md = normalizeMarkdownTables(markdown);
+  if (options?.stripIncompleteTableTail !== false) {
+    md = trimIncompleteMarkdownTableTail(md);
+  }
+  const rawHtml = marked.parse(md, { async: false }) as string;
+  const headings = extractTocHeadings(md);
   let out: string;
   if (typeof document !== "undefined") {
     const wrap = document.createElement("div");

@@ -589,7 +589,9 @@ function ChangelogPageInner() {
                 before that budget and sends a <code className="text-xs">firecomply</code> SSE
                 marker so the UI shows a partial-output warning instead of looking finished.
                 Override with <code className="text-xs">PARSE_CONFIG_STREAM_BUDGET_MS</code> on paid
-                projects.
+                projects. Preview (when generation has finished) and exports also drop a trailing
+                markdown table row when it has fewer columns than the header — typical when the
+                stream stops mid-row — so you do not see a half-empty &quot;broken&quot; row.
               </li>
               <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}

@@ -771,8 +771,12 @@ function ReportContent({
     const footer = activeResult
       ? `Generated from Sophos FireComply · ${activeResult.stats.totalSections} sections, ${activeResult.stats.totalRules} rules`
       : undefined;
-    return buildReportHtml(markdown, { footer });
-  }, [markdown, activeResult]);
+    return buildReportHtml(markdown, {
+      footer,
+      // While streaming, the last table row is often incomplete; trimming would flicker or delete in-progress rows.
+      stripIncompleteTableTail: !isLoading,
+    });
+  }, [markdown, activeResult, isLoading]);
 
   const reportTruncated = Boolean(
     activeResult && activeResult.stats.totalRules > 150 && /150|more rules|truncat/i.test(markdown),

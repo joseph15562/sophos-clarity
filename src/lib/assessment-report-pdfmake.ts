@@ -6,7 +6,7 @@
 import { marked } from "marked";
 import type { Token, Tokens } from "marked";
 import type { Content, TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
-import { normalizeMarkdownTables } from "@/lib/report-html";
+import { normalizeMarkdownTables, trimIncompleteMarkdownTableTail } from "@/lib/report-html";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -279,7 +279,9 @@ export function buildMarkdownReportPdfDocDefinition(
   markdown: string,
   options: MarkdownReportPdfOptions,
 ): TDocumentDefinitions {
-  const normalized = normalizeMarkdownTables(markdown.slice(0, MAX_MARKDOWN_CHARS));
+  const normalized = trimIncompleteMarkdownTableTail(
+    normalizeMarkdownTables(markdown.slice(0, MAX_MARKDOWN_CHARS)),
+  );
   const tokens = marked.lexer(normalized) as Token[];
   const body = blocksToContent(tokens);
 

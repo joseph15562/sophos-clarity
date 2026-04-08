@@ -4,6 +4,7 @@
  */
 
 import type { BrandingData } from "@/components/BrandingSetup";
+import { normalizeMarkdownTables, trimIncompleteMarkdownTableTail } from "@/lib/report-html";
 import {
   SE_HEALTH_CHECK_PDF_LAYOUT_CSS,
   SE_HEALTH_CHECK_PDF_PROFILE,
@@ -1305,7 +1306,8 @@ export function printHtmlInHiddenIframe(html: string): boolean {
 
 /** Generate Word blob from markdown */
 export async function generateWordBlob(markdown: string, branding: BrandingData): Promise<Blob> {
-  const { text: mdForDocx, images: docxImages } = extractDataUriMarkdownImagesForDocx(markdown);
+  const cleaned = trimIncompleteMarkdownTableTail(normalizeMarkdownTables(markdown));
+  const { text: mdForDocx, images: docxImages } = extractDataUriMarkdownImagesForDocx(cleaned);
 
   const headerParagraphs: Paragraph[] = [];
   if (branding.companyName) {
@@ -1469,7 +1471,7 @@ export async function generatePptxBlob(
   });
 
   // Parse markdown into sections (include paragraphs so no slide is left blank)
-  const lines = markdown.split("\n");
+  const lines = trimIncompleteMarkdownTableTail(normalizeMarkdownTables(markdown)).split("\n");
   let currentH2 = "";
   let currentBullets: string[] = [];
   let currentParagraphs: string[] = [];
