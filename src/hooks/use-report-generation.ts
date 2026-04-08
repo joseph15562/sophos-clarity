@@ -17,6 +17,7 @@ import {
   filesHaveDifferingGeo,
   resolveStreamFieldsForConfig,
 } from "@/lib/config-compliance-scope";
+import { maybeAppendFirewallRulesExportAppendix } from "@/lib/firewall-rules-markdown-appendix";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
 
@@ -303,6 +304,8 @@ export function useReportGeneration(
         parseAbortRef.current = new AbortController();
         const streamSignal = parseAbortRef.current.signal;
 
+        let assembledMarkdown = "";
+
         const { streamFields, perFirewallComplianceContext, jurisdictionSummary } =
           buildParseStreamOptions(
             reportId,
@@ -316,6 +319,11 @@ export function useReportGeneration(
               firewallLabels: opts?.firewallLabels,
             },
           );
+
+        const appendixOpts = {
+          executive: opts?.executive,
+          firewallLabels: opts?.firewallLabels,
+        };
 
         succeeded = await new Promise<boolean>((resolve) => {
           streamConfigParse({
@@ -356,17 +364,40 @@ export function useReportGeneration(
                       : undefined;
                   const cover = buildCoverPageMarkdown(branding, coverTitle);
                   const newContent = isFirstChunk ? cover + "\n\n---\n\n" + text : text;
+                  assembledMarkdown += newContent;
                   return { ...r, markdown: r.markdown + newContent };
                 }),
               ),
-            onDone: () => resolve(true),
+            onDone: () => {
+              const withAppendix = maybeAppendFirewallRulesExportAppendix(
+                assembledMarkdown,
+                sections,
+                appendixOpts,
+              );
+              if (withAppendix !== assembledMarkdown) {
+                assembledMarkdown = withAppendix;
+                setReports((prev) =>
+                  prev.map((r) => (r.id === reportId ? { ...r, markdown: withAppendix } : r)),
+                );
+              }
+              resolve(true);
+            },
             onError: (err) => {
+              const withAppendix = maybeAppendFirewallRulesExportAppendix(
+                assembledMarkdown,
+                sections,
+                appendixOpts,
+              );
+              if (withAppendix !== assembledMarkdown) {
+                assembledMarkdown = withAppendix;
+              }
               setReports((prev) =>
                 prev.map((r) =>
                   r.id === reportId
                     ? {
                         ...r,
-                        errorMessage: r.markdown
+                        markdown: withAppendix,
+                        errorMessage: assembledMarkdown
                           ? `Generation interrupted after partial output. ${err}`
                           : err,
                       }

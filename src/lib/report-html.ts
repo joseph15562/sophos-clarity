@@ -65,9 +65,10 @@ function isLikelySeparatorRow(line: string): boolean {
 
 /**
  * When the AI stream stops mid-row, that line often has fewer `|` than the table header. Marked
- * still emits a &lt;tr&gt; with missing cells — looks like a "broken" row. Drop trailing incomplete
- * **data** rows from the **last GFM table in the document** (not only when the file ends on a table;
- * the model often adds a heading or paragraph after a bad row).
+ * still emits a &lt;tr&gt; with missing cells — looks like a "broken" row. Remove at most **one**
+ * trailing incomplete **data** row from the **last GFM table block** (not only when the file ends on
+ * a table; the model often adds a heading after a cut-off row). We only strip a single row so we do
+ * not delete many valid rows that happen to use fewer `|` than the header.
  */
 export function trimIncompleteMarkdownTableTail(markdown: string): string {
   const lines = markdown.split("\n");
@@ -99,13 +100,13 @@ export function trimIncompleteMarkdownTableTail(markdown: string): string {
   }
 
   const working = [...segment];
-  while (working.length > dataStart) {
+  // Only remove the single last data row if it is incomplete. Some models emit valid rows with
+  // fewer literal `|` than the header (merged/empty trailing cells); a multi-row loop would strip
+  // many real rows and empty the firewall table.
+  if (working.length > dataStart) {
     const lastTrim = working[working.length - 1].trim();
-    if (isLikelySeparatorRow(lastTrim)) break;
-    if (countPipes(lastTrim) < headerPipes) {
+    if (!isLikelySeparatorRow(lastTrim) && countPipes(lastTrim) < headerPipes) {
       working.pop();
-    } else {
-      break;
     }
   }
 

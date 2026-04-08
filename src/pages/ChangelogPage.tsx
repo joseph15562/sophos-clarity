@@ -595,7 +595,13 @@ function ChangelogPageInner() {
                 (not only when the file ends on the table) — typical when the stream stops mid-row.
                 The Evidence Verification strip still shows totals from the parsed upload; if the
                 narrative firewall table lists fewer rules than that count, generation likely ended
-                early — use <strong className="text-foreground">Retry</strong>.
+                early — use <strong className="text-foreground">Retry</strong>. Individual firewall
+                reports also append a{" "}
+                <strong className="text-foreground">
+                  Complete firewall rules (from configuration export)
+                </strong>{" "}
+                section with the full parsed table when the narrative table is short (≤150 rules in
+                the export).
                 <strong className="text-foreground"> Rate limits</strong>:{" "}
                 <code className="text-xs">parse-config</code> now counts assistant vs report
                 completions separately (higher cap on chat) and returns clearer 429 text
