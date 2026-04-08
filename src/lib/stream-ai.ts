@@ -592,6 +592,7 @@ async function consumeSSEStream(
   /** True after we have emitted at least one non-empty text delta (avoids killing the stream before first tokens). */
   let hasStreamedText = false;
   let lengthFinishWarned = false;
+  let edgeTimeLimitWarned = false;
   let inactivityDone = false;
   let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   let userAbortDone = false;
@@ -654,6 +655,13 @@ async function consumeSSEStream(
 
         try {
           const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+          const fc = parsed.firecomply as { error?: string } | undefined;
+          if (fc?.error === "EDGE_TIME_LIMIT" && !edgeTimeLimitWarned) {
+            edgeTimeLimitWarned = true;
+            onError?.(
+              "Report generation hit the server time limit — the text below may be incomplete. Try Retry, generate one firewall at a time, or use fewer frameworks. (Long runs need a paid Supabase tier or a higher stream budget on the Edge function.)",
+            );
+          }
           const choice = parsed.choices?.[0] as Record<string, unknown> | undefined;
           const delta = choice?.delta as Record<string, unknown> | undefined;
           const content = delta?.content as string | undefined;
@@ -690,7 +698,14 @@ async function consumeSSEStream(
         const jsonStr = raw.slice(6).trim();
         if (jsonStr === "[DONE]") continue;
         try {
-          const parsed = JSON.parse(jsonStr);
+          const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+          const fc = parsed.firecomply as { error?: string } | undefined;
+          if (fc?.error === "EDGE_TIME_LIMIT" && !edgeTimeLimitWarned) {
+            edgeTimeLimitWarned = true;
+            onError?.(
+              "Report generation hit the server time limit — the text below may be incomplete. Try Retry, generate one firewall at a time, or use fewer frameworks. (Long runs need a paid Supabase tier or a higher stream budget on the Edge function.)",
+            );
+          }
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
         } catch (err) {

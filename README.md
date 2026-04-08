@@ -160,18 +160,20 @@ The app will be available at `http://localhost:8080`.
 
 #### Edge Functions (set via Supabase Dashboard → Edge Functions → Secrets)
 
-| Variable                    | Required | Description                                                |
-| --------------------------- | -------- | ---------------------------------------------------------- |
-| `SUPABASE_URL`              | Yes      | Same Supabase project URL                                  |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Service role key (admin access — never expose client-side) |
-| `SUPABASE_ANON_KEY`         | Yes      | Anon key for RLS-scoped queries                            |
-| `GEMINI_API_KEY`            | Yes      | Google Gemini API key                                      |
-| `GEMINI_REPORT_MODEL`       | No       | Model for reports (default: `gemini-2.5-flash`)            |
-| `GEMINI_CHAT_MODEL`         | No       | Model for chat (default: `gemini-2.5-flash-lite`)          |
-| `RESEND_API_KEY`            | No       | Resend API key for email delivery                          |
-| `REPORT_FROM_EMAIL`         | No       | Sender address for emailed reports                         |
-| `ALLOWED_ORIGIN`            | No       | CORS origin restriction for edge functions                 |
-| `CENTRAL_ENCRYPTION_KEY`    | No       | Encryption key for Sophos Central integration              |
+| Variable                          | Required | Description                                                                                                                                               |
+| --------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`                    | Yes      | Same Supabase project URL                                                                                                                                 |
+| `SUPABASE_SERVICE_ROLE_KEY`       | Yes      | Service role key (admin access — never expose client-side)                                                                                                |
+| `SUPABASE_ANON_KEY`               | Yes      | Anon key for RLS-scoped queries                                                                                                                           |
+| `GEMINI_API_KEY`                  | Yes      | Google Gemini API key                                                                                                                                     |
+| `GEMINI_REPORT_MODEL`             | No       | Model for reports (default: `gemini-2.5-flash`)                                                                                                           |
+| `GEMINI_CHAT_MODEL`               | No       | Model for chat (default: `gemini-2.5-flash-lite`)                                                                                                         |
+| `GEMINI_REPORT_MAX_OUTPUT_TOKENS` | No       | Cap on completion tokens for non-chat `parse-config` calls (default `32768`, max `65536`)                                                                 |
+| `PARSE_CONFIG_STREAM_BUDGET_MS`   | No       | Wall-clock ms before `parse-config` stops proxying Gemini (default `138000` ~2.3m — under Supabase free ~150s limit). On paid (~400s), set e.g. `385000`. |
+| `RESEND_API_KEY`                  | No       | Resend API key for email delivery                                                                                                                         |
+| `REPORT_FROM_EMAIL`               | No       | Sender address for emailed reports                                                                                                                        |
+| `ALLOWED_ORIGIN`                  | No       | CORS origin restriction for edge functions                                                                                                                |
+| `CENTRAL_ENCRYPTION_KEY`          | No       | Encryption key for Sophos Central integration                                                                                                             |
 
 ### Commands
 

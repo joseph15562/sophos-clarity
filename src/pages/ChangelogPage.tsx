@@ -583,7 +583,13 @@ function ChangelogPageInner() {
                 message when the model ends with an output-length cap. The{" "}
                 <code className="text-xs">parse-config</code> function requests a higher default{" "}
                 <code className="text-xs">max_tokens</code> for reports (tune with{" "}
-                <code className="text-xs">GEMINI_REPORT_MAX_OUTPUT_TOKENS</code>).
+                <code className="text-xs">GEMINI_REPORT_MAX_OUTPUT_TOKENS</code>
+                ). Hosted Supabase Edge also has a wall-clock limit (~150s free, ~400s paid);{" "}
+                <code className="text-xs">parse-config</code> stops the Gemini stream slightly
+                before that budget and sends a <code className="text-xs">firecomply</code> SSE
+                marker so the UI shows a partial-output warning instead of looking finished.
+                Override with <code className="text-xs">PARSE_CONFIG_STREAM_BUDGET_MS</code> on paid
+                projects.
               </li>
               <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}

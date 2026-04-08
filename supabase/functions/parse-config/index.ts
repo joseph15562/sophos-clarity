@@ -770,9 +770,28 @@ serve(async (req) => {
     const stream = new ReadableStream({
       async start(controller) {
         controller.enqueue(immediateChunk);
+        /** Wall-clock budget before hosted Edge kills the worker (free ~150s, paid ~400s). */
+        let timeBudgetExceeded = false;
+        const rawBudget = Deno.env.get("PARSE_CONFIG_STREAM_BUDGET_MS");
+        const parsedBudget = rawBudget ? parseInt(rawBudget, 10) : NaN;
+        const streamBudgetMs = Number.isFinite(parsedBudget)
+          ? Math.max(30_000, Math.min(parsedBudget, 395_000))
+          : 138_000;
+        const budgetTimer = setTimeout(() => {
+          timeBudgetExceeded = true;
+          void reader.cancel().catch(() => {});
+        }, streamBudgetMs);
+
         try {
           for (;;) {
-            const { done, value } = await reader.read();
+            let chunk: ReadableStreamReadResult<Uint8Array>;
+            try {
+              chunk = await reader.read();
+            } catch {
+              if (timeBudgetExceeded) break;
+              throw new Error("Upstream Gemini stream read failed");
+            }
+            const { done, value } = chunk;
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             let newlineIdx: number;
@@ -812,7 +831,7 @@ serve(async (req) => {
                       promptTokens,
                       completionTokens,
                       total,
-                      model,
+                      model: usedModel,
                       chat,
                     });
                     if (adminClient) {
@@ -820,7 +839,7 @@ serve(async (req) => {
                         total_tokens: total,
                         prompt_tokens: promptTokens ?? null,
                         completion_tokens: completionTokens ?? null,
-                        model,
+                        model: usedModel,
                         is_chat: chat,
                         user_id: user.id,
                       }).then(() => {}).catch((err) =>
@@ -846,8 +865,30 @@ serve(async (req) => {
             }
             controller.enqueue(value);
           }
+        } catch (e) {
+          if (!timeBudgetExceeded) {
+            logJson("error", "parse_config_upstream_stream_error", {
+              message: e instanceof Error ? e.message : String(e),
+            });
+          }
         } finally {
-          reader.releaseLock();
+          clearTimeout(budgetTimer);
+          try {
+            reader.releaseLock();
+          } catch {
+            /* already released */
+          }
+          if (timeBudgetExceeded) {
+            logJson("warn", "parse_config_stream_budget_exceeded", {
+              streamBudgetMs,
+              chat,
+            });
+            controller.enqueue(
+              new TextEncoder().encode(
+                `data: {"firecomply":{"error":"EDGE_TIME_LIMIT"}}\n`,
+              ),
+            );
+          }
           // Send explicit [DONE] so the client clears "Still generating..." and calls onDone()
           controller.enqueue(new TextEncoder().encode("data: [DONE]\n"));
           controller.close();
