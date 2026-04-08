@@ -478,14 +478,17 @@ export async function streamConfigParse({
     ...(jurisdictionSummary?.trim() ? { jurisdictionSummary: jurisdictionSummary.trim() } : {}),
   });
 
-  const RETRYABLE = new Set([429, 502, 503, 504]);
+  // Do NOT retry 429 here: Gemini free tier and per-minute caps recover slowly; an immediate second
+  // POST burns quota and confuses users ("Retrying analysis" then another limit). The Edge function
+  // already backs off when calling Gemini. Retain retries only for transient gateway errors.
+  const RETRYABLE = new Set([502, 503, 504]);
   const MAX_ATTEMPTS = 2;
   let resp: Response | null = null;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     if (attempt > 0) {
       onStatus?.("Retrying analysis…");
-      await new Promise((r) => setTimeout(r, 1200 * attempt));
+      await new Promise((r) => setTimeout(r, 2500 * attempt));
     }
     try {
       const token = await getAuthBearer();

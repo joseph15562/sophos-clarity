@@ -603,10 +603,13 @@ function ChangelogPageInner() {
                 section with the full parsed table when the narrative table is short (≤150 rules in
                 the export).
                 <strong className="text-foreground"> Rate limits</strong>:{" "}
-                <code className="text-xs">parse-config</code> now counts assistant vs report
-                completions separately (higher cap on chat) and returns clearer 429 text
-                distinguishing FireComply limits from Google Gemini&apos;s (free tier is often ~5
-                RPM even when the console chart looks quiet).
+                <code className="text-xs">parse-config</code> counts assistant vs report completions
+                separately (higher cap on chat) and returns clearer 429 text distinguishing
+                FireComply limits from Google&apos;s. The browser no longer fires a second{" "}
+                <code className="text-xs">parse-config</code> request immediately on HTTP 429 (that
+                only burned quota); the Edge function uses a single short backoff to Gemini instead
+                of two long waits; the report retry loop skips automatic re-runs on quota /
+                rate-limit messages so you are not spammed with duplicate failures.
               </li>
               <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}

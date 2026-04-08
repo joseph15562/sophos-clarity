@@ -19,6 +19,21 @@ import {
 } from "@/lib/config-compliance-scope";
 import { maybeAppendFirewallRulesExportAppendix } from "@/lib/firewall-rules-markdown-appendix";
 
+/** Do not run the outer report retry loop — it only hammers the API and toasts again. */
+function isNonRetryableQuotaOrAuthError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("rate limit") ||
+    m.includes("too many requests") ||
+    m.includes("resource exhausted") ||
+    m.includes("quota") ||
+    m.includes("report limit") ||
+    m.includes("credits exhausted") ||
+    m.includes("sign in to generate") ||
+    m.includes("please sign in")
+  );
+}
+
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
 
 /** Build branded cover page markdown for reports. Use titleOverride for individual firewall reports (e.g. firewall name). */
@@ -289,6 +304,8 @@ export function useReportGeneration(
       let succeeded = false;
 
       while (attempt <= MAX_RETRIES && !succeeded) {
+        let lastAttemptError = "";
+
         if (attempt > 0) {
           await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
           setReports((prev) =>
@@ -383,6 +400,7 @@ export function useReportGeneration(
               resolve(true);
             },
             onError: (err) => {
+              lastAttemptError = err;
               const withAppendix = maybeAppendFirewallRulesExportAppendix(
                 assembledMarkdown,
                 sections,
@@ -421,6 +439,9 @@ export function useReportGeneration(
               ),
           });
         });
+        if (!succeeded && isNonRetryableQuotaOrAuthError(lastAttemptError)) {
+          break;
+        }
         attempt++;
       }
 

@@ -671,13 +671,14 @@ serve(async (req) => {
 
     let usedModel = primaryModel;
     let response = await doRequest(primaryModel);
-    const max429Retries = 2;
+    /** One backoff retry only — multiple long waits still fail on tight free-tier RPM and feel "stuck". */
+    const max429Retries = 1;
     for (
       let retries = 0;
       response.status === 429 && retries < max429Retries;
       retries++
     ) {
-      const retrySec = 15 + retries * 15;
+      const retrySec = 12;
       logJson("info", "parse_config_429_retry", {
         retrySec,
         attempt: retries + 1,
@@ -725,7 +726,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             error:
-              "Google Gemini rate limit. The free tier is often about 5 requests per minute; short bursts can fail even when the usage chart looks low. Wait 60 seconds, avoid starting several reports at once, or enable billing in Google AI Studio for the API key’s project.",
+              "Google Gemini rate limit. Free and low-quota tiers use strict per-minute limits; bursts often fail even when a usage chart looks quiet. Wait at least 60 seconds before retrying, avoid starting several reports back-to-back, or enable billing in Google AI Studio for the API key’s project.",
           }),
           {
             status: 429,
