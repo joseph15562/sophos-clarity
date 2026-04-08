@@ -9,19 +9,27 @@ let corsHeaders: Record<string, string> = {};
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
 const RATE_WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 6;
+/** Report generation (heavy). Separate from chat so assistant use does not block reports. */
+const MAX_REPORT_COMPLETIONS_PER_WINDOW = 10;
+/** AI assistant messages — higher cap; Google’s own RPM still applies. */
+const MAX_CHAT_COMPLETIONS_PER_WINDOW = 40;
 
-async function isRateLimited(
+async function isRateLimitedForMode(
   userId: string,
   db: ReturnType<typeof createClient>,
+  chat: boolean,
 ): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
+  const max = chat
+    ? MAX_CHAT_COMPLETIONS_PER_WINDOW
+    : MAX_REPORT_COMPLETIONS_PER_WINDOW;
   const { count } = await db
     .from("gemini_usage")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
+    .eq("is_chat", chat)
     .gte("created_at", windowStart);
-  return (count ?? 0) >= MAX_REQUESTS_PER_WINDOW;
+  return (count ?? 0) >= max;
 }
 
 /**
@@ -271,23 +279,6 @@ serve(async (req) => {
     );
   }
 
-  // Per-user rate limit (DB-backed via gemini_usage table)
-  if (adminClient && await isRateLimited(user.id, adminClient)) {
-    logJson("warn", "parse_config_rate_limited", {
-      userPrefix: user.id.slice(0, 8),
-    });
-    return new Response(
-      JSON.stringify({
-        error:
-          "Too many requests. Please wait a moment before generating another report.",
-      }),
-      {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
   // Body size guard
   const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
   if (contentLength > MAX_BODY_BYTES) {
@@ -376,6 +367,24 @@ serve(async (req) => {
         }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Per-user rate limit (DB-backed): chat vs report are counted separately.
+    if (adminClient && await isRateLimitedForMode(user.id, adminClient, chat)) {
+      logJson("warn", "parse_config_rate_limited", {
+        userPrefix: user.id.slice(0, 8),
+        chat,
+      });
+      const msg = chat
+        ? "FireComply assistant limit: too many chat replies completed in the last minute. Wait briefly and try again (separate from Google’s API dashboard)."
+        : "FireComply report limit: too many report generations completed in the last minute for your account. Wait briefly and try again (separate from Google’s API dashboard).";
+      return new Response(
+        JSON.stringify({ error: msg }),
+        {
+          status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
@@ -714,7 +723,8 @@ serve(async (req) => {
       if (response.status === 429) {
         return new Response(
           JSON.stringify({
-            error: "Rate limit exceeded. Please wait a moment and try again.",
+            error:
+              "Google Gemini rate limit. The free tier is often about 5 requests per minute; short bursts can fail even when the usage chart looks low. Wait 60 seconds, avoid starting several reports at once, or enable billing in Google AI Studio for the API key’s project.",
           }),
           {
             status: 429,

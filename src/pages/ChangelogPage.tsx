@@ -592,6 +592,11 @@ function ChangelogPageInner() {
                 projects. Preview (when generation has finished) and exports also drop a trailing
                 markdown table row when it has fewer columns than the header — typical when the
                 stream stops mid-row — so you do not see a half-empty &quot;broken&quot; row.
+                <strong className="text-foreground"> Rate limits</strong>:{" "}
+                <code className="text-xs">parse-config</code> now counts assistant vs report
+                completions separately (higher cap on chat) and returns clearer 429 text
+                distinguishing FireComply limits from Google Gemini&apos;s (free tier is often ~5
+                RPM even when the console chart looks quiet).
               </li>
               <li>
                 <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}

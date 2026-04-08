@@ -175,6 +175,8 @@ The app will be available at `http://localhost:8080`.
 | `ALLOWED_ORIGIN`                  | No       | CORS origin restriction for edge functions                                                                                                                |
 | `CENTRAL_ENCRYPTION_KEY`          | No       | Encryption key for Sophos Central integration                                                                                                             |
 
+**Gemini quotas:** Google’s **free tier** is often about **~5 requests/minute** per model; you can still get HTTP **429** in short bursts even when the AI Studio usage chart looks fine. Enabling billing on the API key’s project raises RPM. **FireComply** also applies separate per-user limits on **completed** runs in `parse-config` (reports vs assistant are counted separately).
+
 ### Commands
 
 ```bash
