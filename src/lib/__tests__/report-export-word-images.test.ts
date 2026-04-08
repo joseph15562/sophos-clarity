@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateWordBlob } from "@/lib/report-export";
+import { docxImageTransformation, generateWordBlob } from "@/lib/report-export";
 import type { BrandingData } from "@/components/BrandingSetup";
 
 const minimalBranding: BrandingData = {
@@ -12,6 +12,18 @@ const minimalBranding: BrandingData = {
 };
 
 describe("generateWordBlob — data URI images", () => {
+  it("caps Company Logo PNG dimensions smaller than body figures", () => {
+    const tinyPng =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const data = Uint8Array.from(globalThis.atob!(tinyPng), (c) => c.charCodeAt(0));
+    const branding = docxImageTransformation("png", data, "Company Logo");
+    const figure = docxImageTransformation("png", data, "Architecture diagram");
+    expect(branding.width).toBeLessThanOrEqual(168);
+    expect(branding.height).toBeLessThanOrEqual(44);
+    expect(figure.width).toBeGreaterThan(branding.width);
+    expect(figure.height).toBeGreaterThan(branding.height);
+  });
+
   it("embeds a PNG data-URI as binary instead of pasting base64 text", async () => {
     const tinyPng =
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";

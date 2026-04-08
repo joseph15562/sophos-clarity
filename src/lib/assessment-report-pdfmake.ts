@@ -16,6 +16,32 @@ const MAX_TABLE_BODY_ROWS = 200;
 /** pdfmake accepts these data-URI schemes; WebP etc. stay in markdown (may print as text). */
 const DATA_IMAGE_URI_RE = /^data:image\/(png|jpeg|jpg|gif);base64,/i;
 
+/** Only whitespace / BOM / NBSP before a line-start image (handles CRLF and full-width space). */
+function isOnlyLeadingWhitespaceBeforeImage(prefix: string): boolean {
+  return !/[^\s\uFEFF\u00A0]/.test(prefix);
+}
+
+/**
+ * Repair markdown that lost `![]` / `](` so it became `label|(data:image/...;base64,...)`, which
+ * marked treats as plain text and pdfmake would print as a wall of base64.
+ */
+export function normalizePdfImageMarkdownSyntax(markdown: string): string {
+  let md = markdown;
+  md = md.replace(
+    /(^|[\r\n])([\t \u00A0\uFEFF]*)([^\r\n]+?)\|\((data:image\/(?:png|jpeg|jpg|gif);base64,[^)\r\n]+)\)/gi,
+    (_, lineBreak, indent, label, uri) => `${lineBreak}${indent}![${String(label).trim()}](${uri})`,
+  );
+  md = md.replace(
+    /(^|[\r\n])([\t \u00A0\uFEFF]*)\[([^\]\r\n]+)\]\((data:image\/(?:png|jpeg|jpg|gif);base64,[^)\r\n]+)\)/gi,
+    (match, lineBreak, sp, alt, uri, offset, fullString: string) => {
+      const bracketIdx = offset + String(lineBreak).length + String(sp).length;
+      if (bracketIdx > 0 && fullString[bracketIdx - 1] === "!") return match;
+      return `${lineBreak}${sp}![${alt}](${uri})`;
+    },
+  );
+  return md;
+}
+
 export type MarkdownOrDataUriImage = { kind: "md"; text: string } | { kind: "image"; uri: string };
 
 /**
@@ -56,10 +82,13 @@ export function splitMarkdownDataUriImages(markdown: string): MarkdownOrDataUriI
     }
     const uri = markdown.slice(afterBracket + 1, closeParen);
     if (DATA_IMAGE_URI_RE.test(uri)) {
-      const lineStart = img === 0 ? 0 : markdown.lastIndexOf("\n", img - 1) + 1;
+      const lineStart =
+        img === 0
+          ? 0
+          : Math.max(markdown.lastIndexOf("\n", img - 1), markdown.lastIndexOf("\r", img - 1)) + 1;
       const beforeImg = markdown.slice(lineStart, img);
       // Only treat as a pdfmake image at line start (after spaces). Inline/table images stay in MD.
-      if (/^[ \t]*$/.test(beforeImg)) {
+      if (isOnlyLeadingWhitespaceBeforeImage(beforeImg)) {
         parts.push({ kind: "image", uri });
         i = closeParen + 1;
       } else {
@@ -85,7 +114,16 @@ export function splitMarkdownDataUriImages(markdown: string): MarkdownOrDataUriI
   return merged;
 }
 
-function dataUriToPdfImage(uri: string): Content {
+function dataUriToPdfImage(uri: string, compact?: boolean): Content {
+  if (compact) {
+    return {
+      image: uri,
+      width: 140,
+      maxHeight: 40,
+      alignment: "left",
+      margin: [0, 2, 0, 4],
+    };
+  }
   return {
     image: uri,
     width: 200,
@@ -93,6 +131,43 @@ function dataUriToPdfImage(uri: string): Content {
     alignment: "left",
     margin: [0, 0, 0, 12],
   };
+}
+
+/** Paragraph / table cell: emit data-URI images instead of dropping image/link tokens in inlineToRich. */
+function tokensToFlowContent(tokens: Token[] | undefined, compactImage: boolean): Content {
+  if (!tokens?.length) return " ";
+  const hasDataImage = tokens.some((t) => {
+    if (t.type === "image") return DATA_IMAGE_URI_RE.test((t as Tokens.Image).href ?? "");
+    if (t.type === "link") return DATA_IMAGE_URI_RE.test((t as Tokens.Link).href ?? "");
+    return false;
+  });
+  if (!hasDataImage) return inlineToRich(tokens);
+
+  const stack: Content[] = [];
+  for (const t of tokens) {
+    if (t.type === "image") {
+      const href = (t as Tokens.Image).href ?? "";
+      if (DATA_IMAGE_URI_RE.test(href)) {
+        stack.push(dataUriToPdfImage(href, compactImage));
+      }
+      continue;
+    }
+    if (t.type === "link") {
+      const href = (t as Tokens.Link).href ?? "";
+      if (DATA_IMAGE_URI_RE.test(href)) {
+        stack.push(dataUriToPdfImage(href, compactImage));
+      } else {
+        const frag = inlineToRich([t]);
+        if (frag !== " ") stack.push({ text: frag });
+      }
+      continue;
+    }
+    const frag = inlineToRich([t]);
+    if (frag !== " ") stack.push({ text: frag });
+  }
+  if (stack.length === 0) return " ";
+  if (stack.length === 1) return stack[0];
+  return { stack };
 }
 
 export type MarkdownReportPdfOptions = {
@@ -216,7 +291,7 @@ function tableToPdf(tok: Tokens.Table): Content {
   const widths = Array.from({ length: colCount }, () => "*");
 
   const headerRow: TableCell[] = tok.header.map((cell) => ({
-    text: inlineToRich(cell.tokens),
+    text: tokensToFlowContent(cell.tokens, true),
     style: "tableHeader",
     color: "#ffffff",
     margin: [4, 5, 4, 5],
@@ -235,7 +310,7 @@ function tableToPdf(tok: Tokens.Table): Content {
 
   const dataRows: TableCell[][] = bodyRows.map((row) =>
     row.map((cell) => ({
-      text: inlineToRich(cell.tokens),
+      text: tokensToFlowContent(cell.tokens, true),
       style: "tableCell",
       margin: [4, 4, 4, 4],
     })),
@@ -278,13 +353,23 @@ function blocksToContent(tokens: Token[]): Content[] {
         out.push({ text, style, margin: [0, h.depth <= 2 ? 14 : 10, 0, 6] });
         break;
       }
-      case "paragraph":
-        out.push({
-          text: inlineToRich((tok as Tokens.Paragraph).tokens),
-          style: "body",
-          margin: [0, 0, 0, 8],
-        });
+      case "paragraph": {
+        const flow = tokensToFlowContent((tok as Tokens.Paragraph).tokens, false);
+        const margin: [number, number, number, number] = [0, 0, 0, 8];
+        if (typeof flow === "string") {
+          out.push({ text: flow, style: "body", margin });
+        } else {
+          const stack =
+            typeof flow === "object" &&
+            flow !== null &&
+            "stack" in flow &&
+            Array.isArray((flow as { stack: Content[] }).stack)
+              ? (flow as { stack: Content[] }).stack
+              : [flow];
+          out.push({ stack, style: "body", margin });
+        }
         break;
+      }
       case "list": {
         const list = tok as Tokens.List;
         const items = list.items.map((item) => listItemPlain(item));
@@ -361,7 +446,7 @@ export function buildMarkdownReportPdfDocDefinition(
   markdown: string,
   options: MarkdownReportPdfOptions,
 ): TDocumentDefinitions {
-  const sliced = markdown.slice(0, MAX_MARKDOWN_CHARS);
+  const sliced = normalizePdfImageMarkdownSyntax(markdown).slice(0, MAX_MARKDOWN_CHARS);
   const pieces = splitMarkdownDataUriImages(sliced);
 
   const cover: Content[] = [

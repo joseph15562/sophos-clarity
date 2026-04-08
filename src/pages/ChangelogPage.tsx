@@ -548,8 +548,10 @@ function ChangelogPageInner() {
                 branding logo uses a bounded flex slot so large intrinsic SVG/raster dimensions
                 cannot blow out the layout, and images from report markdown are capped (
                 <code className="text-xs">max-width: 100%</code>,{" "}
-                <code className="text-xs">max-height</code> clamp).{" "}
-                <code className="text-xs">buildReportHtml</code> now removes{" "}
+                <code className="text-xs">max-height</code> clamp). Word export scales{" "}
+                <code className="text-xs">Company Logo</code> (and similar alt text) data-URI PNGs
+                to a small header-style box (~44px tall max); larger caps still apply to other
+                embedded figures. <code className="text-xs">buildReportHtml</code> now removes{" "}
                 <code className="text-xs">img</code> width/height/style before sanitize (and drops{" "}
                 <code className="text-xs">style</code> on all nodes), and the rendered body uses{" "}
                 <code className="text-xs">report-body-html</code> with unlayered{" "}
@@ -571,9 +573,12 @@ function ChangelogPageInner() {
                 markdown (headings, lists, GFM tables, basic inline emphasis). Line-start{" "}
                 <code className="text-xs">![alt](data:image/png|jpeg|gif;base64,…)</code> logos from
                 the cover markdown are converted to real pdfmake images (not dumped as raw
-                markdown/base64 text). Inline or table-cell images stay in markdown. No system print
-                dialog or Safari orientation toggle is required. If pdf generation fails, the app
-                falls back to the existing HTML print tab.
+                markdown/base64 text). Lines corrupted to{" "}
+                <code className="text-xs">Label|(data:image/png|jpeg|gif;base64,…)</code> (missing{" "}
+                <code className="text-xs">![](</code>) are repaired first; data-URI images inside
+                GFM table cells render as images. Other inline images stay in markdown. No system
+                print dialog or Safari orientation toggle is required. If pdf generation fails, the
+                app falls back to the existing HTML print tab.
               </li>
               <li>
                 <strong className="text-foreground">
@@ -608,9 +613,14 @@ function ChangelogPageInner() {
                 section with the full parsed table when the narrative table is short (≤150 rules in
                 the export).
                 <strong className="text-foreground"> Rate limits</strong>:{" "}
-                <code className="text-xs">parse-config</code> counts assistant vs report completions
-                separately (higher cap on chat) and returns clearer 429 text distinguishing
-                FireComply limits from Google&apos;s. The browser no longer fires a second{" "}
+                <code className="text-xs">parse-config</code> can optionally count assistant vs
+                report completions separately and return clearer 429 text when FireComply-side caps
+                are enabled via Supabase secrets{" "}
+                <code className="text-xs">PARSE_CONFIG_MAX_REPORT_COMPLETIONS_PER_MIN</code> /{" "}
+                <code className="text-xs">PARSE_CONFIG_MAX_CHAT_COMPLETIONS_PER_MIN</code> (positive
+                integer = cap per rolling minute; unset or <code className="text-xs">0</code> ={" "}
+                <strong className="text-foreground">no FireComply cap</strong> — only Google Gemini
+                quotas apply). The browser no longer fires a second{" "}
                 <code className="text-xs">parse-config</code> request immediately on HTTP 429 (that
                 only burned quota); the Edge function uses a single short backoff to Gemini instead
                 of two long waits; the report retry loop skips automatic re-runs on quota /
@@ -646,8 +656,12 @@ function ChangelogPageInner() {
                 you belong to an organisation, the main library no longer fills with demo companies
                 when <code className="text-xs">saved_reports</code> is empty — you get a clear empty
                 state and real rows only after saving from Assess. Load failures show a toast
-                instead of leaving misleading samples. Scheduled reports shows a short empty hint
-                with a link to Settings when nothing is configured.
+                instead of leaving misleading samples. The library refetches when you navigate back
+                to Reports (route change), when the browser tab becomes visible again, or when you
+                use <strong className="text-foreground">Refresh list</strong> on the empty state;
+                cloud list loads now throw on Supabase errors so you see the message instead of a
+                silent empty list. Scheduled reports shows a short empty hint with a link to
+                Settings when nothing is configured.
               </li>
               <li>
                 <strong className="text-foreground">Saved reports + client portal</strong>: cloud
@@ -680,7 +694,9 @@ function ChangelogPageInner() {
                 library and <strong className="text-foreground">Archives</strong> tables use a
                 relaxed horizontal layout (wrap when needed) with larger gaps and 36px hit targets
                 instead of a tight 3×2 icon grid, so view, PDF, Markdown, email, archive, and delete
-                are easier to use.
+                are easier to use. The <strong className="text-foreground">Eye</strong> preview
+                modal loads the saved package from the cloud and renders the full report HTML (not
+                only the short “preview only” stub).
               </li>
               <li>
                 <strong className="text-foreground">Client portal — HA firewalls</strong>:{" "}

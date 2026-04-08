@@ -9,20 +9,46 @@ let corsHeaders: Record<string, string> = {};
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
 const RATE_WINDOW_MS = 60_000; // 1 minute
-/** Report generation (heavy). Separate from chat so assistant use does not block reports. */
-const MAX_REPORT_COMPLETIONS_PER_WINDOW = 10;
-/** AI assistant messages — higher cap; Google’s own RPM still applies. */
-const MAX_CHAT_COMPLETIONS_PER_WINDOW = 40;
+
+/**
+ * Parse env for optional per-minute completion caps (rolling window = RATE_WINDOW_MS).
+ * Default **0** = disabled (Gemini billing/quotas apply only). Set a positive integer to enable
+ * FireComply-side throttling (e.g. shared multi-tenant without per-customer API keys).
+ */
+function maxCompletionsPerWindowFromEnv(
+  key: string,
+  defaultMax: number,
+): number {
+  const raw = Deno.env.get(key)?.trim().toLowerCase();
+  if (raw === "0" || raw === "off" || raw === "false") return 0;
+  if (!raw) return defaultMax;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) return defaultMax;
+  return Math.min(n, 500_000);
+}
+
+/** Report generation — separate bucket from chat. Default **off** (0). */
+const MAX_REPORT_COMPLETIONS_PER_WINDOW = maxCompletionsPerWindowFromEnv(
+  "PARSE_CONFIG_MAX_REPORT_COMPLETIONS_PER_MIN",
+  0,
+);
+/** Assistant — default **off** (0). */
+const MAX_CHAT_COMPLETIONS_PER_WINDOW = maxCompletionsPerWindowFromEnv(
+  "PARSE_CONFIG_MAX_CHAT_COMPLETIONS_PER_MIN",
+  0,
+);
 
 async function isRateLimitedForMode(
   userId: string,
   db: ReturnType<typeof createClient>,
   chat: boolean,
 ): Promise<boolean> {
-  const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
   const max = chat
     ? MAX_CHAT_COMPLETIONS_PER_WINDOW
     : MAX_REPORT_COMPLETIONS_PER_WINDOW;
+  if (max <= 0) return false;
+
+  const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
   const { count } = await db
     .from("gemini_usage")
     .select("id", { count: "exact", head: true })

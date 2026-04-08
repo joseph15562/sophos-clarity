@@ -1368,6 +1368,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           setReportsSaved(true);
           setSavedReportsTrigger((n) => n + 1);
           setTimeout(() => setReportsSaved(false), 3000);
+          if (!isGuest && org?.id) {
+            void queryClient.invalidateQueries({ queryKey: ["saved-reports"] });
+            void queryClient.invalidateQueries({ queryKey: ["org", org.id, "mission_control"] });
+          }
           if (org?.id) {
             logAudit(
               org.id,
@@ -1422,6 +1426,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       branding.environment,
       files.length,
       generateAll,
+      queryClient,
     ],
   );
 

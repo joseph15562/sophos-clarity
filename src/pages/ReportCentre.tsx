@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   createColumnHelper,
@@ -16,8 +16,10 @@ import {
   formatFirewallSummaryFromPackage,
   savedPackageToMarkdown,
   setSavedReportArchivedCloud,
+  type SavedReportPackage,
 } from "@/lib/saved-reports";
 import { buildReportHtml } from "@/lib/report-html";
+import { SafeHtml } from "@/components/SafeHtml";
 import { displayCustomerNameForUi } from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 import { loadScheduledReports as loadScheduledReportsFromStorage } from "@/lib/scheduled-reports";
@@ -41,6 +43,7 @@ import {
   Archive,
   ArchiveRestore,
   X,
+  Loader2,
 } from "lucide-react";
 import { deleteSavedReportCloud } from "@/lib/saved-reports";
 import { toast } from "sonner";
@@ -313,6 +316,39 @@ function riskPillClass(score: number): string {
   return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30";
 }
 
+function mapSavedPackagesToLibraryRows(
+  savedReports: SavedReportPackage[],
+  orgName: string,
+): ReportLibraryRow[] {
+  return savedReports.map((r, i) => {
+    const rawCustomer =
+      !r.customerName || PLACEHOLDER_NAMES.test(r.customerName) ? orgName : r.customerName;
+    const desc = describeSavedReportRowType(r);
+    const type = libraryTypeFromDescription(desc);
+    const created = new Date(r.createdAt);
+    const archivedAt = r.archivedAt ?? null;
+    return {
+      id: r.id || `r${i}`,
+      customer: rawCustomer,
+      environment: "Production",
+      type,
+      pages: pagesForType(type),
+      riskScore: hashToRisk(r.id || String(i)),
+      generatedIso: created.toISOString().slice(0, 10),
+      dateDisplay: created.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+      status: archivedAt ? "Archived" : "Ready",
+      format: "PDF",
+      firewalls: formatFirewallSummaryFromPackage(r),
+      previewMd: `# ${rawCustomer}\n\n**${type}** · ${desc}\n\nPreview only — use **Download** or open the saved report for full export (PDF / Word).`,
+      archivedAt,
+    };
+  });
+}
+
 const columnHelper = createColumnHelper<ReportLibraryRow>();
 
 /* ── Component ── */
@@ -329,6 +365,10 @@ function ReportCentreInner() {
   const [overrides, setOverrides] = useState<Record<string, Partial<ReportLibraryRow>>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<ReportLibraryRow | null>(null);
+  /** Full HTML for cloud saves (Eye preview); stub `previewMd` is not the document body. */
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewLoadState, setPreviewLoadState] = useState<"idle" | "loading" | "error">("idle");
+  const previewLoadGenRef = useRef(0);
   const [sorting, setSorting] = useState<SortingState>([{ id: "generatedIso", desc: true }]);
 
   const [dateFrom, setDateFrom] = useState("");
@@ -345,6 +385,41 @@ function ReportCentreInner() {
   const [quickSendEmail, setQuickSendEmail] = useState("");
   const [quickSendBusy, setQuickSendBusy] = useState(false);
   const [archivesOpen, setArchivesOpen] = useState(true);
+
+  useEffect(() => {
+    if (!preview) {
+      previewLoadGenRef.current += 1;
+      setPreviewHtml(null);
+      setPreviewLoadState("idle");
+      return;
+    }
+    if (!SAVED_REPORT_ROW_ID_RE.test(preview.id)) {
+      previewLoadGenRef.current += 1;
+      setPreviewHtml(null);
+      setPreviewLoadState("idle");
+      return;
+    }
+    const gen = ++previewLoadGenRef.current;
+    setPreviewLoadState("loading");
+    setPreviewHtml(null);
+    void loadSavedReportPackageById(preview.id)
+      .then((pkg) => {
+        if (gen !== previewLoadGenRef.current) return;
+        if (!pkg) {
+          setPreviewLoadState("error");
+          setPreviewHtml(null);
+          return;
+        }
+        const md = savedPackageToMarkdown(pkg);
+        setPreviewHtml(buildReportHtml(md));
+        setPreviewLoadState("idle");
+      })
+      .catch(() => {
+        if (gen !== previewLoadGenRef.current) return;
+        setPreviewLoadState("error");
+        setPreviewHtml(null);
+      });
+  }, [preview]);
 
   const openScheduledReportsInManagement = useCallback(() => {
     navigate({
@@ -530,39 +605,10 @@ function ReportCentreInner() {
         ]);
         if (cancelled) return;
 
-        if (savedReports.length > 0) {
-          const orgName = org.name || "My Organisation";
-          const mapped: ReportLibraryRow[] = savedReports.map((r, i) => {
-            const rawCustomer =
-              !r.customerName || PLACEHOLDER_NAMES.test(r.customerName) ? orgName : r.customerName;
-            const desc = describeSavedReportRowType(r);
-            const type = libraryTypeFromDescription(desc);
-            const created = new Date(r.createdAt);
-            const archivedAt = r.archivedAt ?? null;
-            return {
-              id: r.id || `r${i}`,
-              customer: rawCustomer,
-              environment: "Production",
-              type,
-              pages: pagesForType(type),
-              riskScore: hashToRisk(r.id || String(i)),
-              generatedIso: created.toISOString().slice(0, 10),
-              dateDisplay: created.toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              }),
-              status: archivedAt ? "Archived" : "Ready",
-              format: "PDF",
-              firewalls: formatFirewallSummaryFromPackage(r),
-              previewMd: `# ${rawCustomer}\n\n**${type}** · ${desc}\n\nPreview only — use **Download** or open the saved report for full export (PDF / Word).`,
-              archivedAt,
-            };
-          });
-          setReports(mapped);
-        } else {
-          setReports([]);
-        }
+        const orgName = org.name || "My Organisation";
+        setReports(
+          savedReports.length > 0 ? mapSavedPackagesToLibraryRows(savedReports, orgName) : [],
+        );
 
         if (storedSchedules.length > 0) {
           const mappedSchedules: ReportCentreSchedule[] = storedSchedules.map((s) => {
@@ -603,6 +649,33 @@ function ReportCentreInner() {
     })();
     return () => {
       cancelled = true;
+    };
+    // Re-fetch when returning to this route (e.g. after saving on Assess) or when the tab regains focus.
+  }, [org?.id, org?.name, location.key]);
+
+  /** When another tab saves or you return to this tab, refresh the library without a full remount. */
+  useEffect(() => {
+    if (!org?.id) return;
+    const orgName = org.name || "My Organisation";
+    let cancelled = false;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void (async () => {
+        try {
+          const savedReports = await loadSavedReportsCloud();
+          if (cancelled) return;
+          setReports(
+            savedReports.length > 0 ? mapSavedPackagesToLibraryRows(savedReports, orgName) : [],
+          );
+        } catch (err) {
+          if (!cancelled) console.warn("[ReportCentre] visibility refresh failed", err);
+        }
+      })();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [org?.id, org?.name]);
 
@@ -1125,9 +1198,43 @@ function ReportCentreInner() {
                         : "Run an assessment and generate your first report."
                     }
                     action={
-                      <Button asChild size="sm" className="rounded-lg">
-                        <Link to="/">Go to Assess</Link>
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button asChild size="sm" className="rounded-lg">
+                          <Link to="/">Go to Assess</Link>
+                        </Button>
+                        {org?.id ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => {
+                              void (async () => {
+                                try {
+                                  setLoading(true);
+                                  const savedReports = await loadSavedReportsCloud();
+                                  const orgName = org.name || "My Organisation";
+                                  setReports(
+                                    savedReports.length > 0
+                                      ? mapSavedPackagesToLibraryRows(savedReports, orgName)
+                                      : [],
+                                  );
+                                } catch (e) {
+                                  toast.error(
+                                    e instanceof Error
+                                      ? e.message
+                                      : "Could not refresh the library",
+                                  );
+                                } finally {
+                                  setLoading(false);
+                                }
+                              })();
+                            }}
+                          >
+                            Refresh list
+                          </Button>
+                        ) : null}
+                      </div>
                     }
                   />
                 </div>
@@ -1560,10 +1667,35 @@ function ReportCentreInner() {
                   </div>
                 </div>
               </DialogHeader>
-              <div className="flex-1 overflow-y-auto px-6 py-4 text-sm leading-relaxed">
-                <pre className="whitespace-pre-wrap font-sans text-foreground/90">
-                  {preview.previewMd}
-                </pre>
+              <div className="flex-1 overflow-y-auto px-6 py-4 text-sm leading-relaxed bg-background">
+                {SAVED_REPORT_ROW_ID_RE.test(preview.id) ? (
+                  previewLoadState === "loading" ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#00EDFF]" />
+                      <span className="text-sm">Loading report…</span>
+                    </div>
+                  ) : previewLoadState === "error" ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-destructive">
+                        Could not load this report. Use <strong>Open saved report</strong> from the
+                        table or try again.
+                      </p>
+                      <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/20 p-4 font-sans text-xs text-foreground/90">
+                        {preview.previewMd}
+                      </pre>
+                    </div>
+                  ) : previewHtml ? (
+                    <SafeHtml html={previewHtml} className="report-body-html" />
+                  ) : (
+                    <pre className="whitespace-pre-wrap font-sans text-foreground/90">
+                      {preview.previewMd}
+                    </pre>
+                  )
+                ) : (
+                  <pre className="whitespace-pre-wrap font-sans text-foreground/90">
+                    {preview.previewMd}
+                  </pre>
+                )}
               </div>
             </>
           ) : null}

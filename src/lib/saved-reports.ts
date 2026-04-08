@@ -346,7 +346,11 @@ export async function loadSavedReportsCloud(signal?: AbortSignal): Promise<Saved
     signal,
   );
 
-  if (error || !data) return [];
+  if (error) {
+    console.error("[saved-reports] loadSavedReportsCloud", error);
+    throw new Error(error.message || "Could not load saved reports");
+  }
+  if (!data) return [];
 
   return data.map((row) => ({
     id: row.id,

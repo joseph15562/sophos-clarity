@@ -267,12 +267,32 @@ function readPngIhdrDimensions(bytes: Uint8Array): { w: number; h: number } | nu
   return { w, h };
 }
 
-function docxImageTransformation(
+/** Cover / MSP logos use alt text like "Company Logo" — keep Word inline size near header strip (see PDF ~56px tall). */
+function isLikelyBrandingLogoAlt(alt: string): boolean {
+  const a = alt.trim().toLowerCase();
+  if (!a) return false;
+  return (
+    a === "company logo" ||
+    a === "logo" ||
+    a.startsWith("company logo") ||
+    a.includes("customer logo") ||
+    a.includes("msp logo") ||
+    a.includes("branding logo")
+  );
+}
+
+/** Pixel size passed to docx {@link ImageRun} (library converts for OOXML). Exported for unit tests. */
+export function docxImageTransformation(
   mime: DocxEmbedImage["type"],
   data: Uint8Array,
+  alt: string = "",
 ): { width: number; height: number } {
-  const maxW = 440;
-  const maxH = 260;
+  const branding = isLikelyBrandingLogoAlt(alt);
+  /** Inline figures in report body can stay larger; cover logos must not dominate the page. */
+  const maxW = branding ? 168 : 440;
+  const maxH = branding ? 44 : 260;
+  const minW = branding ? 24 : 48;
+  const minH = branding ? 20 : 32;
   if (mime === "png") {
     const dim = readPngIhdrDimensions(data);
     if (dim) {
@@ -286,8 +306,11 @@ function docxImageTransformation(
         w = Math.round((w * maxH) / h);
         h = maxH;
       }
-      return { width: Math.max(48, w), height: Math.max(32, h) };
+      return { width: Math.max(minW, w), height: Math.max(minH, h) };
     }
+  }
+  if (branding) {
+    return { width: 160, height: 40 };
   }
   return { width: 320, height: 120 };
 }
@@ -382,7 +405,7 @@ function markdownToDocxElements(
       const idx = Number(imgPh[1]);
       const img = embeddedImages[idx];
       if (img) {
-        const { width, height } = docxImageTransformation(img.type, img.data);
+        const { width, height } = docxImageTransformation(img.type, img.data, img.alt);
         const altSafe = (img.alt || "Image").slice(0, 120);
         elements.push(
           new Paragraph({

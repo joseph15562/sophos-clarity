@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildMarkdownReportPdfDocDefinition,
+  normalizePdfImageMarkdownSyntax,
   splitMarkdownDataUriImages,
 } from "@/lib/assessment-report-pdfmake";
 
@@ -31,6 +32,30 @@ describe("assessment-report-pdfmake", () => {
     const json = JSON.stringify(doc.content);
     expect(json).toContain(`"image":"${TINY_PNG_DATA_URI}"`);
     expect(json).not.toContain("![Co]");
+  });
+
+  it("normalizes broken pipe-before-paren logo lines to real markdown images", () => {
+    const broken = `Company Logo|(${TINY_PNG_DATA_URI})\n\n## Section\n`;
+    const fixed = normalizePdfImageMarkdownSyntax(broken);
+    expect(fixed).toContain(`![Company Logo](${TINY_PNG_DATA_URI})`);
+    const doc = buildMarkdownReportPdfDocDefinition(broken, { title: "Report" });
+    const json = JSON.stringify(doc.content);
+    expect(json).toContain(`"image":"${TINY_PNG_DATA_URI}"`);
+    expect(json).not.toContain("Company Logo|(");
+  });
+
+  it("extracts line-start images after CRLF", () => {
+    const md = `\r\n![L](${TINY_PNG_DATA_URI})\r\n\r\n## Hi\r\n`;
+    const parts = splitMarkdownDataUriImages(md);
+    const img = parts.find((p) => p.kind === "image");
+    expect(img).toEqual({ kind: "image", uri: TINY_PNG_DATA_URI });
+  });
+
+  it("renders data-uri image inside a GFM table cell", () => {
+    const md = `| A | B |\n| - | - |\n| x | ![L](${TINY_PNG_DATA_URI}) |\n`;
+    const doc = buildMarkdownReportPdfDocDefinition(md, { title: "T" });
+    const json = JSON.stringify(doc.content);
+    expect(json).toContain(`"image":"${TINY_PNG_DATA_URI}"`);
   });
 
   it("builds an A4 landscape definition with headings, table, and list", () => {
