@@ -129,7 +129,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
               Sophos SE Health Check
             </h1>
             <p className="text-[11px] text-[#6A889B]">
-              Firewall best-practice assessment for Sophos Sales Engineers
+              Snapshot firewall best-practice check for Sophos Sales Engineers
             </p>
           </div>
         </div>

@@ -36,7 +36,8 @@ export function HealthCheckInnerHeader({
             Sophos Firewall Health Check
           </h1>
           <p className="text-[10px] text-muted-foreground hidden sm:block">
-            Sales Engineer quick check — Sophos best practices (not compliance frameworks)
+            Sales Engineer snapshot — quick firewall best-practice review (not full compliance
+            frameworks)
           </p>
         </div>
         {seProfile && teamsLength > 0 && <TeamSwitcher />}

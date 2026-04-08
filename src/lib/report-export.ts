@@ -86,6 +86,17 @@ const DOCX_TABLE_HEADER_TEXT = "FFFFFF";
 const DOCX_TABLE_ZEBRA = "EDF2F9";
 const DOCX_TABLE_GRID = "94A3B8";
 
+/** Landscape table grid: first column wider for titles / rule names; remainder split evenly. */
+function computeDocxFixedColumnWidths(cellCount: number, gridTotal: number): number[] {
+  if (cellCount <= 1) return [gridTotal];
+  const firstW = Math.min(Math.floor(gridTotal * 0.32), 4800);
+  const restTotal = gridTotal - firstW;
+  const nRest = cellCount - 1;
+  const base = Math.floor(restTotal / nRest);
+  const rem = restTotal - base * nRest;
+  return [firstW, ...Array.from({ length: nRest }, (_, i) => base + (i < rem ? 1 : 0))];
+}
+
 function buildDocxTable(tableLines: string[]): Table {
   const dataRows = tableLines.filter((l) => !isSeparatorRow(l));
   if (dataRows.length === 0) {
@@ -95,12 +106,15 @@ function buildDocxTable(tableLines: string[]): Table {
   const cellCount = Math.max(...dataRows.map((line) => parseTableRow(line).length), 1);
   /** Twip grid for landscape body — wide firewall rule tables need room to wrap, not squeeze. */
   const gridTotal = 13_000;
-  const baseW = Math.floor(gridTotal / cellCount);
-  const remainder = gridTotal - baseW * cellCount;
-  const columnWidths: number[] = Array.from(
-    { length: cellCount },
-    (_, i) => baseW + (i < remainder ? 1 : 0),
-  );
+  const useAutofit = cellCount <= 5;
+  const columnWidths = useAutofit ? undefined : computeDocxFixedColumnWidths(cellCount, gridTotal);
+
+  const cellMargins =
+    cellCount > 12
+      ? { top: 36, bottom: 36, left: 55, right: 55 }
+      : cellCount > 8
+        ? { top: 45, bottom: 45, left: 70, right: 70 }
+        : { top: 60, bottom: 60, left: 90, right: 90 };
 
   const cellBorders = {
     top: { style: BorderStyle.SINGLE, size: 1, color: DOCX_TABLE_GRID },
@@ -124,7 +138,7 @@ function buildDocxTable(tableLines: string[]): Table {
           new TableCell({
             borders: cellBorders,
             verticalAlign: VerticalAlignTable.TOP,
-            margins: { top: 60, bottom: 60, left: 90, right: 90 },
+            margins: cellMargins,
             shading: isHeader
               ? { fill: DOCX_TABLE_HEADER_FILL, type: ShadingType.CLEAR }
               : rowIdx % 2 === 1
@@ -148,6 +162,14 @@ function buildDocxTable(tableLines: string[]): Table {
       ),
     });
   });
+
+  if (useAutofit) {
+    return new Table({
+      rows,
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.AUTOFIT,
+    });
+  }
 
   return new Table({
     rows,
@@ -359,6 +381,7 @@ export function buildPdfHtml(
   const preparedBySafe = escapeHtmlBranding(preparedBy);
   const footerTextSafe = escapeHtmlBranding(footerText);
   const customLogo = sanitizeBrandingLogoUrl(branding?.logoUrl);
+  const hideDuplicateBodyLogo = !omitReportHeader && Boolean(customLogo);
 
   const tocEntries = options?.omitPdfToc ? [] : extractTocFromHtml(innerHTML);
   const tocHtml =
@@ -389,7 +412,7 @@ export function buildPdfHtml(
   }
 
   return `<!DOCTYPE html>
-<html lang="en" data-theme="${theme}"${pdfProfileAttr}>
+<html lang="en" data-theme="${theme}"${pdfProfileAttr} data-hide-duplicate-body-logo="${hideDuplicateBodyLogo ? "true" : "false"}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -511,6 +534,19 @@ export function buildPdfHtml(
     /* ── Content area ── */
     .print-content {
       padding: 28px clamp(16px, 4vw, 48px) 48px;
+    }
+
+    /* Print/PDF: innerHTML has no Tailwind — constrain images so branding logos cannot span pages */
+    .print-content img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+    .print-content img.report-pdf-brand-logo {
+      max-height: 3.5rem;
+      max-width: 200px;
+      width: auto;
+      display: block;
     }
 
     h1 {
@@ -708,6 +744,28 @@ export function buildPdfHtml(
       }
       .theme-toggle { display: none !important; }
       .report-footer { display: none; }
+      /* Header already shows MSP logo — hide only the body image, keep title/subtitle text */
+      html[data-hide-duplicate-body-logo="true"] .report-pdf-brand-block img.report-pdf-brand-logo {
+        display: none !important;
+      }
+      .report-header img.sophos-logo {
+        max-height: 28px !important;
+        max-width: 180px !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+      }
+      .print-content img {
+        max-width: 100% !important;
+        max-height: 120mm;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+      }
+      .print-content img.report-pdf-brand-logo {
+        max-height: 48px !important;
+        max-width: 200px !important;
+      }
       .pdf-toc { page-break-after: always; }
       .pdf-toc-list a::after { content: " ... " target-counter(attr(href), page); }
       /*
@@ -719,12 +777,20 @@ export function buildPdfHtml(
         margin: 12mm 14mm 14mm 14mm;
       }
 
+      thead {
+        display: table-header-group;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
       table {
         font-size: 8pt;
         min-width: 0 !important;
         width: 100% !important;
         table-layout: fixed !important;
         border-collapse: collapse !important;
+      }
+      table:not(.pdf-table--wide):not(.pdf-table--medium) tr {
+        page-break-inside: avoid;
       }
       th, td {
         padding: 4px 6px !important;
@@ -760,7 +826,20 @@ export function buildPdfHtml(
       table.pdf-table--wide {
         font-size: 6.5pt !important;
       }
-      .pdf-table--wide tr {
+      table.pdf-table--medium th {
+        font-size: 6.75pt !important;
+        padding: 3px 5px !important;
+        line-height: 1.22 !important;
+      }
+      table.pdf-table--medium td {
+        font-size: 6.75pt !important;
+        padding: 3px 5px !important;
+      }
+      table.pdf-table--medium {
+        font-size: 6.75pt !important;
+      }
+      .pdf-table--wide tr,
+      .pdf-table--medium tr {
         page-break-inside: auto !important;
       }
       td {
@@ -858,8 +937,10 @@ export function buildPdfHtml(
       var n = row.cells.length;
       if (n >= 10) {
         t.classList.add("pdf-table--wide");
-        var wrap = t.parentElement;
-        if (wrap && wrap.classList.contains("table-wrapper")) wrap.classList.add("pdf-table-wrap--wide");
+        var wrapW = t.parentElement;
+        if (wrapW && wrapW.classList.contains("table-wrapper")) wrapW.classList.add("pdf-table-wrap--wide");
+      } else if (n >= 7) {
+        t.classList.add("pdf-table--medium");
       }
     });
 

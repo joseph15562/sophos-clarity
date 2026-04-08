@@ -32,6 +32,8 @@ export async function generateExecutiveReportPdfBlob(
   const plain = markdownToPlain(markdown);
   const docDef: TDocumentDefinitions = {
     info: { title },
+    pageSize: "A4",
+    pageOrientation: "landscape",
     content: [
       { text: title, style: "h" },
       { text: plain.trim() || "(Empty report)", style: "b" },

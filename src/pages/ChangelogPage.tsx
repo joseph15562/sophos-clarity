@@ -524,6 +524,18 @@ function ChangelogPageInner() {
                 gate themselves.
               </li>
               <li>
+                <strong className="text-foreground">Report exports — PDF and Word</strong>: print
+                PDF keeps <strong className="text-foreground">A4 landscape</strong> with tighter
+                table breaks for wide recommendation tables, header row grouping, and a
+                medium-density tier for 7–9 columns; MSP logos in the document body are capped when
+                Tailwind is not loaded in the print window, the duplicate MSP logo in the document
+                body is hidden when the navy header already shows it (subtitle text stays), and
+                Download PDF includes a short orientation hint. Word exports stay landscape with{" "}
+                <strong className="text-foreground">autofit</strong> tables for five or fewer
+                columns and a wider first column for larger tables; E2E pdfmake downloads use
+                landscape A4 for parity.
+              </li>
+              <li>
                 <strong className="text-foreground">Report library — quick email</strong>: the row
                 email icon opens a dialog to send the saved package to a recipient (HTML attachment,
                 same rendering pipeline as the saved report viewer). Backend:{" "}
@@ -548,6 +560,15 @@ function ChangelogPageInner() {
                 <strong className="text-foreground">Firewall overview</strong> merges Sophos Central
                 HA peers into one row (shared cluster id, or same hostname and model with two
                 distinct serials), listing both serial numbers.
+              </li>
+              <li>
+                <strong className="text-foreground">Customers — create on this page</strong>:{" "}
+                <strong className="text-foreground">Add customer</strong> /{" "}
+                <strong className="text-foreground">Onboard Customer</strong> open a dialog that
+                saves to <code className="text-xs">customer_directory_manual</code> (name, contact,
+                environment, country) so new customers appear in the directory before the first
+                assessment. Delete removes that row when present. Optional logo field is not
+                persisted yet.
               </li>
               <li>
                 <strong className="text-foreground">Workspace pages — bottom spacing</strong>: hub

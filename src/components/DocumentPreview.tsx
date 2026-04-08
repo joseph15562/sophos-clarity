@@ -883,6 +883,7 @@ function ReportContent({
               className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-pdf"
               data-testid="export-download-pdf"
+              title="Opens print preview in a new tab. Choose Save as PDF. If the dialog has orientation or layout, pick Landscape to match the export."
             >
               <Download className="h-4 w-4 shrink-0" /> Download PDF
             </Button>
@@ -926,12 +927,12 @@ function ReportContent({
         </div>
         <div ref={docRef} className="bg-card p-8 md:p-12">
           {(branding.companyName || branding.logoUrl) && (
-            <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
+            <div className="report-pdf-brand-block flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
               {branding.logoUrl && (
                 <img
                   src={branding.logoUrl}
                   alt="Company logo"
-                  className="h-14 w-auto max-w-[200px] object-contain"
+                  className="report-pdf-brand-logo h-14 w-auto max-w-[200px] object-contain"
                 />
               )}
               <div className="flex-1">
