@@ -692,6 +692,47 @@ export type Database = {
           },
         ];
       };
+      customer_directory_manual: {
+        Row: {
+          compliance_country: string | null;
+          contact_email: string | null;
+          created_at: string;
+          display_name: string;
+          environment: string | null;
+          id: string;
+          org_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          compliance_country?: string | null;
+          contact_email?: string | null;
+          created_at?: string;
+          display_name: string;
+          environment?: string | null;
+          id?: string;
+          org_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          compliance_country?: string | null;
+          contact_email?: string | null;
+          created_at?: string;
+          display_name?: string;
+          environment?: string | null;
+          id?: string;
+          org_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_directory_manual_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       connectwise_cloud_credentials: {
         Row: {
           connected_at: string;

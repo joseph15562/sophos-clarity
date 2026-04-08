@@ -67,6 +67,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -290,7 +291,6 @@ function CustomerManagementInner() {
   const [customerSort, setCustomerSort] = useState<CustomerSortKey>("name");
   const [attentionCustomersOnly, setAttentionCustomersOnly] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
-  const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DemoCustomer | null>(null);
   const [accessTarget, setAccessTarget] = useState<DemoCustomer | null>(null);
@@ -365,6 +365,16 @@ function CustomerManagementInner() {
 
   const deleteCustomerMutation = useMutation({
     mutationFn: async (payload: { orgId: string; customer: DemoCustomer }) => {
+      const manualId = payload.customer.manualDirectoryId?.trim();
+      if (manualId) {
+        const { error: mErr } = await supabase
+          .from("customer_directory_manual")
+          .delete()
+          .eq("org_id", payload.orgId)
+          .eq("id", manualId);
+        if (mErr) throw mErr;
+      }
+
       const variants = dedupeNameVariantsCaseInsensitive(
         customerNameVariantsForDelete(payload.customer),
       );
@@ -405,6 +415,36 @@ function CustomerManagementInner() {
     onError: (err) => {
       console.warn("[CustomerManagement] delete failed", err);
       toast.error("Could not delete customer data.");
+    },
+  });
+
+  const addCustomerMutation = useMutation({
+    mutationFn: async () => {
+      if (!org?.id) throw new Error("No organisation");
+      const name = addForm.name.trim();
+      const { error } = await supabase.from("customer_directory_manual").insert({
+        org_id: org.id,
+        display_name: name,
+        contact_email: addForm.email.trim() || null,
+        environment: addForm.environment.trim() || null,
+        compliance_country: addForm.country.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      if (org?.id) {
+        await invalidateOrgScopedQueries(queryClient, org.id);
+      }
+      toast.success("Customer created", {
+        description:
+          "They appear in your directory. Run an assessment from Assess when you have a config export.",
+      });
+      setAddCustomerOpen(false);
+      setAddForm({ name: "", email: "", environment: "", country: "", logoFile: null });
+    },
+    onError: (err: Error & { code?: string }) => {
+      const dup = err?.code === "23505" || /duplicate|unique/i.test(String(err?.message ?? ""));
+      toast.error(dup ? "A customer with this name already exists." : "Could not create customer.");
     },
   });
 
@@ -492,8 +532,9 @@ function CustomerManagementInner() {
             </Button>
             <Button
               variant="default"
-              onClick={() => setShowOnboardModal(true)}
               className="gap-2 shadow-sm"
+              onClick={() => setAddCustomerOpen(true)}
+              title="Create a customer record on this page (no need to leave Customers)"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Onboard Customer</span>
@@ -940,44 +981,17 @@ function CustomerManagementInner() {
               className="py-16 px-6"
               icon={<Users className="h-8 w-8 text-[#2006F7]" />}
               title="No customers yet"
-              description="Start by running your first assessment."
+              description="Create a customer here, or run your first assessment from Assess when you have a firewall export."
               action={
-                <Button onClick={() => setShowOnboardModal(true)} className="gap-2">
+                <Button className="gap-2" onClick={() => setAddCustomerOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Onboard Customer
+                  Add customer
                 </Button>
               }
             />
           </div>
         )}
       </main>
-
-      {/* Onboard modal backdrop */}
-      {showOnboardModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowOnboardModal(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-md rounded-2xl border border-slate-900/[0.10] bg-white p-6 shadow-2xl dark:border-white/[0.06] dark:bg-slate-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-lg font-bold">Onboard New Customer</h2>
-            <p className="mb-6 text-sm text-muted-foreground">
-              Customer onboarding will be available once you connect your first firewall
-              configuration. Use the main dashboard to run an assessment.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowOnboardModal(false)}>
-                Cancel
-              </Button>
-              <Link to="/">
-                <Button>Go to Dashboard</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Per-customer portal configuration */}
       {portalConfigTarget && org?.id && (
@@ -1085,6 +1099,10 @@ function CustomerManagementInner() {
         <DialogContent className="sm:max-w-md border-border/60">
           <DialogHeader>
             <DialogTitle>Add customer</DialogTitle>
+            <DialogDescription>
+              Creates a directory entry for this organisation. You can upload a firewall assessment
+              from Assess whenever you are ready — you do not need to leave this page first.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
@@ -1156,6 +1174,8 @@ function CustomerManagementInner() {
                 type="file"
                 accept="image/*"
                 className="cursor-pointer"
+                disabled
+                title="Logo upload for directory customers is not wired yet"
                 onChange={(e) =>
                   setAddForm((f) => ({
                     ...f,
@@ -1163,25 +1183,32 @@ function CustomerManagementInner() {
                   }))
                 }
               />
+              <p className="text-[10px] text-muted-foreground">
+                Logo is not saved to the directory yet.
+              </p>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setAddCustomerOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddCustomerOpen(false)}
+              disabled={addCustomerMutation.isPending}
+            >
               Cancel
             </Button>
             <Button
               type="button"
+              disabled={addCustomerMutation.isPending}
               onClick={() => {
                 if (!addForm.name.trim()) {
                   toast.error("Enter a customer name.");
                   return;
                 }
-                toast.success("Customer queued — complete onboarding from Assess when ready.");
-                setAddCustomerOpen(false);
-                setAddForm({ name: "", email: "", environment: "", country: "", logoFile: null });
+                addCustomerMutation.mutate();
               }}
             >
-              Create customer
+              {addCustomerMutation.isPending ? "Creating…" : "Create customer"}
             </Button>
           </DialogFooter>
         </DialogContent>

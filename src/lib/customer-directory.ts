@@ -25,6 +25,8 @@ export interface CustomerDirectoryEntry {
   originalNames?: string[];
   /** True when this customer matches a Sophos Central tenant that is in use (firewalls, portal, or agent). */
   centralLinked?: boolean;
+  /** Row in `customer_directory_manual` when created from Customers → Add/Onboard (delete cleans this up). */
+  manualDirectoryId?: string;
 }
 
 type AssessmentRow = {
@@ -95,7 +97,7 @@ export async function fetchCustomerDirectory(
   opts?: { signal?: AbortSignal },
 ): Promise<CustomerDirectoryEntry[]> {
   const s = opts?.signal;
-  const [assessRes, tenantRes, agentRes, fwRes, portalRes] = await Promise.all([
+  const [assessRes, tenantRes, agentRes, fwRes, portalRes, manualRes] = await Promise.all([
     supabaseWithAbort(
       supabase.from("assessments").select("*").eq("org_id", orgId).order("created_at", {
         ascending: false,
@@ -128,6 +130,13 @@ export async function fetchCustomerDirectory(
       supabase.from("portal_config").select("slug, tenant_name").eq("org_id", orgId),
       s,
     ),
+    supabaseWithAbort(
+      supabase
+        .from("customer_directory_manual")
+        .select("id, display_name, contact_email, environment, compliance_country")
+        .eq("org_id", orgId),
+      s,
+    ),
   ]);
 
   const assessments = (assessRes.data ?? []) as AssessmentRow[];
@@ -135,6 +144,13 @@ export async function fetchCustomerDirectory(
   const agents = agentRes.data ?? [];
   const firewalls = fwRes.data ?? [];
   const portalRows = portalRes.data ?? [];
+  const manualDirectoryRows = (manualRes.data ?? []) as Array<{
+    id: string;
+    display_name: string;
+    contact_email: string | null;
+    environment: string | null;
+    compliance_country: string | null;
+  }>;
 
   /** Legacy rows: assessment keyed by connector site label while agent has Central tenant — fold into tenant bucket. */
   const agentSiteLabelToTenant = new Map<string, string>();
@@ -347,6 +363,50 @@ export async function fetchCustomerDirectory(
     if (!tenantRow) continue;
     const tName = resolveCustomerName(String(tenantRow.name ?? ""), orgDisplayName);
     bumpCountry(countryByCustomer, tName, fw.compliance_country);
+  }
+
+  for (const m of manualDirectoryRows) {
+    const trimmed = String(m.display_name ?? "").trim();
+    if (!trimmed) continue;
+    const resolved = resolveCustomerName(trimmed, orgDisplayName);
+    if (!resolved) continue;
+    const country = String(m.compliance_country ?? "").trim();
+    const env = String(m.environment ?? "").trim();
+    const existing = customerMap.get(resolved);
+    if (existing) {
+      existing.manualDirectoryId = m.id;
+      if (country) bumpCountry(countryByCustomer, resolved, country);
+      if (
+        country &&
+        (existing.country === "—" || !(existing.country ?? "").trim() || existing.country === "")
+      ) {
+        existing.country = country;
+        existing.countryFlag = countryFlagEmoji(country);
+      }
+      if (env && (existing.sector === "Private Sector" || !(existing.sector ?? "").trim())) {
+        existing.sector = env;
+      }
+      continue;
+    }
+    if (country) bumpCountry(countryByCustomer, resolved, country);
+    customerMap.set(resolved, {
+      id: m.id,
+      name: resolved,
+      sector: env || "Private Sector",
+      country: country || "—",
+      countryFlag: country ? countryFlagEmoji(country) : "",
+      score: 0,
+      grade: "F",
+      firewallCount: 0,
+      unassessedCount: 0,
+      lastAssessed: "Pending first assessment",
+      daysAgo: 999,
+      frameworks: [],
+      health: "Overdue",
+      portalSlug: "",
+      tenantNameRaw: trimmed,
+      manualDirectoryId: m.id,
+    });
   }
 
   for (const c of customerMap.values()) {
