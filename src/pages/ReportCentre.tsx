@@ -867,7 +867,7 @@ function ReportCentreInner() {
           const real = SAVED_REPORT_ROW_ID_RE.test(r.id);
           return (
             <div
-              className="ml-auto grid w-fit grid-cols-3 grid-rows-2 gap-0.5"
+              className="ml-auto inline-flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1.5"
               role="group"
               aria-label="Report actions"
             >
@@ -875,27 +875,27 @@ function ReportCentreInner() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9 shrink-0"
                 title="View"
                 onClick={() => setPreview(r)}
               >
-                <Eye className="h-3.5 w-3.5" />
+                <Eye className="h-4 w-4" />
               </Button>
               {real ? (
                 <Link
                   to={`/reports/saved/${r.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex"
+                  className="inline-flex shrink-0"
                 >
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9"
                     title="Download PDF"
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-4 w-4" />
                   </Button>
                 </Link>
               ) : (
@@ -903,53 +903,53 @@ function ReportCentreInner() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-9 w-9 shrink-0"
                   disabled
                   title="Demo row"
                 >
-                  <Download className="h-3.5 w-3.5 opacity-40" />
+                  <Download className="h-4 w-4 opacity-40" />
                 </Button>
               )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9 shrink-0"
                 title="Download .md"
                 onClick={() => downloadMarkdown(r)}
               >
-                <FileText className="h-3.5 w-3.5" />
+                <FileText className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9 shrink-0"
                 title={real ? "Email report" : "Demo row — email unavailable"}
                 onClick={() => onLibraryEmailClick(r, real)}
               >
-                <Mail className="h-3.5 w-3.5" />
+                <Mail className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9 shrink-0"
                 title="Archive"
                 onClick={() => void handleArchiveRow(r, real)}
               >
-                <Archive className="h-3.5 w-3.5" />
+                <Archive className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
+                className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
                 title="Delete"
                 disabled={!real}
                 onClick={() => void deleteRow(r)}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           );
@@ -1251,7 +1251,7 @@ function ReportCentreInner() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div
-                                  className="ml-auto grid w-fit grid-cols-3 grid-rows-2 gap-0.5"
+                                  className="ml-auto inline-flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1.5"
                                   role="group"
                                   aria-label="Archived report actions"
                                 >
@@ -1259,14 +1259,19 @@ function ReportCentreInner() {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-9 w-9 shrink-0"
                                     title="Preview"
                                     onClick={() => setPreview(r)}
                                   >
-                                    <Eye className="h-3.5 w-3.5" />
+                                    <Eye className="h-4 w-4" />
                                   </Button>
                                   {real ? (
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-9 w-9 shrink-0"
+                                      asChild
+                                    >
                                       <Link
                                         to={`/reports/saved/${r.id}`}
                                         target="_blank"
@@ -1274,32 +1279,32 @@ function ReportCentreInner() {
                                         title="Open saved report"
                                         className="inline-flex"
                                       >
-                                        <Download className="h-3.5 w-3.5" />
+                                        <Download className="h-4 w-4" />
                                       </Link>
                                     </Button>
                                   ) : (
-                                    <span className="inline-flex h-8 w-8" aria-hidden />
+                                    <span className="inline-flex h-9 w-9 shrink-0" aria-hidden />
                                   )}
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-[#00F2B3] hover:text-[#00F2B3]"
+                                    className="h-9 w-9 shrink-0 text-[#00F2B3] hover:text-[#00F2B3]"
                                     title="Restore to library"
                                     onClick={() => void restoreRow(r, real)}
                                   >
-                                    <ArchiveRestore className="h-3.5 w-3.5" />
+                                    <ArchiveRestore className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
                                     title="Delete"
                                     disabled={!real}
                                     onClick={() => void deleteRow(r)}
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </TableCell>

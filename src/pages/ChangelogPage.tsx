@@ -556,6 +556,13 @@ function ChangelogPageInner() {
                 data function excludes archived rows so customers do not see them.
               </li>
               <li>
+                <strong className="text-foreground">Report Centre — row actions</strong>: the main
+                library and <strong className="text-foreground">Archives</strong> tables use a
+                relaxed horizontal layout (wrap when needed) with larger gaps and 36px hit targets
+                instead of a tight 3×2 icon grid, so view, PDF, Markdown, email, archive, and delete
+                are easier to use.
+              </li>
+              <li>
                 <strong className="text-foreground">Client portal — HA firewalls</strong>:{" "}
                 <strong className="text-foreground">Firewall overview</strong> merges Sophos Central
                 HA peers into one row (shared cluster id, or same hostname and model with two

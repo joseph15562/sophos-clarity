@@ -34,7 +34,7 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "fixed" as const,
-      text: "Fleet map: sharp landmasses (no SVG blur); pan clamped; min zoom 1×; pin hover shows customer + Sophos tenant when known; portaled from getBoundingClientRect at deep zoom; max 12×. Org/MSP header opens workspace controls in place; Central alerts pagination + merge fixes; cache v5 + dev no-rehydrate; tenant-type whoAmI; richer timestamps. Sign out returns to the login gate (hub routes go to /; stale Skip cleared after session ends). Report library: quick-send email + Resend API; Report Centre archives on saved_reports.archived_at with an Archives section; portal omits archived saves; portal firewall overview merges HA pairs with both serials; Customers Add/Onboard saves manual directory rows (no redirect to Assess).",
+      text: "Fleet map: sharp landmasses (no SVG blur); pan clamped; min zoom 1×; pin hover shows customer + Sophos tenant when known; portaled from getBoundingClientRect at deep zoom; max 12×. Org/MSP header opens workspace controls in place; Central alerts pagination + merge fixes; cache v5 + dev no-rehydrate; tenant-type whoAmI; richer timestamps. Sign out returns to the login gate (hub routes go to /; stale Skip cleared after session ends). Report library: quick-send email + Resend API; Report Centre archives on saved_reports.archived_at with an Archives section; portal omits archived saves; portal firewall overview merges HA pairs with both serials; Customers Add/Onboard saves manual directory rows (no redirect to Assess). Report Centre row actions use wider spacing and larger icon targets.",
     },
   ] satisfies PlatformHighlightLine[],
 };
