@@ -52,17 +52,47 @@ const PDF_OVERLAY_CSS = `
     max-width: 180px !important;
   }
 
-  /* Wide tables: auto layout so columns size to content */
-  table.pdf-table--wide,
-  table.pdf-table--medium {
-    table-layout: auto !important;
+  /* Tables must not overflow the page — no scrolling in a PDF */
+  .table-wrapper {
+    overflow: visible !important;
+    max-width: 100% !important;
   }
-  table.pdf-table--wide { font-size: 6.5pt !important; }
+  table {
+    table-layout: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 7pt !important;
+  }
+  th, td {
+    padding: 4px 6px !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+    white-space: normal !important;
+    vertical-align: top !important;
+  }
+  th {
+    font-size: 6.5pt !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.25 !important;
+  }
+  /* Wide tables (10+ cols): tighter to fit */
+  table.pdf-table--wide { font-size: 5.5pt !important; }
   table.pdf-table--wide th,
-  table.pdf-table--wide td { padding: 3px 4px !important; font-size: 6.5pt !important; }
-  table.pdf-table--medium { font-size: 6.75pt !important; }
+  table.pdf-table--wide td {
+    padding: 2px 3px !important;
+    font-size: 5.5pt !important;
+    line-height: 1.2 !important;
+  }
+  /* Medium tables (7-9 cols) */
+  table.pdf-table--medium { font-size: 6pt !important; }
   table.pdf-table--medium th,
-  table.pdf-table--medium td { padding: 3px 5px !important; font-size: 6.75pt !important; }
+  table.pdf-table--medium td {
+    padding: 3px 4px !important;
+    font-size: 6pt !important;
+    line-height: 1.22 !important;
+  }
 
   /* Hide the interactive dark/light toggle */
   .theme-toggle { display: none !important; }
