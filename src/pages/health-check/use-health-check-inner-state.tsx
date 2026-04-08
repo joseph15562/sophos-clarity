@@ -915,6 +915,7 @@ export function useHealthCheckInnerState() {
 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
+  const [sendingReportToSe, setSendingReportToSe] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useCentralApiHelpHash();
 
@@ -1626,6 +1627,121 @@ export function useHealthCheckInnerState() {
     seAuth.seProfile,
   ]);
 
+  const handleSendReportToSE = useCallback(async () => {
+    const seEmail = seAuth.seProfile?.email?.trim();
+    if (!seEmail) {
+      toast.error("SE email not available.");
+      return;
+    }
+    if (!files.length || Object.keys(analysisResults).length === 0) {
+      toast.error("Run a health check before sending.");
+      return;
+    }
+    setSendingReportToSe(true);
+    try {
+      const { buildSeHealthCheckPdfBlob } = await import("@/lib/se-health-check-pdfmake-v2");
+      const { buildSeHealthCheckBrowserHtmlDocument } =
+        await import("@/lib/se-health-check-browser-html-v2");
+      const { sanitizePdfFilenamePart } = await import("@/lib/pdf-utils");
+
+      const { reportParams } = buildHealthCheckReportParams({
+        files,
+        analysisResults,
+        baselineResults,
+        licence,
+        customerName,
+        preparedFor,
+        preparedBy: effectivePreparedBy,
+        dpiExemptZones,
+        dpiExemptNetworks,
+        webFilterComplianceMode,
+        webFilterExemptRuleNames,
+        seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+        seAckNdrEssentials: seNdrEssentialsAck,
+        seAckDnsProtection: seDnsProtectionAck,
+        seExcludeSecurityHeartbeat,
+        centralValidated: centralLinkedForAnalysis,
+        seCentralHaLabels,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+        seNotes,
+      });
+
+      const [pdfBlob, html] = await Promise.all([
+        buildSeHealthCheckPdfBlob(reportParams),
+        Promise.resolve(buildSeHealthCheckBrowserHtmlDocument(reportParams)),
+      ]);
+
+      const pdfBuf = await pdfBlob.arrayBuffer();
+      const pdfBytes = new Uint8Array(pdfBuf);
+      let pdfBinary = "";
+      for (let i = 0; i < pdfBytes.length; i += 8192) {
+        pdfBinary += String.fromCharCode(...pdfBytes.subarray(i, i + 8192));
+      }
+      const pdfBase64 = btoa(pdfBinary);
+      const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
+
+      const part = sanitizePdfFilenamePart(customerName || "Health-Check");
+      const date = new Date().toISOString().slice(0, 10);
+      const filenameBase = `Sophos-Firewall-Health-Check-${part}-${date}`;
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/send-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          customer_email: seEmail,
+          customer_name: customerName.trim() || undefined,
+          prepared_for: preparedFor.trim() || undefined,
+          prepared_by: effectivePreparedBy,
+          se_title: seAuth.seProfile?.seTitle || undefined,
+          pdf_base64: pdfBase64,
+          html_base64: htmlBase64,
+          filename_base: filenameBase,
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Send failed");
+      }
+      toast.success(`Report sent to ${seEmail}`);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      console.warn("[health-check] send report to SE failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not send report.");
+    } finally {
+      setSendingReportToSe(false);
+    }
+  }, [
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    preparedFor,
+    effectivePreparedBy,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+    seNotes,
+    seAuth.seProfile,
+  ]);
+
   const restoreFromSavedSnapshot = useCallback(
     (snapshot: SeHealthCheckSnapshotV1, meta?: { checkId: string; followupAt?: string | null }) => {
       try {
@@ -1819,6 +1935,8 @@ export function useHealthCheckInnerState() {
     setPdfBusy,
     sendingReport,
     setSendingReport,
+    sendingReportToSe,
+    handleSendReportToSE,
     savingCheck,
     setSavingCheck,
     centralApiHelpOpen,

@@ -518,6 +518,28 @@ function HealthCheckResultsSectionBody(model: HealthCheckInnerModel) {
                 ? `Send to ${model.customerEmail.trim()}`
                 : "Send to customer"}
           </Button>
+          {model.seAuth.seProfile?.email && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-lg gap-1.5 w-fit"
+              disabled={
+                model.sendingReportToSe ||
+                model.pdfBusy ||
+                !model.files.length ||
+                !Object.keys(model.analysisResults).length
+              }
+              onClick={() => void model.handleSendReportToSE()}
+            >
+              {model.sendingReportToSe ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {model.sendingReportToSe ? "Sending…" : `Send to ${model.seAuth.seProfile.email}`}
+            </Button>
+          )}
         </div>
 
         {model.savedCheckId && (
