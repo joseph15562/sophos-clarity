@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { pathSegmentsAfterApiPathname } from "../_shared/api-path.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { json as jsonResponse, safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
@@ -16,6 +17,7 @@ import { handlePasskeyRoutes } from "./routes/passkey.ts";
 import { handleSeTeamRoutes } from "./routes/se-teams.ts";
 import { handlePortalViewerRoutes } from "./routes/portal-viewers.ts";
 import { handleSendReportRoutes } from "./routes/send-report.ts";
+import { handleSendSavedLibraryReportRoutes } from "./routes/send-saved-library-report.ts";
 import { handleServiceKeyRoutes } from "./routes/service-key.ts";
 
 let corsHeaders: Record<string, string> = {};
@@ -44,6 +46,7 @@ const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 //   config-upload/:token/…     JWT via authenticateSE (resend/download/claim/central-data/delete)
 //   firewalls                  JWT via userClient + getUser
 //   send-report                JWT via authenticateSE
+//   send-saved-library-report | send-report/saved-library  JWT + org member; saved_reports row
 //   service-key/ping           X-FireComply-Service-Key or Bearer (non-JWT) + org_service_api_keys hash
 //   service-key/issue|revoke   JWT + org admin (create/revoke hashed keys; secret returned once on issue)
 //   Service-key scopes (see ISSUABLE_SERVICE_KEY_SCOPES in _shared/service-key.ts):
@@ -74,10 +77,7 @@ serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const path = url.pathname;
-    const match = path.match(/\/api\/?(.*)$/);
-    const rest = (match ? match[1] : path).replace(/\/$/, "") || "";
-    const segments = rest.split("/").filter(Boolean);
+    const segments = pathSegmentsAfterApiPathname(url.pathname);
 
     const serviceKeyRes = await handleServiceKeyRoutes(
       req,
@@ -151,6 +151,14 @@ serve(async (req: Request) => {
       corsHeaders,
     );
     if (sendReportRes !== null) return sendReportRes;
+
+    const sendSavedLibraryRes = await handleSendSavedLibraryReportRoutes(
+      req,
+      url,
+      segments,
+      corsHeaders,
+    );
+    if (sendSavedLibraryRes !== null) return sendSavedLibraryRes;
 
     const connectWiseRes = await handleConnectWiseRoutes(
       req,

@@ -16,15 +16,15 @@ function BrowserChrome({ children, className }: { children: ReactNode; className
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
-        <div className="ml-2 flex-1 rounded-md bg-background/80 px-2 py-0.5 text-[8px] text-muted-foreground font-mono truncate">
+      <div className="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-3 py-2.5 sm:px-4">
+        <span className="h-3 w-3 rounded-full bg-red-400/80" />
+        <span className="h-3 w-3 rounded-full bg-amber-400/80" />
+        <span className="h-3 w-3 rounded-full bg-emerald-400/80" />
+        <div className="ml-1 flex-1 rounded-md bg-background/80 px-2.5 py-1 text-[10px] text-muted-foreground font-mono truncate sm:text-[11px]">
           firecomply.app
         </div>
       </div>
-      <div className="p-3">{children}</div>
+      <div className="p-3 sm:p-4">{children}</div>
     </div>
   );
 }
@@ -472,30 +472,34 @@ function WorkspaceAssessArt() {
 
 function HelpGroupPortfolioArt() {
   return (
-    <div className="space-y-1.5 py-0.5">
-      <div className="text-[6px] font-bold uppercase text-muted-foreground px-0.5">
+    <div className="space-y-1 py-0.5">
+      <div className="text-center text-[6px] font-bold uppercase text-muted-foreground">
         Portfolio & customers
       </div>
-      <div className="rounded-lg border border-border/55 p-1.5 space-y-1 bg-card/60">
-        <div className="text-[5.5px] text-muted-foreground font-semibold">Mission control</div>
+      <div className="space-y-1 rounded-lg border border-border/55 bg-card/60 p-1.5">
+        <div className="text-center text-[5.5px] font-semibold text-muted-foreground">
+          Mission control
+        </div>
         <div className="grid grid-cols-4 gap-1">
-          {["24", "186", "82%", "12"].map((v, i) => (
+          {["24", "186", "82%", "12"].map((v) => (
             <div
               key={v}
-              className="rounded bg-muted/50 py-1 text-center text-[9px] font-black tabular-nums"
+              className="rounded bg-muted/50 py-0.5 text-center text-[9px] font-black tabular-nums"
             >
               {v}
             </div>
           ))}
         </div>
       </div>
-      <div className="rounded-lg border border-border/55 p-1.5 bg-muted/25">
-        <div className="text-[5.5px] text-muted-foreground font-semibold mb-1">Fleet · sample</div>
-        <div className="h-1.5 w-full rounded bg-foreground/12 mb-0.5" />
-        <div className="h-1.5 w-11/12 rounded bg-foreground/10" />
+      <div className="rounded-lg border border-border/55 bg-muted/25 p-1.5">
+        <div className="mb-0.5 text-center text-[5.5px] font-semibold text-muted-foreground">
+          Fleet · sample
+        </div>
+        <div className="mb-0.5 h-1.5 w-full rounded bg-foreground/12" />
+        <div className="h-1.5 w-full rounded bg-foreground/10" />
       </div>
-      <div className="flex items-center gap-1 rounded-md border border-border/50 bg-muted/30 px-1.5 py-1">
-        <span className="text-[6px] font-bold text-foreground truncate">
+      <div className="flex items-center justify-center rounded-md border border-border/50 bg-muted/30 px-1.5 py-0.5">
+        <span className="text-center text-[6px] font-bold text-foreground">
           Customers · Central map
         </span>
       </div>
@@ -1249,23 +1253,32 @@ export type DocIllustrationProps = {
 export function DocIllustration({ id, className, framed = true, caption }: DocIllustrationProps) {
   const body = inner[id];
   return (
-    <figure className={cn("space-y-2", className)}>
+    <figure className={cn("space-y-3", className)}>
       <div
         className={cn(
           frame,
           "from-muted/40 via-background to-brand-accent/[0.07] dark:to-brand-accent/10",
-          "aspect-[16/10] sm:aspect-[2/1] max-h-[min(280px,42vw)] w-full",
+          /* Size to content so short mocks are not swimming in a fixed 2:1 box; cap height for tall art */
+          "w-full min-h-[240px] max-h-[min(640px,82vh)] overflow-y-auto",
         )}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(32,6,247,0.14),transparent_45%)]" />
-        <div className="relative z-[1] flex h-full items-center justify-center p-4 sm:p-6">
-          <div className="w-full max-w-md">
-            {framed && id !== "site-map" ? <BrowserChrome>{body}</BrowserChrome> : body}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(32,6,247,0.12),transparent_52%)]" />
+        <div className="relative z-[1] grid w-full place-items-center px-2 py-3 sm:px-4 sm:py-4">
+          {/*
+            Wider column + CSS zoom (sm+): scales every text-[Npx] mock in one shot without editing
+            dozens of art components. motion-reduce: no zoom jump.
+          */}
+          <div className="w-full max-w-6xl justify-self-center motion-reduce:[zoom:1] max-sm:[zoom:1] sm:[zoom:1.14] lg:[zoom:1.2]">
+            {framed && id !== "site-map" ? (
+              <BrowserChrome className="w-full">{body}</BrowserChrome>
+            ) : (
+              body
+            )}
           </div>
         </div>
       </div>
       {caption ? (
-        <figcaption className="text-center text-[11px] text-muted-foreground px-2">
+        <figcaption className="mx-auto max-w-6xl text-center text-xs leading-relaxed text-muted-foreground sm:text-sm">
           {caption}
         </figcaption>
       ) : null}

@@ -40,6 +40,7 @@ import {
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { queryKeys } from "@/hooks/queries/keys";
@@ -61,6 +62,7 @@ import {
 } from "@/lib/compliance-context-options";
 import {
   fleetCustomerComplianceScope,
+  parseFleetMapCoordinateInputs,
   persistFleetCustomerCompliance,
   persistFleetFirewallCompliance,
 } from "@/lib/fleet-firewall-compliance";
@@ -111,6 +113,10 @@ const demoCompliance = {
   complianceState: "",
   customerComplianceCountry: "",
   complianceEnvironment: "",
+  mapLatitude: null,
+  mapLongitude: null,
+  centralGeoLatitude: null,
+  centralGeoLongitude: null,
 } as const;
 
 const COMPLIANCE_NONE = "__none__";
@@ -688,11 +694,19 @@ function DetailPanel({
   const readOnly = isGuest || isViewerOnly || !orgId;
   const [country, setCountry] = useState(fw.complianceCountry);
   const [usState, setUsState] = useState(fw.complianceState);
+  const [mapLat, setMapLat] = useState("");
+  const [mapLng, setMapLng] = useState("");
 
   useEffect(() => {
     setCountry(fw.complianceCountry);
     setUsState(fw.complianceState);
-  }, [fw.id, fw.complianceCountry, fw.complianceState]);
+    setMapLat(
+      fw.mapLatitude != null && Number.isFinite(fw.mapLatitude) ? String(fw.mapLatitude) : "",
+    );
+    setMapLng(
+      fw.mapLongitude != null && Number.isFinite(fw.mapLongitude) ? String(fw.mapLongitude) : "",
+    );
+  }, [fw.id, fw.complianceCountry, fw.complianceState, fw.mapLatitude, fw.mapLongitude]);
 
   const deviceCountry = (fw.complianceCountry ?? "").trim();
   const customerDef = (fw.customerComplianceCountry ?? "").trim();
@@ -701,9 +715,13 @@ function DetailPanel({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!orgId) throw new Error("No org");
+      const parsed = parseFleetMapCoordinateInputs(mapLat, mapLng);
+      if (!parsed.ok) throw new Error(parsed.message);
       await persistFleetFirewallCompliance(orgId, fw, {
         country,
         state: usState,
+        mapLatitude: parsed.mapLatitude,
+        mapLongitude: parsed.mapLongitude,
       });
     },
     onSuccess: () => {
@@ -711,7 +729,8 @@ function DetailPanel({
       void queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(orgId!) });
       toast.success("Firewall location saved");
     },
-    onError: () => toast.error("Could not save firewall location"),
+    onError: (err: Error) =>
+      toast.error(err?.message?.trim() ? err.message : "Could not save firewall location"),
   });
 
   return (
@@ -800,6 +819,40 @@ function DetailPanel({
               </Select>
             </div>
           ) : null}
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium text-foreground">Map coordinates (optional)</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Decimal degrees (WGS84). When set, the Fleet{" "}
+            <strong className="text-foreground/90">Map</strong> tab places this firewall at this
+            point (overrides Sophos Central geo and country centroid). Leave both blank to clear.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Latitude</Label>
+              <Input
+                className="h-9 text-xs bg-background/80"
+                placeholder="e.g. 41.8781"
+                value={mapLat}
+                onChange={(e) => setMapLat(e.target.value)}
+                disabled={readOnly}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Longitude</Label>
+              <Input
+                className="h-9 text-xs bg-background/80"
+                placeholder="e.g. -87.6298"
+                value={mapLng}
+                onChange={(e) => setMapLng(e.target.value)}
+                disabled={readOnly}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            </div>
+          </div>
         </div>
         {!readOnly ? (
           <Button

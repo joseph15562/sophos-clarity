@@ -356,7 +356,7 @@ export function useMissionControlLiveQuery(
 
     const onlineN = fleetRows.filter((r) => r.status === "online").length;
 
-    const recentPkgs = savedReportsQuery.data ?? [];
+    const recentPkgs = (savedReportsQuery.data ?? []).filter((p) => !p.archivedAt);
     const orgLabel = (orgDisplayName ?? "").trim();
     const recentDocs: RecentDocCard[] = recentPkgs.slice(0, 8).map((pkg) => ({
       id: pkg.id,

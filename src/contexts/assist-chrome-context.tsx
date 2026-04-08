@@ -7,8 +7,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { BrandingData } from "@/components/BrandingSetup";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { TourCallbacks } from "@/lib/guided-tours";
+
+export type AssessReportFooterActionsBinding = {
+  branding: BrandingData;
+  onScrollToFindings: () => void;
+  onScrollToReports: () => void;
+  onScrollToContext: () => void;
+  onGenerateAll: () => void;
+};
 
 export type AssessAiPanelBinding = {
   analysisResults: Record<string, AnalysisResult>;
@@ -29,6 +38,8 @@ export type AssessAssistRegistration = {
   isGuest: boolean;
   /** null = hide AI on assess (e.g. local mode) */
   ai: AssessAiPanelBinding | null;
+  /** View Findings / Generate Reports in the global footer; null when not shown (e.g. report-only view). */
+  reportFooterActions: AssessReportFooterActionsBinding | null;
 };
 
 type AssistChromeContextValue = {

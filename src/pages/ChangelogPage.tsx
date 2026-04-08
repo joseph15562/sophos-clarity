@@ -492,12 +492,56 @@ function ChangelogPageInner() {
                 bar chrome — same layout, more presence.
               </li>
               <li>
+                <strong className="text-foreground">Help centre — doc illustrations</strong>:
+                preview frames size to content, wider column (
+                <code className="text-xs">max-w-6xl</code>), taller scroll cap, slightly larger
+                window chrome, and responsive <code className="text-xs">zoom</code> on sm+ so tab
+                mocks and labels read larger (reduced motion / narrow viewports stay at 1×).
+                Captions match width; portfolio group art stays centre-aligned.
+              </li>
+              <li>
                 <strong className="text-foreground">Global assist bar and AI chat</strong>: the
                 bottom <em>Tours</em> and <em>Shortcuts</em> strip and the floating AI assistant are
                 available on every route (including shared links and token pages). Suggested
                 questions and AI context follow the page you&apos;re on; full assessment data still
                 applies on Assess when configs are loaded. Keyboard shortcuts (Shift+?) open from
                 anywhere without blocking Escape elsewhere.
+              </li>
+              <li>
+                <strong className="text-foreground">Assess — single bottom bar</strong>:{" "}
+                <strong className="text-foreground">View Findings</strong> and{" "}
+                <strong className="text-foreground">Generate Reports</strong> (plus the
+                missing-context dialog) live on the{" "}
+                <strong className="text-foreground">same</strong> fixed footer as <em>Tours</em> and{" "}
+                <em>Shortcuts</em> — right-aligned on wide layouts — instead of a second strip above
+                it.
+              </li>
+              <li>
+                <strong className="text-foreground">Sign out</strong>: workspace header sign-out
+                clears session immediately, resets a stale <em>Skip sign-in</em> choice after you
+                had signed in, and navigates to Assess (<code className="text-xs">/</code>) so the
+                login gate appears from hub routes (Fleet, Central, and others) that do not wrap the
+                gate themselves.
+              </li>
+              <li>
+                <strong className="text-foreground">Report library — quick email</strong>: the row
+                email icon opens a dialog to send the saved package to a recipient (HTML attachment,
+                same rendering pipeline as the saved report viewer). Backend:{" "}
+                <code className="text-xs">POST /api/send-report/saved-library</code> (primary) or{" "}
+                <code className="text-xs">POST /api/send-saved-library-report</code> (org JWT + row
+                ownership check, Resend). API router uses the last{" "}
+                <code className="text-xs">/api/</code> segment in the pathname so varied gateways
+                still match routes. Demo/sample rows stay non-actionable; the dialog still links to{" "}
+                <strong className="text-foreground">Scheduled reports</strong> for recurring
+                delivery.
+              </li>
+              <li>
+                <strong className="text-foreground">Report Centre — archives</strong>: archive and
+                restore persist in Supabase on{" "}
+                <code className="text-xs">saved_reports.archived_at</code>. The Report Centre page
+                includes a collapsible <strong className="text-foreground">Archives</strong> area;
+                the main library and Saved Reports list omit archived packages. The client portal
+                data function excludes archived rows so customers do not see them.
               </li>
               <li>
                 <strong className="text-foreground">Workspace pages — bottom spacing</strong>: hub
@@ -507,12 +551,45 @@ function ChangelogPageInner() {
                 bottom of the viewport.
               </li>
               <li>
-                <strong className="text-foreground">Fleet — Map tab</strong>: the world view now
-                renders Natural Earth land (same source as the attack-surface geo map), pins from
-                your <strong className="text-foreground">filtered fleet list</strong> grouped by
-                customer, and approximate positions from each row&apos;s compliance country. Hover
-                (or focus) a pin for customer name, counts, and a scrollable list of hostnames with
-                model, grade, and status.
+                <strong className="text-foreground">Fleet — Map tab</strong>: Natural Earth
+                landmasses,{" "}
+                <strong className="text-foreground">one compact pin per firewall</strong> in the
+                filtered list, <strong className="text-foreground">pan</strong> (drag) +{" "}
+                <strong className="text-foreground">zoom</strong> (scroll or +/−) with reset;{" "}
+                <strong className="text-foreground">pan is bounded</strong> so the map cannot slide
+                away and leave an empty or strip-thin frame. Pin position: optional{" "}
+                <strong className="text-foreground">latitude/longitude</strong> on each
+                firewall&apos;s location card (WGS84, saved to{" "}
+                <code className="text-xs">map_latitude</code> /{" "}
+                <code className="text-xs">map_longitude</code>), else Sophos Central{" "}
+                <code className="text-xs">geo_location</code> when present, else compliance country
+                centroid. Hover a pin for customer, Sophos tenant (when known), and firewall lines.{" "}
+                <strong className="text-foreground">Rendering</strong>: pin glows avoid SVG Gaussian
+                blur under CSS zoom. Pin hover details use a small card{" "}
+                <strong className="text-foreground">portaled to</strong>{" "}
+                <code className="text-xs">document.body</code>, positioned from the hovered pin
+                button&apos;s <code className="text-xs">getBoundingClientRect()</code> (updates on
+                pan/zoom/resize) so it stays on the dot at deep zoom — nested{" "}
+                <code className="text-xs">scale(zoom)</code> + percentage offsets inside the map
+                layer caused drift when zoomed in. On-screen size still follows{" "}
+                <code className="text-xs">tipScreen</code> (zoom curve). Zoom range{" "}
+                <strong className="text-foreground">1×</strong> (min, fills the frame) through{" "}
+                <strong className="text-foreground">12×</strong> (max).
+              </li>
+              <li>
+                <strong className="text-foreground">Workspace header — organisation button</strong>:
+                from Fleet, Customers, Central, and other hub pages, clicking the org name opens{" "}
+                <strong className="text-foreground">Workspace Controls</strong> in place (no jump to
+                Assess). Assess still uses the same drawer with full assessment context.
+              </li>
+              <li>
+                <strong className="text-foreground">Fleet — Agent Status (7 days)</strong>: a daily
+                server job records one UTC calendar-day presence row per connector agent (
+                <code className="text-xs">agent_daily_presence</code> via the{" "}
+                <code className="text-xs">agent-daily-presence</code> Edge Function), so the
+                timeline can show activity without a full assessment or opening the desktop
+                connector. Connector heartbeats on{" "}
+                <code className="text-xs">agents.last_seen_at</code> are unchanged.
               </li>
               <li>
                 <strong className="text-foreground">API hub — endpoint list</strong>: the API &amp;
@@ -1318,9 +1395,9 @@ function ChangelogPageInner() {
                 <strong className="text-foreground">Bottom bar</strong>: Tours and Shortcuts stay on
                 the left on the same full-width strip as soon as you open Assess (including before
                 you upload a config); <strong className="text-foreground">View findings</strong> /{" "}
-                <strong className="text-foreground">Generate reports</strong> appear once analysis
-                is ready. Report view keeps the same left-aligned utilities without the primary
-                actions.
+                <strong className="text-foreground">Generate reports</strong> on the right once
+                analysis is ready (see April 2026 for the single-bar layout). Report view keeps the
+                same left-aligned utilities without the primary actions.
               </li>
               <li>
                 <strong className="text-foreground">Bottom bar (light)</strong>: the Tours/Shortcuts

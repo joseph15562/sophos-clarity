@@ -110,7 +110,6 @@ import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
 import { ProgressNarrative } from "@/components/ProgressNarrative";
 import { QbrPackChecklist } from "@/components/QbrPackChecklist";
 import { ExtractionSummary } from "@/components/ExtractionSummary";
-import { StickyActionBar } from "@/components/StickyActionBar";
 import { AssessDocumentPreviewSection } from "@/components/assess/AssessDocumentPreviewSection";
 import { AssessWorkflowStepper } from "@/components/AssessWorkflowStepper";
 import { OPEN_MANAGEMENT_EVENT } from "@/components/WorkspaceCommandPalette";
@@ -1713,6 +1712,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   );
 
   const assessAssistRegistration = useMemo((): AssessAssistRegistration => {
+    const showReportFooter = !inDiffMode && hasFiles && !isLoading && (!viewingReports || isGuest);
     return {
       tourCallbacks,
       hasFiles,
@@ -1732,6 +1732,39 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onInitialMessageSent: () => setAiChatInitialMessage(undefined),
             }
           : null,
+      reportFooterActions: showReportFooter
+        ? {
+            branding,
+            onScrollToFindings: () => {
+              if (findingsRef.current) {
+                const y = findingsRef.current.getBoundingClientRect().top + window.scrollY - 70;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              }
+            },
+            onScrollToReports: () => {
+              if (reportsRef.current) {
+                const y = reportsRef.current.getBoundingClientRect().top + window.scrollY - 70;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              }
+            },
+            onScrollToContext: () => {
+              if (contextRef.current) {
+                const y = contextRef.current.getBoundingClientRect().top + window.scrollY - 70;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              }
+            },
+            onGenerateAll: () => {
+              setViewingReports(true);
+              generateAll();
+              if (org?.id) logAudit(org.id, "report.generated", "report", "all");
+              addNotification(
+                "info",
+                "Generating Reports",
+                `Generating all reports for ${branding.customerName || "this assessment"}…`,
+              );
+            },
+          }
+        : null,
     };
   }, [
     tourCallbacks,
@@ -1741,11 +1774,19 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     localMode,
     analysisResults,
     reports,
+    branding,
     branding.customerName,
     branding.environment,
     analysisTab,
     aiChatOpen,
     aiChatInitialMessage,
+    inDiffMode,
+    isLoading,
+    viewingReports,
+    generateAll,
+    org?.id,
+    logAudit,
+    addNotification,
   ]);
 
   useRegisterAssessAssistChrome(assessAssistRegistration);
@@ -2088,44 +2129,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           />
         )}
       </main>
-
-      {/* Sticky bottom bar: assess actions only; Tours/Shortcuts + AI are global (GlobalAssistChrome) */}
-      {!inDiffMode && hasFiles && !isLoading && (!viewingReports || isGuest) && (
-        <StickyActionBar
-          variant="full"
-          slotAboveGlobalAssist
-          hasFiles={hasFiles}
-          branding={branding}
-          onScrollToFindings={() => {
-            if (findingsRef.current) {
-              const y = findingsRef.current.getBoundingClientRect().top + window.scrollY - 70;
-              window.scrollTo({ top: y, behavior: "smooth" });
-            }
-          }}
-          onScrollToReports={() => {
-            if (reportsRef.current) {
-              const y = reportsRef.current.getBoundingClientRect().top + window.scrollY - 70;
-              window.scrollTo({ top: y, behavior: "smooth" });
-            }
-          }}
-          onScrollToContext={() => {
-            if (contextRef.current) {
-              const y = contextRef.current.getBoundingClientRect().top + window.scrollY - 70;
-              window.scrollTo({ top: y, behavior: "smooth" });
-            }
-          }}
-          onGenerateAll={() => {
-            setViewingReports(true);
-            generateAll();
-            if (org?.id) logAudit(org.id, "report.generated", "report", "all");
-            addNotification(
-              "info",
-              "Generating Reports",
-              `Generating all reports for ${branding.customerName || "this assessment"}…`,
-            );
-          }}
-        />
-      )}
 
       {/* First-Time Setup Wizard */}
       <SetupWizard

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   createColumnHelper,
   flexRender,
@@ -11,9 +11,15 @@ import {
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import {
   loadSavedReportsCloud,
+  loadSavedReportPackageById,
   describeSavedReportRowType,
   formatFirewallSummaryFromPackage,
+  savedPackageToMarkdown,
+  setSavedReportArchivedCloud,
 } from "@/lib/saved-reports";
+import { buildReportHtml } from "@/lib/report-html";
+import { displayCustomerNameForUi } from "@/lib/sophos-central";
+import { supabase } from "@/integrations/supabase/client";
 import { loadScheduledReports as loadScheduledReportsFromStorage } from "@/lib/scheduled-reports";
 import { Button } from "@/components/ui/button";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
@@ -33,13 +39,21 @@ import {
   Printer,
   Share2,
   Archive,
+  ArchiveRestore,
   X,
 } from "lucide-react";
 import { deleteSavedReportCloud } from "@/lib/saved-reports";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -58,6 +72,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { mergeManagePanelIntoCurrentSearch } from "@/lib/workspace-deeplink";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import JSZip from "jszip";
 
 const PLACEHOLDER_NAMES = /^\s*(\(this tenant\)|unnamed|unknown|customer)\s*$/i;
@@ -78,6 +94,8 @@ export type ReportLibraryRow = {
   format: "PDF" | "DOCX";
   firewalls: string;
   previewMd: string;
+  /** Cloud rows: set when archived in Supabase (`archived_at`). */
+  archivedAt?: number | null;
 };
 
 function hashToRisk(id: string): number {
@@ -284,6 +302,11 @@ const STATUS_STYLE: Record<ReportLibraryStatus, string> = {
 const SAVED_REPORT_ROW_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function rowIsArchived(r: ReportLibraryRow): boolean {
+  if (SAVED_REPORT_ROW_ID_RE.test(r.id)) return r.archivedAt != null;
+  return r.status === "Archived";
+}
+
 function riskPillClass(score: number): string {
   if (score >= 70) return "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30";
   if (score >= 40) return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30";
@@ -295,7 +318,9 @@ const columnHelper = createColumnHelper<ReportLibraryRow>();
 /* ── Component ── */
 
 function ReportCentreInner() {
-  const { org, isGuest } = useAuth();
+  const { org, isGuest, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<ReportLibraryRow[]>(DEMO_REPORTS);
@@ -315,29 +340,159 @@ function ReportCentreInner() {
   const [genType, setGenType] = useState<ReportLibraryType>("Executive Summary");
   const [genConfigFile, setGenConfigFile] = useState<File | null>(null);
 
+  const [quickSendRow, setQuickSendRow] = useState<ReportLibraryRow | null>(null);
+  const [quickSendEmail, setQuickSendEmail] = useState("");
+  const [quickSendBusy, setQuickSendBusy] = useState(false);
+  const [archivesOpen, setArchivesOpen] = useState(true);
+
+  const openScheduledReportsInManagement = useCallback(() => {
+    navigate({
+      pathname: location.pathname,
+      search: mergeManagePanelIntoCurrentSearch(new URLSearchParams(location.search), {
+        panel: "settings",
+        section: "scheduled-reports",
+      }),
+    });
+  }, [navigate, location.pathname, location.search]);
+
+  const onLibraryEmailClick = useCallback(
+    (r: ReportLibraryRow, real: boolean) => {
+      if (isGuest || !org) {
+        toast.message("Email from library", {
+          description:
+            "Sign in with your organisation to email saved reports. Until then, download from the row or open the saved report page.",
+        });
+        return;
+      }
+      if (!real) {
+        toast.message("Email from library", {
+          description:
+            "This is a sample row. Save a report from Assess while signed in to email it from the library.",
+        });
+        return;
+      }
+      setQuickSendRow(r);
+      setQuickSendEmail("");
+    },
+    [isGuest, org],
+  );
+
+  const submitQuickSend = useCallback(async () => {
+    if (!quickSendRow || !org) return;
+    const to = quickSendEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+    setQuickSendBusy(true);
+    try {
+      const pkg = await loadSavedReportPackageById(quickSendRow.id);
+      if (!pkg) {
+        toast.error("Could not load this saved report");
+        return;
+      }
+      const md = savedPackageToMarkdown(pkg);
+      const html = buildReportHtml(md);
+      const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Session expired — sign in again");
+        return;
+      }
+      const base = `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/+$/, "")}/functions/v1/api`;
+      const tryUrls = [`${base}/send-report/saved-library`, `${base}/send-saved-library-report`];
+      let lastErr = "Send failed";
+      let res: Response | null = null;
+      for (const url of tryUrls) {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            saved_report_id: quickSendRow.id,
+            recipient_email: to,
+            html_base64: htmlBase64,
+            customer_display_name: displayCustomerNameForUi(pkg.customerName, org.name),
+            prepared_by: user?.email ?? undefined,
+          }),
+        });
+        res = r;
+        if (r.status !== 404) break;
+        const j = (await r.json().catch(() => ({}))) as { error?: string };
+        lastErr = j.error || "Not found";
+      }
+      if (!res) {
+        throw new Error(lastErr);
+      }
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        const msg = j.error || "Send failed";
+        if (res.status === 404) {
+          throw new Error(
+            `${msg} — the API may be missing this route. Deploy the latest \`api\` Edge Function (e.g. \`supabase functions deploy api\`) or merge to \`main\` so CI deploys.`,
+          );
+        }
+        throw new Error(msg);
+      }
+      toast.success(`Report emailed to ${to}`);
+      setQuickSendRow(null);
+      setQuickSendEmail("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send email");
+    } finally {
+      setQuickSendBusy(false);
+    }
+  }, [quickSendRow, quickSendEmail, org, user?.email]);
+
   const mergedReports = useMemo(
     () => reports.map((r) => ({ ...r, ...overrides[r.id] })),
     [reports, overrides],
   );
 
-  const filteredReports = useMemo(() => {
-    return mergedReports.filter((r) => {
-      if (filterCustomer !== "__all__" && r.customer !== filterCustomer) return false;
-      if (filterEnv !== "__all__" && r.environment !== filterEnv) return false;
-      if (dateFrom && r.generatedIso < dateFrom) return false;
-      if (dateTo && r.generatedIso > dateTo) return false;
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        if (
-          !r.customer.toLowerCase().includes(q) &&
-          !r.type.toLowerCase().includes(q) &&
-          !r.firewalls.toLowerCase().includes(q)
-        )
-          return false;
-      }
-      return true;
-    });
-  }, [mergedReports, filterCustomer, filterEnv, dateFrom, dateTo, search]);
+  const activeMerged = useMemo(
+    () => mergedReports.filter((r) => !rowIsArchived(r)),
+    [mergedReports],
+  );
+  const archivedMerged = useMemo(
+    () => mergedReports.filter((r) => rowIsArchived(r)),
+    [mergedReports],
+  );
+
+  const applyReportFilters = useCallback(
+    (list: ReportLibraryRow[]) =>
+      list.filter((r) => {
+        if (filterCustomer !== "__all__" && r.customer !== filterCustomer) return false;
+        if (filterEnv !== "__all__" && r.environment !== filterEnv) return false;
+        if (dateFrom && r.generatedIso < dateFrom) return false;
+        if (dateTo && r.generatedIso > dateTo) return false;
+        if (search.trim()) {
+          const q = search.trim().toLowerCase();
+          if (
+            !r.customer.toLowerCase().includes(q) &&
+            !r.type.toLowerCase().includes(q) &&
+            !r.firewalls.toLowerCase().includes(q)
+          )
+            return false;
+        }
+        return true;
+      }),
+    [filterCustomer, filterEnv, dateFrom, dateTo, search],
+  );
+
+  const filteredReports = useMemo(
+    () => applyReportFilters(activeMerged),
+    [activeMerged, applyReportFilters],
+  );
+
+  const filteredArchivedReports = useMemo(
+    () => applyReportFilters(archivedMerged),
+    [archivedMerged, applyReportFilters],
+  );
 
   const customerOptions = useMemo(() => {
     const s = new Set(mergedReports.map((r) => r.customer));
@@ -348,16 +503,15 @@ function ReportCentreInner() {
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const stats = useMemo(() => {
-    const total = mergedReports.length;
-    const generatedThisMonth = mergedReports.filter((r) =>
+    const total = activeMerged.length;
+    const archived = archivedMerged.length;
+    const generatedThisMonth = activeMerged.filter((r) =>
       r.generatedIso.startsWith(monthPrefix),
     ).length;
-    const pending = mergedReports.filter(
-      (r) => r.status === "Draft" || r.status === "Ready",
-    ).length;
-    const delivered = mergedReports.filter((r) => r.status === "Delivered").length;
-    return { total, generatedThisMonth, pending, delivered };
-  }, [mergedReports, monthPrefix]);
+    const pending = activeMerged.filter((r) => r.status === "Draft" || r.status === "Ready").length;
+    const delivered = activeMerged.filter((r) => r.status === "Delivered").length;
+    return { total, archived, generatedThisMonth, pending, delivered };
+  }, [activeMerged, archivedMerged, monthPrefix]);
 
   useEffect(() => {
     if (!org?.id) {
@@ -383,6 +537,7 @@ function ReportCentreInner() {
             const desc = describeSavedReportRowType(r);
             const type = libraryTypeFromDescription(desc);
             const created = new Date(r.createdAt);
+            const archivedAt = r.archivedAt ?? null;
             return {
               id: r.id || `r${i}`,
               customer: rawCustomer,
@@ -396,15 +551,17 @@ function ReportCentreInner() {
                 month: "short",
                 year: "numeric",
               }),
-              status: "Ready",
+              status: archivedAt ? "Archived" : "Ready",
               format: "PDF",
               firewalls: formatFirewallSummaryFromPackage(r),
               previewMd: `# ${rawCustomer}\n\n**${type}** · ${desc}\n\nPreview only — use **Download** or open the saved report for full export (PDF / Word).`,
+              archivedAt,
             };
           });
           setReports(mapped);
         } else {
-          setReports([]);
+          // Keep sample rows when the org has no saved reports yet (same as guest UX).
+          setReports(DEMO_REPORTS);
         }
 
         if (storedSchedules.length > 0) {
@@ -433,7 +590,7 @@ function ReportCentreInner() {
           });
           setSchedules(mappedSchedules);
         } else {
-          setSchedules([]);
+          setSchedules(DEMO_SCHEDULES);
         }
       } catch (err) {
         console.warn("[ReportCentre] load failed", err);
@@ -464,7 +621,37 @@ function ReportCentreInner() {
   }, []);
 
   const applyBulkStatus = useCallback(
-    (status: ReportLibraryStatus) => {
+    async (status: ReportLibraryStatus) => {
+      if (status === "Archived") {
+        const ids = [...selectedIds];
+        for (const id of ids) {
+          if (!SAVED_REPORT_ROW_ID_RE.test(id)) continue;
+          const { error } = await setSavedReportArchivedCloud(id, true);
+          if (error) {
+            toast.error(error);
+            return;
+          }
+        }
+        setReports((prev) =>
+          prev.map((r) =>
+            ids.includes(r.id) && SAVED_REPORT_ROW_ID_RE.test(r.id)
+              ? { ...r, archivedAt: Date.now(), status: "Archived" }
+              : r,
+          ),
+        );
+        setOverrides((prev) => {
+          const next = { ...prev };
+          for (const id of ids) {
+            if (!SAVED_REPORT_ROW_ID_RE.test(id)) {
+              next[id] = { ...next[id], status: "Archived" };
+            }
+          }
+          return next;
+        });
+        toast.success("Archived selected reports");
+        setSelectedIds(new Set());
+        return;
+      }
       setOverrides((prev) => {
         const next = { ...prev };
         for (const id of selectedIds) {
@@ -472,9 +659,7 @@ function ReportCentreInner() {
         }
         return next;
       });
-      toast.success(
-        status === "Delivered" ? "Marked selected as delivered" : "Archived selected reports",
-      );
+      toast.success(status === "Delivered" ? "Marked selected as delivered" : "Updated");
       setSelectedIds(new Set());
     },
     [selectedIds],
@@ -525,6 +710,54 @@ function ReportCentreInner() {
     } catch {
       toast.error("Failed to delete report");
     }
+  }, []);
+
+  const handleArchiveRow = useCallback(async (r: ReportLibraryRow, real: boolean) => {
+    if (real) {
+      const { error } = await setSavedReportArchivedCloud(r.id, true);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      setReports((prev) =>
+        prev.map((x) => (x.id === r.id ? { ...x, archivedAt: Date.now(), status: "Archived" } : x)),
+      );
+    } else {
+      setOverrides((o) => ({
+        ...o,
+        [r.id]: { ...o[r.id], status: "Archived" },
+      }));
+    }
+    setSelectedIds((s) => {
+      const n = new Set(s);
+      n.delete(r.id);
+      return n;
+    });
+    toast.success("Report archived");
+  }, []);
+
+  const restoreRow = useCallback(async (r: ReportLibraryRow, real: boolean) => {
+    if (real) {
+      const { error } = await setSavedReportArchivedCloud(r.id, false);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      setReports((prev) =>
+        prev.map((x) => (x.id === r.id ? { ...x, archivedAt: null, status: "Ready" } : x)),
+      );
+      setOverrides((o) => {
+        const next = { ...o };
+        delete next[r.id];
+        return next;
+      });
+    } else {
+      setOverrides((o) => ({
+        ...o,
+        [r.id]: { ...o[r.id], status: "Ready" },
+      }));
+    }
+    toast.success("Restored to library");
   }, []);
 
   const columns = useMemo(
@@ -633,7 +866,11 @@ function ReportCentreInner() {
           const r = row.original;
           const real = SAVED_REPORT_ROW_ID_RE.test(r.id);
           return (
-            <div className="flex flex-wrap items-center justify-end gap-0.5">
+            <div
+              className="ml-auto grid w-fit grid-cols-3 grid-rows-2 gap-0.5"
+              role="group"
+              aria-label="Report actions"
+            >
               <Button
                 type="button"
                 variant="ghost"
@@ -645,7 +882,12 @@ function ReportCentreInner() {
                 <Eye className="h-3.5 w-3.5" />
               </Button>
               {real ? (
-                <Link to={`/reports/saved/${r.id}`} target="_blank" rel="noreferrer">
+                <Link
+                  to={`/reports/saved/${r.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex"
+                >
                   <Button
                     type="button"
                     variant="ghost"
@@ -683,12 +925,8 @@ function ReportCentreInner() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                title="Email"
-                onClick={() =>
-                  toast.message("Email delivery", {
-                    description: "Connect mail in settings to send from the library.",
-                  })
-                }
+                title={real ? "Email report" : "Demo row — email unavailable"}
+                onClick={() => onLibraryEmailClick(r, real)}
               >
                 <Mail className="h-3.5 w-3.5" />
               </Button>
@@ -698,12 +936,7 @@ function ReportCentreInner() {
                 size="icon"
                 className="h-8 w-8"
                 title="Archive"
-                onClick={() =>
-                  setOverrides((o) => ({
-                    ...o,
-                    [r.id]: { ...o[r.id], status: "Archived" },
-                  }))
-                }
+                onClick={() => void handleArchiveRow(r, real)}
               >
                 <Archive className="h-3.5 w-3.5" />
               </Button>
@@ -723,7 +956,16 @@ function ReportCentreInner() {
         },
       }),
     ],
-    [filteredReports, selectedIds, toggleSelectAll, toggleSelect, downloadMarkdown, deleteRow],
+    [
+      filteredReports,
+      selectedIds,
+      toggleSelectAll,
+      toggleSelect,
+      downloadMarkdown,
+      deleteRow,
+      onLibraryEmailClick,
+      handleArchiveRow,
+    ],
   );
 
   const table = useReactTable({
@@ -763,9 +1005,12 @@ function ReportCentreInner() {
         className={cn("mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-6", loading ? "hidden" : "")}
         data-tour="tour-page-reports"
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-tour="tour-reports-stats">
+        <div
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+          data-tour="tour-reports-stats"
+        >
           {[
-            { label: "Total reports", value: stats.total, icon: FileText, colour: "#2006F7" },
+            { label: "In library", value: stats.total, icon: FileText, colour: "#2006F7" },
             {
               label: "This month",
               value: stats.generatedThisMonth,
@@ -773,7 +1018,8 @@ function ReportCentreInner() {
               colour: "#00EDFF",
             },
             { label: "Pending", value: stats.pending, icon: Clock, colour: "#F29400" },
-            { label: "Delivered", value: stats.delivered, icon: Mail, colour: "#00F2B3" },
+            { label: "Delivered", value: stats.delivered, icon: Send, colour: "#00F2B3" },
+            { label: "Archived", value: stats.archived, icon: Archive, colour: "#9BB0D3" },
           ].map((s) => (
             <div
               key={s.label}
@@ -864,7 +1110,7 @@ function ReportCentreInner() {
 
             <section data-tour="tour-reports-library">
               <h2 className="mb-3 text-sm font-semibold tracking-tight">Library</h2>
-              {!hasReports && mergedReports.length === 0 ? (
+              {!hasReports && activeMerged.length === 0 && archivedMerged.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 backdrop-blur-md">
                   <EmptyState
                     className="py-12"
@@ -877,6 +1123,20 @@ function ReportCentreInner() {
                       </Button>
                     }
                   />
+                </div>
+              ) : !hasReports && activeMerged.length === 0 && archivedMerged.length > 0 ? (
+                <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center text-sm text-muted-foreground space-y-2">
+                  <p>
+                    No active reports in the library — everything here is in{" "}
+                    <strong>Archives</strong> below.
+                  </p>
+                  <Button
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => setArchivesOpen(true)}
+                  >
+                    Open Archives
+                  </Button>
                 </div>
               ) : !hasReports ? (
                 <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center text-sm text-muted-foreground">
@@ -929,6 +1189,129 @@ function ReportCentreInner() {
                 </div>
               )}
             </section>
+
+            <Collapsible open={archivesOpen} onOpenChange={setArchivesOpen} className="space-y-2">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card/50 backdrop-blur-md px-4 py-3 text-left transition-colors hover:bg-card/70"
+                  data-tour="tour-reports-archives"
+                >
+                  <div className="flex items-center gap-2">
+                    <Archive className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Archives</span>
+                    <span className="ml-1 inline-flex items-center rounded-md border border-border/60 bg-card/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                      {archivedMerged.length}
+                    </span>
+                  </div>
+                  {archivesOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {filteredArchivedReports.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-card/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                    {archivedMerged.length === 0
+                      ? "No archived reports. Archive rows from the library to store them here (saved cloud reports sync to Supabase)."
+                      : "No archived reports match these filters."}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-border/60 bg-card/40 overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent border-border/50">
+                          <TableHead className="text-[10px] uppercase tracking-wider">
+                            Customer
+                          </TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">
+                            Type
+                          </TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">
+                            Saved
+                          </TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider w-[1%] text-right">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredArchivedReports.map((r) => {
+                          const real = SAVED_REPORT_ROW_ID_RE.test(r.id);
+                          return (
+                            <TableRow key={r.id} className="border-border/50">
+                              <TableCell className="font-medium text-sm">{r.customer}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {r.type}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                {r.dateDisplay}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div
+                                  className="ml-auto grid w-fit grid-cols-3 grid-rows-2 gap-0.5"
+                                  role="group"
+                                  aria-label="Archived report actions"
+                                >
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Preview"
+                                    onClick={() => setPreview(r)}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {real ? (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                      <Link
+                                        to={`/reports/saved/${r.id}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title="Open saved report"
+                                        className="inline-flex"
+                                      >
+                                        <Download className="h-3.5 w-3.5" />
+                                      </Link>
+                                    </Button>
+                                  ) : (
+                                    <span className="inline-flex h-8 w-8" aria-hidden />
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-[#00F2B3] hover:text-[#00F2B3]"
+                                    title="Restore to library"
+                                    onClick={() => void restoreRow(r, real)}
+                                  >
+                                    <ArchiveRestore className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    title="Delete"
+                                    disabled={!real}
+                                    onClick={() => void deleteRow(r)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             <section data-tour="tour-reports-scheduled">
               <button
@@ -1159,6 +1542,77 @@ function ReportCentreInner() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={quickSendRow != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setQuickSendRow(null);
+            setQuickSendEmail("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email saved report</DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  Sends the same HTML document as the saved report viewer (open the attachment in a
+                  browser). Your deployment must have outbound email configured (Resend).
+                </p>
+                <p>
+                  For recurring sends, open{" "}
+                  <button
+                    type="button"
+                    className="text-primary underline-offset-2 hover:underline font-medium"
+                    onClick={() => {
+                      setQuickSendRow(null);
+                      setQuickSendEmail("");
+                      openScheduledReportsInManagement();
+                    }}
+                  >
+                    Scheduled reports
+                  </button>{" "}
+                  in workspace management.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="quick-send-email">Recipient email</Label>
+            <Input
+              id="quick-send-email"
+              type="email"
+              autoComplete="email"
+              placeholder="client@example.com"
+              value={quickSendEmail}
+              onChange={(e) => setQuickSendEmail(e.target.value)}
+              disabled={quickSendBusy}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={quickSendBusy}
+              onClick={() => {
+                setQuickSendRow(null);
+                setQuickSendEmail("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={quickSendBusy || !quickSendEmail.trim()}
+              onClick={() => void submitQuickSend()}
+            >
+              {quickSendBusy ? "Sending…" : "Send email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {selectedIds.size > 0 ? (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-md px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
           <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
@@ -1179,7 +1633,7 @@ function ReportCentreInner() {
                 size="sm"
                 variant="secondary"
                 className="gap-1.5"
-                onClick={() => applyBulkStatus("Delivered")}
+                onClick={() => void applyBulkStatus("Delivered")}
               >
                 <Send className="h-3.5 w-3.5" />
                 Mark delivered
@@ -1188,7 +1642,7 @@ function ReportCentreInner() {
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                onClick={() => applyBulkStatus("Archived")}
+                onClick={() => void applyBulkStatus("Archived")}
               >
                 <Archive className="h-3.5 w-3.5" />
                 Archive

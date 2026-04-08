@@ -97,3 +97,18 @@ export function stripManagePanelParams(searchParams: URLSearchParams): URLSearch
   next.delete(QUERY_SECTION);
   return next;
 }
+
+/** Merge panel/section into existing query (keeps other params). Used when opening workspace controls from hub routes without leaving the page. */
+export function mergeManagePanelIntoCurrentSearch(
+  current: URLSearchParams,
+  opts: { panel: ManagePanelTab; section?: ManageSettingsSection },
+): string {
+  const next = new URLSearchParams(current);
+  next.set(QUERY_PANEL, opts.panel);
+  if (opts.panel === "settings" && opts.section) {
+    next.set(QUERY_SECTION, opts.section);
+  } else {
+    next.delete(QUERY_SECTION);
+  }
+  return next.toString();
+}

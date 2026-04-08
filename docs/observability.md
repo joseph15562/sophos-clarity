@@ -130,6 +130,8 @@ Use your host’s **Edge Function** HTTP metrics (Supabase Dashboard → Edge Fu
 | **process-job-outbox**     | `process_job_outbox_reap_stale`, `process_job_outbox_report_missing`, `process_job_outbox_build_failed` | warn/error      | Stale `processing` reap, bad payload / missing report              |
 | **agent-nudge**            | `agent_nudge_start`                                                                                     | info            | Cron: `staleCandidates` before updates                             |
 | **agent-nudge**            | `agent_nudge_complete`, `agent_nudge_fetch`                                                             | info/error      | Summary counts / DB fetch failure                                  |
+| **agent-daily-presence**   | `agent_daily_presence_start`, `agent_daily_presence_complete`                                           | info            | Cron: `day`, `agentCount` / `upserted`                             |
+| **agent-daily-presence**   | `agent_daily_presence_agents`, `agent_daily_presence_upsert`, `agent_daily_presence_prune`              | error/warn      | Agent list / upsert failure / old-row delete                       |
 | **regulatory-scanner**     | `regulatory_*`                                                                                          | warn/info       | RSS / Gemini / upsert                                              |
 
 ## Parity with the repo

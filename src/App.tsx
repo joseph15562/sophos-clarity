@@ -13,6 +13,7 @@ import { NotificationsProvider } from "@/hooks/use-notifications";
 import { AssistChromeProvider } from "@/contexts/assist-chrome-context";
 import { GlobalAssistChrome } from "@/components/GlobalAssistChrome";
 import { OrgCentralPrefetch } from "@/components/OrgCentralPrefetch";
+import { WorkspaceManagementDrawerHost } from "@/components/WorkspaceManagementDrawerHost";
 
 const Index = lazy(() => import("./pages/Index"));
 const MissionControlPage = lazy(() => import("./pages/MissionControlPage"));
@@ -164,6 +165,7 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                <WorkspaceManagementDrawerHost />
                 <GlobalAssistChrome />
               </NotificationsProvider>
             </AssistChromeProvider>

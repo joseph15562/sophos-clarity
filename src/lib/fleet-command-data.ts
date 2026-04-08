@@ -43,6 +43,12 @@ export interface FleetFirewall {
   complianceEnvironment: string;
   /** Agent-only: key for customer-scoped environment (`agent_customer_compliance_environment`). */
   agentCustomerBucketKey?: string;
+  /** MSP-set WGS84 coordinates for fleet map (optional). */
+  mapLatitude: number | null;
+  mapLongitude: number | null;
+  /** Parsed from Central `geo_location` when no MSP map pin. */
+  centralGeoLatitude: number | null;
+  centralGeoLongitude: number | null;
 }
 
 /** `id` refers to `agents.id` when agent-only; otherwise `central_firewalls.id`. */
@@ -73,6 +79,9 @@ type CentralFwRow = {
   compliance_country?: string | null;
   compliance_state?: string | null;
   compliance_environment?: string | null;
+  geo_location?: unknown;
+  map_latitude?: number | null;
+  map_longitude?: number | null;
 };
 
 type AgentRow = {
@@ -92,7 +101,31 @@ type AgentRow = {
   compliance_country?: string | null;
   compliance_state?: string | null;
   compliance_environment?: string | null;
+  map_latitude?: number | null;
+  map_longitude?: number | null;
 };
+
+function parseCentralGeoLocation(json: unknown): { lat: number; lng: number } | null {
+  if (!json || typeof json !== "object") return null;
+  const o = json as Record<string, unknown>;
+  const latRaw = o.latitude ?? o.lat;
+  const lngRaw = o.longitude ?? o.lng;
+  const lat = typeof latRaw === "number" ? latRaw : parseFloat(String(latRaw ?? ""));
+  const lng = typeof lngRaw === "number" ? lngRaw : parseFloat(String(lngRaw ?? ""));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
+function mapFieldsFromCentralRow(row: CentralFwRow) {
+  const geo = parseCentralGeoLocation(row.geo_location);
+  return {
+    mapLatitude: row.map_latitude ?? null,
+    mapLongitude: row.map_longitude ?? null,
+    centralGeoLatitude: geo?.lat ?? null,
+    centralGeoLongitude: geo?.lng ?? null,
+  };
+}
 
 function complianceFromCentral(fw: CentralFwRow) {
   return {
@@ -394,6 +427,7 @@ export async function fetchFleetBundle(
         ...comp,
         customerComplianceCountry: custCountry,
         complianceEnvironment: sectorEnv,
+        ...mapFieldsFromCentralRow(primary),
       });
       continue;
     }
@@ -451,6 +485,7 @@ export async function fetchFleetBundle(
       ...compSingle,
       customerComplianceCountry: custCountrySingle,
       complianceEnvironment: sectorEnvSingle,
+      ...mapFieldsFromCentralRow(fw),
     });
   }
 
@@ -497,6 +532,10 @@ export async function fetchFleetBundle(
       customerComplianceCountry: custCountryAgent,
       complianceEnvironment: sectorEnvAgent,
       agentCustomerBucketKey: bucketKey,
+      mapLatitude: ag.map_latitude ?? null,
+      mapLongitude: ag.map_longitude ?? null,
+      centralGeoLatitude: null,
+      centralGeoLongitude: null,
     });
   }
 

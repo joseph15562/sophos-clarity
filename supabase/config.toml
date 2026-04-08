@@ -36,6 +36,10 @@ verify_jwt = false
 verify_jwt = false
 # Cron-triggered: nudges stale agents and marks offline after 48 h.
 
+[functions.agent-daily-presence]
+verify_jwt = false
+# Cron-triggered: records per-agent UTC day rows for fleet Agent Status timeline.
+
 [functions.regulatory-scanner]
 verify_jwt = false
 # User JWT for optional manual scan; service role Bearer for pg_cron daily ingest.

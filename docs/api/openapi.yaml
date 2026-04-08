@@ -642,6 +642,21 @@ paths:
         "500":
           description: Server error
 
+  /agent-daily-presence:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1
+        variables:
+          project:
+            default: your-project-ref
+    post:
+      summary: Record per-agent UTC calendar-day presence for fleet timeline UI
+      description: Intended for daily cron; uses service role inside the function.
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Server error
+
   /regulatory-scanner:
     servers:
       - url: https://{project}.supabase.co/functions/v1

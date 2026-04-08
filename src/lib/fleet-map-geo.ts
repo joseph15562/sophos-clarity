@@ -8,10 +8,13 @@ export type FleetMapFirewallPin = {
   grade: string;
 };
 
-/** One customer site on the fleet map (approximate geo from compliance country). */
+/** One pin on the fleet map (one firewall per site). */
 export type FleetMapSite = {
   id: string;
+  /** FireComply / MSP customer label for this firewall. */
   customer: string;
+  /** Sophos Central tenant display name when known (may match customer). */
+  tenantName?: string;
   lat: number;
   lng: number;
   countryLabel: string;
@@ -59,7 +62,7 @@ function countryKey(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-/** Small deterministic offset so multiple customers in the same country do not stack exactly. */
+/** Small deterministic offset so multiple firewalls in the same country separate slightly. */
 function siteOffsetDegrees(seed: string, index: number): { dLat: number; dLng: number } {
   let h = 2166136261;
   const s = `${seed}:${index}`;
@@ -70,8 +73,8 @@ function siteOffsetDegrees(seed: string, index: number): { dLat: number; dLng: n
   const u = (h >>> 0) / 0xffffffff;
   const v = (Math.imul(h, 1103515245) >>> 0) / 0xffffffff;
   return {
-    dLat: (u - 0.5) * 5,
-    dLng: (v - 0.5) * 8,
+    dLat: (u - 0.5) * 4,
+    dLng: (v - 0.5) * 6,
   };
 }
 
@@ -99,50 +102,85 @@ function centroidForCountry(raw: string): { lat: number; lng: number; label: str
   return { ...f, label: raw.trim() || "Unknown region" };
 }
 
-function slugCustomerId(name: string, i: number): string {
-  const base = name
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .slice(0, 48)
-    .toLowerCase();
-  return `${base || "site"}-${i}`;
+function resolveFirewallMapPosition(
+  fw: FleetFirewall,
+  index: number,
+): { lat: number; lng: number; label: string } {
+  const mLat = fw.mapLatitude;
+  const mLng = fw.mapLongitude;
+  if (
+    mLat != null &&
+    mLng != null &&
+    Number.isFinite(mLat) &&
+    Number.isFinite(mLng) &&
+    mLat >= -90 &&
+    mLat <= 90 &&
+    mLng >= -180 &&
+    mLng <= 180
+  ) {
+    return {
+      lat: mLat,
+      lng: mLng,
+      label: `Map pin (${mLat.toFixed(4)}, ${mLng.toFixed(4)})`,
+    };
+  }
+
+  const cLat = fw.centralGeoLatitude;
+  const cLng = fw.centralGeoLongitude;
+  if (
+    cLat != null &&
+    cLng != null &&
+    Number.isFinite(cLat) &&
+    Number.isFinite(cLng) &&
+    cLat >= -90 &&
+    cLat <= 90 &&
+    cLng >= -180 &&
+    cLng <= 180
+  ) {
+    return { lat: cLat, lng: cLng, label: "Sophos Central geo" };
+  }
+
+  const countryRaw =
+    fleetEffectiveComplianceCountry(fw).trim() || (fw.customerComplianceCountry ?? "").trim();
+  const { lat: baseLat, lng: baseLng, label: countryLabel } = centroidForCountry(countryRaw);
+  const seed = `${fw.hostname || fw.id}:${index}`;
+  const { dLat, dLng } = siteOffsetDegrees(seed, index);
+  return {
+    lat: baseLat + dLat * 0.4,
+    lng: baseLng + dLng * 0.4,
+    label: countryRaw ? countryLabel : "Unknown region",
+  };
 }
 
 /**
- * Group fleet rows by customer; place each group using compliance country (effective per row).
+ * One map site per firewall. Position: MSP map pin → Central geo → compliance country centroid.
  */
 export function buildFleetMapSites(firewalls: FleetFirewall[]): FleetMapSite[] {
-  const byCustomer = new Map<string, FleetFirewall[]>();
-  for (const fw of firewalls) {
-    const name = (fw.customer ?? "").trim() || "Unassigned";
-    const arr = byCustomer.get(name) ?? [];
-    arr.push(fw);
-    byCustomer.set(name, arr);
-  }
-
-  const sites: FleetMapSite[] = [];
-  let idx = 0;
-  for (const [customer, rows] of byCustomer) {
-    const countryRaw =
-      rows.map((r) => fleetEffectiveComplianceCountry(r)).find((c) => c.trim().length > 0) ?? "";
-    const { lat: baseLat, lng: baseLng, label: countryLabel } = centroidForCountry(countryRaw);
-    const { dLat, dLng } = siteOffsetDegrees(customer, idx);
-    const firewallsPins: FleetMapFirewallPin[] = rows.map((r) => ({
-      hostname: (r.hostname ?? "").trim() || "—",
-      model: (r.model ?? "").trim() || "—",
-      status: r.status,
-      grade: r.grade,
-    }));
-    sites.push({
-      id: slugCustomerId(customer, idx),
+  const sites = firewalls.map((fw, index) => {
+    const { lat, lng, label } = resolveFirewallMapPosition(fw, index);
+    const customer = (fw.customer ?? "").trim() || "Unassigned";
+    const tenantRaw = (fw.tenantName ?? "").trim();
+    return {
+      id: fw.id,
       customer,
-      lat: baseLat + dLat,
-      lng: baseLng + dLng,
-      countryLabel: countryRaw.trim() ? countryLabel : "Unknown region",
-      firewallCount: rows.length,
-      firewalls: firewallsPins,
-    });
-    idx++;
-  }
-
-  return sites.sort((a, b) => a.customer.localeCompare(b.customer));
+      ...(tenantRaw ? { tenantName: tenantRaw } : {}),
+      lat,
+      lng,
+      countryLabel: label,
+      firewallCount: 1,
+      firewalls: [
+        {
+          hostname: (fw.hostname ?? "").trim() || "—",
+          model: (fw.model ?? "").trim() || "—",
+          status: fw.status,
+          grade: fw.grade,
+        },
+      ],
+    };
+  });
+  return sites.sort((a, b) => {
+    const c = a.customer.localeCompare(b.customer);
+    if (c !== 0) return c;
+    return a.firewalls[0].hostname.localeCompare(b.firewalls[0].hostname);
+  });
 }

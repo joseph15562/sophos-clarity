@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Moon,
   Sun,
@@ -25,7 +25,7 @@ import {
   syncFirewalls,
   type CentralStatus,
 } from "@/lib/sophos-central";
-import { buildManagePanelSearch } from "@/lib/workspace-deeplink";
+import { mergeManagePanelIntoCurrentSearch } from "@/lib/workspace-deeplink";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationCentre } from "@/components/NotificationCentre";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -309,18 +309,28 @@ export function FireComplyWorkspaceHeader({
   loginShell = false,
 }: FireComplyWorkspaceHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setTheme } = useTheme();
   const isDark = useResolvedIsDark();
   const { user, org, isGuest, signOut } = useAuth();
 
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  }, [signOut, navigate]);
+
   const openManagement = useCallback(() => {
     if (onOrgClick) onOrgClick();
-    else
+    else {
       navigate({
-        pathname: "/",
-        search: buildManagePanelSearch({ panel: "settings", section: "team" }),
+        pathname: location.pathname,
+        search: mergeManagePanelIntoCurrentSearch(new URLSearchParams(location.search), {
+          panel: "settings",
+          section: "team",
+        }),
       });
-  }, [navigate, onOrgClick]);
+    }
+  }, [navigate, onOrgClick, location.pathname, location.search]);
 
   return (
     <header
@@ -402,7 +412,7 @@ export function FireComplyWorkspaceHeader({
             <Button
               variant="ghost"
               size="icon"
-              onClick={signOut}
+              onClick={() => void handleSignOut()}
               className="shrink-0 h-8 w-8 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:!text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:!text-[#B6C4FF] dark:hover:!text-white dark:hover:bg-white/[0.08]"
               aria-label="Sign out"
               title="Sign out"

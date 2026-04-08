@@ -99,6 +99,7 @@ jobs:
           supabase functions deploy send-scheduled-reports --no-verify-jwt --use-api
           supabase functions deploy process-job-outbox --no-verify-jwt --use-api
           supabase functions deploy agent-nudge --no-verify-jwt --use-api
+          supabase functions deploy agent-daily-presence --no-verify-jwt --use-api
           supabase functions deploy regulatory-scanner --no-verify-jwt --use-api
           supabase functions deploy sophos-central --no-verify-jwt --use-api
         env:

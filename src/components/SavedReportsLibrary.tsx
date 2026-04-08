@@ -118,7 +118,8 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger = 0 }: Props
   );
 
   const filtered = useMemo(() => {
-    let list = packages;
+    const visible = packages.filter((p) => !p.archivedAt);
+    let list = visible;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter(

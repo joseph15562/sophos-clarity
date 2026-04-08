@@ -155,6 +155,9 @@ export function TenantDashboard() {
   const [agentSubmissions, setAgentSubmissions] = useState<
     { agent_id: string; created_at: string }[]
   >([]);
+  const [agentDailyPresence, setAgentDailyPresence] = useState<{ agent_id: string; day: string }[]>(
+    [],
+  );
   const [nocMode, setNocMode] = useState(false);
   const [nocSlide, setNocSlide] = useState(0);
   const [heatmapDrill, setHeatmapDrill] = useState<string | null>(null);
@@ -213,14 +216,25 @@ export function TenantDashboard() {
     if (!useCloud || !org?.id) return;
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    supabase
-      .from("agent_submissions")
-      .select("agent_id, created_at")
-      .eq("org_id", org.id)
-      .gte("created_at", weekAgo.toISOString())
-      .then(({ data }) =>
-        setAgentSubmissions((data ?? []) as { agent_id: string; created_at: string }[]),
-      );
+    const weekAgoDay = weekAgo.toISOString().slice(0, 10);
+    void Promise.all([
+      supabase
+        .from("agent_submissions")
+        .select("agent_id, created_at")
+        .eq("org_id", org.id)
+        .gte("created_at", weekAgo.toISOString())
+        .then(({ data }) =>
+          setAgentSubmissions((data ?? []) as { agent_id: string; created_at: string }[]),
+        ),
+      supabase
+        .from("agent_daily_presence")
+        .select("agent_id, day")
+        .eq("org_id", org.id)
+        .gte("day", weekAgoDay)
+        .then(({ data }) =>
+          setAgentDailyPresence((data ?? []) as { agent_id: string; day: string }[]),
+        ),
+    ]);
   }, [useCloud, org?.id]);
 
   useEffect(() => {
@@ -509,6 +523,12 @@ export function TenantDashboard() {
         byAgentDay.get(agent.id)!.set(day, "active");
       }
     }
+    for (const row of agentDailyPresence) {
+      const day = row.day.slice(0, 10);
+      if (byAgentDay.has(row.agent_id)) {
+        byAgentDay.get(row.agent_id)!.set(day, "active");
+      }
+    }
     const todayKey = dayKeys[dayKeys.length - 1];
     for (const agent of agentList) {
       const m = byAgentDay.get(agent.id)!;
@@ -525,7 +545,7 @@ export function TenantDashboard() {
       }
     }
     return { agents: agentList, dayKeys, byAgentDay };
-  }, [agentList, agentSubmissions]);
+  }, [agentList, agentSubmissions, agentDailyPresence]);
 
   const exportFleetCsv = useCallback(() => {
     const rows = allFirewalls.map((fw) => {

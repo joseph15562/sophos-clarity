@@ -1,5 +1,7 @@
 import {
   useState,
+  useEffect,
+  useRef,
   ReactNode,
   Children,
   cloneElement,
@@ -146,8 +148,19 @@ function AuthChromeHeader({
  */
 export function AuthFlow({ auth, children }: AuthFlowProps) {
   const [guestMode, setGuestMode] = useState(false);
+  const prevUserRef = useRef(auth.user);
   const theme = useResolvedThemeClass();
   const isDark = theme === "dark";
+
+  // After sign-out, clear "skip sign-in" so the login gate shows (guestMode would otherwise stay true
+  // from an earlier session on the same tab).
+  useEffect(() => {
+    const prev = prevUserRef.current;
+    prevUserRef.current = auth.user;
+    if (prev != null && auth.user == null) {
+      setGuestMode(false);
+    }
+  }, [auth.user]);
 
   if (auth.isLoading) {
     return (

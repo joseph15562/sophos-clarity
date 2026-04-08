@@ -8,6 +8,8 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Fixed
 
+- **Workspace header — org / MSP button:** opening workspace controls from Fleet, Customers, Central, and other hub routes no longer navigates away to Assess (`/`); the management drawer opens on the current page via query params handled by `WorkspaceManagementDrawerHost`.
+
 - **Demo / agent assessments:** `firewall_config_links` queries use `maybeSingle()` so “no link yet” no longer surfaces as HTTP 406 in the browser console.
 - **Report generation:** skip calling `parse-config` when extracted sections are empty (avoids repeated 400s and retries for agent-only or demo rows without a real HTML export).
 - **Management — fleet overview:** tolerate missing `riskScore` or `categories` on snapshot firewalls so the drawer does not crash on sparse demo data.
@@ -25,6 +27,10 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 - **Assess — compliance per upload:** removed the global **Compliance alignment** card; each config row has **Compliance (this firewall)** (web filter mode + framework grid). Every upload gets a `configComplianceScopes` entry seeded from Customer context; deterministic analysis and AI reports use per-file scope (and `webFilterComplianceMode` on scope). Unlinking clears the Central tenant label on the scope but no longer deletes the row. Multi-device compliance prompts include per-firewall web-filter mode when set to informational. Per-row **Scope for this export** (environment, country, US state) shows when the file is unlinked or the Central link did not populate both sector and country on the scope; otherwise chips stay above the link control only.
 
 ### Added
+
+- **Fleet Command — map coordinates:** optional `map_latitude` / `map_longitude` on `central_firewalls` and `agents` (Firewall location card); Fleet Map uses them first, then Central `geo_location`, then compliance country centroid; map supports pan, scroll/button zoom, smaller pins, and one pin per firewall.
+
+- **Agent Status (7-day) timeline:** daily Supabase cron + Edge Function `agent-daily-presence` writes `agent_daily_presence` (UTC day per agent) so the Assess fleet widget can show green days without a full assessment or leaving the connector open; real `agents.last_seen_at` heartbeats are unchanged.
 
 - **Assess — Customer Context:** directory selection, `?customer=` (after directory loads), and Central firewall links hydrate global environment, country, and default frameworks when still empty (single-file from link; multi-file only while global geo unset).
 

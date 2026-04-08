@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
+import { AssessReportFooterActions } from "@/components/AssessReportFooterActions";
 import { GuidedTourButton } from "@/components/GuidedTourButton";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { useAssistChrome } from "@/contexts/assist-chrome-context";
@@ -86,7 +87,7 @@ export function GlobalAssistChrome() {
             }}
           />
 
-          <div className="mx-auto flex max-w-[1320px] items-center gap-3 px-4 py-3 sm:px-6 justify-start">
+          <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6 justify-between">
             <div className="flex items-center gap-2">
               <GuidedTourButton
                 hasFiles={hasFiles}
@@ -118,6 +119,9 @@ export function GlobalAssistChrome() {
                 <span className="relative z-[1]">Shortcuts</span>
               </button>
             </div>
+            {assess?.reportFooterActions ? (
+              <AssessReportFooterActions {...assess.reportFooterActions} />
+            ) : null}
           </div>
         </div>
       )}

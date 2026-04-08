@@ -235,6 +235,8 @@ export function useAuthProvider(): AuthState {
       return;
     }
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
     setOrg(null);
     setRole(null);
     if (currentOrgId) {

@@ -5,10 +5,11 @@ MSP-set **country** and **US state** per firewall; **sector** (environment) per 
 ## Database
 
 - Migration: [`supabase/migrations/20260331193100_firewall_compliance_context.sql`](../../supabase/migrations/20260331193100_firewall_compliance_context.sql) (unique version — avoids clash with `20260330120000_agent_submissions_org_created.sql`)
-- Migration: [`supabase/migrations/20260331204500_compliance_environment_customer_scope.sql`](../../supabase/migrations/20260331204500_compliance_environment_customer_scope.sql) — **`central_tenants.compliance_environment`**, **`agent_customer_compliance_environment`**, RPC **`update_agent_compliance_context(uuid, text, text)`** (jurisdiction only)
+- Migration: [`supabase/migrations/20260331204500_compliance_environment_customer_scope.sql`](../../supabase/migrations/20260331204500_compliance_environment_customer_scope.sql) — **`central_tenants.compliance_environment`**, **`agent_customer_compliance_environment`**, RPC **`update_agent_compliance_context`** (jurisdiction; signature extended later for map pins)
 - Migration: [`supabase/migrations/20260331220000_customer_compliance_country.sql`](../../supabase/migrations/20260331220000_customer_compliance_country.sql) — **`compliance_country`** on **`central_tenants`** and **`agent_customer_compliance_environment`**
-- Columns on **`central_firewalls`** / **`agents`**: `compliance_country`, `compliance_state`; legacy **`compliance_environment`** on those rows is optional fallback only
-- RPC **`update_agent_compliance_context`**: country/state only; sector via **`agent_customer_compliance_environment`**
+- Migration: [`supabase/migrations/20260407150000_firewall_map_coordinates.sql`](../../supabase/migrations/20260407150000_firewall_map_coordinates.sql) — **`map_latitude`**, **`map_longitude`** on **`central_firewalls`** / **`agents`**; RPC **`update_agent_compliance_context(uuid, text, text, double precision, double precision)`**
+- Columns on **`central_firewalls`** / **`agents`**: `compliance_country`, `compliance_state`, optional **`map_latitude`** / **`map_longitude`**; legacy **`compliance_environment`** on those rows is optional fallback only
+- RPC **`update_agent_compliance_context`**: country/state/map coordinates; sector via **`agent_customer_compliance_environment`**
 
 ## App
 

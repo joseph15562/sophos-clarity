@@ -30,11 +30,11 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "improved" as const,
-      text: "Visual polish: ambient mesh + motion-safe pulse, glass panels, gradient title, primary button glow, nav shimmer, richer assist bar; Fleet Map tab shows real landmasses, customer pins from compliance country, and hover details for firewalls.",
+      text: "Visual polish: ambient mesh + motion-safe pulse, glass panels, gradient title, primary button glow, nav shimmer, richer assist bar; Assess footer: View Findings + Generate Reports on the same strip as Tours/Shortcuts; Help docs: wider mocks (max-w-6xl), optional zoom on larger breakpoints, taller frame cap; Fleet Map: per-firewall pins, pan/zoom, optional MSP lat/long, Central geo fallback, then country centroid; daily server presence rows keep Assess fleet Agent Status (7-day) green without opening the connector.",
     },
     {
       tag: "fixed" as const,
-      text: "Central alerts: no brittle GET sort param (fixes empty mission-alerts on some tenants), full pagination + nextKey/pageFromKey for open alerts, merge-time newest-first; cache v5 + dev no-rehydrate; tenant-type whoAmI; timestamps include nested level + detected* + digit epoch strings.",
+      text: "Fleet map: sharp landmasses (no SVG blur); pan clamped; min zoom 1×; pin hover shows customer + Sophos tenant when known; portaled from getBoundingClientRect at deep zoom; max 12×. Org/MSP header opens workspace controls in place; Central alerts pagination + merge fixes; cache v5 + dev no-rehydrate; tenant-type whoAmI; richer timestamps. Sign out returns to the login gate (hub routes go to /; stale Skip cleared after session ends). Report library: quick-send email + Resend API; Report Centre archives on saved_reports.archived_at with an Archives section; portal omits archived saves.",
     },
   ] satisfies PlatformHighlightLine[],
 };

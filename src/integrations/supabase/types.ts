@@ -8,6 +8,45 @@ export type Database = {
   };
   public: {
     Tables: {
+      agent_daily_presence: {
+        Row: {
+          agent_id: string;
+          created_at: string;
+          day: string;
+          id: string;
+          org_id: string;
+        };
+        Insert: {
+          agent_id: string;
+          created_at?: string;
+          day: string;
+          id?: string;
+          org_id: string;
+        };
+        Update: {
+          agent_id?: string;
+          created_at?: string;
+          day?: string;
+          id?: string;
+          org_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_daily_presence_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "agent_daily_presence_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       agent_submissions: {
         Row: {
           agent_id: string;
@@ -126,6 +165,8 @@ export type Database = {
           last_grade: string | null;
           last_score: number | null;
           last_seen_at: string | null;
+          map_latitude: number | null;
+          map_longitude: number | null;
           name: string;
           org_id: string;
           pending_command: string | null;
@@ -157,6 +198,8 @@ export type Database = {
           last_grade?: string | null;
           last_score?: number | null;
           last_seen_at?: string | null;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           name: string;
           org_id: string;
           pending_command?: string | null;
@@ -188,6 +231,8 @@ export type Database = {
           last_grade?: string | null;
           last_score?: number | null;
           last_seen_at?: string | null;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           name?: string;
           org_id?: string;
           pending_command?: string | null;
@@ -444,6 +489,8 @@ export type Database = {
           group_json: Json | null;
           hostname: string;
           id: string;
+          map_latitude: number | null;
+          map_longitude: number | null;
           model: string;
           name: string;
           org_id: string;
@@ -464,6 +511,8 @@ export type Database = {
           group_json?: Json | null;
           hostname?: string;
           id?: string;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           model?: string;
           name?: string;
           org_id: string;
@@ -484,6 +533,8 @@ export type Database = {
           group_json?: Json | null;
           hostname?: string;
           id?: string;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           model?: string;
           name?: string;
           org_id?: string;
@@ -1318,6 +1369,7 @@ export type Database = {
       saved_reports: {
         Row: {
           analysis_summary: Json;
+          archived_at: string | null;
           created_at: string;
           created_by: string | null;
           customer_name: string;
@@ -1329,6 +1381,7 @@ export type Database = {
         };
         Insert: {
           analysis_summary?: Json;
+          archived_at?: string | null;
           created_at?: string;
           created_by?: string | null;
           customer_name: string;
@@ -1340,6 +1393,7 @@ export type Database = {
         };
         Update: {
           analysis_summary?: Json;
+          archived_at?: string | null;
           created_at?: string;
           created_by?: string | null;
           customer_name?: string;
@@ -1761,6 +1815,8 @@ export type Database = {
           p_agent_id: string;
           p_country: string;
           p_state: string;
+          p_map_latitude: number | null;
+          p_map_longitude: number | null;
         };
         Returns: undefined;
       };

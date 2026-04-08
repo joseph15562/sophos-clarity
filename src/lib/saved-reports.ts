@@ -29,6 +29,8 @@ export interface SavedReportPackage {
   analysisSummary: AnalysisSummary;
   createdAt: number;
   createdBy?: string | null;
+  /** Set when the row is archived in Report Centre (Supabase `archived_at`). */
+  archivedAt?: number | null;
 }
 
 function buildAnalysisSummary(analysisResults: Record<string, AnalysisResult>): AnalysisSummary {
@@ -168,6 +170,43 @@ export function buildSavedPackNavItems(
   return out;
 }
 
+/**
+ * Markdown body for viewer, export, and quick-send email (matches saved report viewer).
+ */
+export function savedPackageToMarkdown(pkg: SavedReportPackage): string {
+  const reps = normalizeReportEntries(pkg.reports);
+  if (reps.length > 0) {
+    return packageReportsToMarkdown(pkg.reports);
+  }
+
+  const s = pkg.analysisSummary;
+  const hasSnapshot =
+    s &&
+    ((s.totalFindings ?? 0) > 0 ||
+      (s.overallScore ?? 0) > 0 ||
+      (s.totalRules ?? 0) > 0 ||
+      (s.firewallLabels?.length ?? 0) > 0);
+  const fw = s?.firewallLabels?.filter(Boolean) ?? [];
+  const fwLine =
+    fw.length > 0
+      ? `\n- **Firewalls in scope:** ${fw.length <= 4 ? fw.join(", ") : `${fw.slice(0, 3).join(", ")} +${fw.length - 3} more`}`
+      : "";
+  const snapshot = hasSnapshot
+    ? `\n\n### Assessment snapshot (from this save)\n\n- **Overall score:** ${s!.overallScore}/100 (grade **${s!.overallGrade}**)\n- **Findings:** ${s!.totalFindings}\n- **Rules analysed:** ${s!.totalRules}${fwLine}\n`
+    : "";
+
+  return (
+    `### Saved package\n\n` +
+    `*No AI-generated report bodies are stored on this row.* ` +
+    `That usually means **Save Assessment (Pre-AI)** was used, or **Save reports** ran before every report finished generating.\n` +
+    snapshot +
+    `\n- **Customer:** ${pkg.customerName}\n` +
+    `- **Environment:** ${pkg.environment || "—"}\n` +
+    `- **Stored as:** ${pkg.reportType === "full" ? "Full package (no document bodies saved)" : "Pre-AI assessment"}\n\n` +
+    `**Next step:** On **Assess**, generate your reports, wait for each to complete, then click **Save reports** to store all documents together.\n`
+  );
+}
+
 /** Human-readable pack description from stored report entries. */
 export function describeSavedReportRowType(pkg: SavedReportPackage): string {
   const reps = normalizeReportEntries(pkg.reports);
@@ -292,7 +331,7 @@ export async function loadSavedReportsCloud(signal?: AbortSignal): Promise<Saved
     supabase
       .from("saved_reports")
       .select(
-        "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
+        "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by, archived_at",
       )
       .order("created_at", { ascending: false }),
     signal,
@@ -309,6 +348,7 @@ export async function loadSavedReportsCloud(signal?: AbortSignal): Promise<Saved
     analysisSummary: (row.analysis_summary || {}) as unknown as AnalysisSummary,
     createdAt: new Date(row.created_at).getTime(),
     createdBy: row.created_by,
+    archivedAt: row.archived_at ? new Date(row.archived_at as string).getTime() : null,
   }));
 }
 
@@ -317,7 +357,7 @@ export async function loadSavedReportPackageById(id: string): Promise<SavedRepor
   const { data, error } = await supabase
     .from("saved_reports")
     .select(
-      "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
+      "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by, archived_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -333,7 +373,21 @@ export async function loadSavedReportPackageById(id: string): Promise<SavedRepor
     analysisSummary: (data.analysis_summary || {}) as unknown as AnalysisSummary,
     createdAt: new Date(data.created_at).getTime(),
     createdBy: data.created_by,
+    archivedAt: data.archived_at ? new Date(data.archived_at as string).getTime() : null,
   };
+}
+
+/** Persist Report Centre archive state (org members only via RLS). */
+export async function setSavedReportArchivedCloud(
+  id: string,
+  archived: boolean,
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("saved_reports")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return { error: null };
 }
 
 export async function deleteSavedReportCloud(id: string): Promise<void> {

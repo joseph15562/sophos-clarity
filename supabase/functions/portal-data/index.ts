@@ -654,6 +654,7 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
           "id, customer_name, environment, report_type, reports, analysis_summary, created_at",
         )
         .eq("org_id", orgId)
+        .is("archived_at", null)
         .order("created_at", { ascending: false })
         .limit(80);
 

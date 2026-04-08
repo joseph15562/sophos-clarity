@@ -4,8 +4,7 @@ import { saveAs } from "file-saver";
 import { FileText, Download, ArrowLeft } from "lucide-react";
 import {
   loadSavedReportPackageById,
-  normalizeReportEntries,
-  packageReportsToMarkdown,
+  savedPackageToMarkdown,
   buildSavedPackNavItems,
   type SavedReportPackage,
 } from "@/lib/saved-reports";
@@ -18,40 +17,6 @@ import { SafeHtml } from "@/components/SafeHtml";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
-
-function packageToMarkdown(pkg: SavedReportPackage): string {
-  const reps = normalizeReportEntries(pkg.reports);
-  if (reps.length > 0) {
-    return packageReportsToMarkdown(pkg.reports);
-  }
-
-  const s = pkg.analysisSummary;
-  const hasSnapshot =
-    s &&
-    ((s.totalFindings ?? 0) > 0 ||
-      (s.overallScore ?? 0) > 0 ||
-      (s.totalRules ?? 0) > 0 ||
-      (s.firewallLabels?.length ?? 0) > 0);
-  const fw = s?.firewallLabels?.filter(Boolean) ?? [];
-  const fwLine =
-    fw.length > 0
-      ? `\n- **Firewalls in scope:** ${fw.length <= 4 ? fw.join(", ") : `${fw.slice(0, 3).join(", ")} +${fw.length - 3} more`}`
-      : "";
-  const snapshot = hasSnapshot
-    ? `\n\n### Assessment snapshot (from this save)\n\n- **Overall score:** ${s!.overallScore}/100 (grade **${s!.overallGrade}**)\n- **Findings:** ${s!.totalFindings}\n- **Rules analysed:** ${s!.totalRules}${fwLine}\n`
-    : "";
-
-  return (
-    `### Saved package\n\n` +
-    `*No AI-generated report bodies are stored on this row.* ` +
-    `That usually means **Save Assessment (Pre-AI)** was used, or **Save reports** ran before every report finished generating.\n` +
-    snapshot +
-    `\n- **Customer:** ${pkg.customerName}\n` +
-    `- **Environment:** ${pkg.environment || "—"}\n` +
-    `- **Stored as:** ${pkg.reportType === "full" ? "Full package (no document bodies saved)" : "Pre-AI assessment"}\n\n` +
-    `**Next step:** On **Assess**, generate your reports, wait for each to complete, then click **Save reports** to store all documents together.\n`
-  );
-}
 
 function SavedReportViewerInner() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +39,7 @@ function SavedReportViewerInner() {
     };
   }, [id, user, isGuest, org]);
 
-  const markdown = pkg ? packageToMarkdown(pkg) : "";
+  const markdown = pkg ? savedPackageToMarkdown(pkg) : "";
   const html = useMemo(() => buildReportHtml(markdown), [markdown]);
   const headings = useMemo(() => extractTocHeadings(markdown), [markdown]);
   const packNavItems = useMemo(() => (pkg ? buildSavedPackNavItems(pkg.reports) : []), [pkg]);
