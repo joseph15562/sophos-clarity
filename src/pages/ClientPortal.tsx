@@ -53,7 +53,7 @@ import { resolveCustomerName } from "@/lib/customer-name";
 import { saveAs } from "file-saver";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { buildReportHtml } from "@/lib/report-html";
-import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
+import { buildPdfHtml, generateWordBlob, openHtmlForPrint } from "@/lib/report-export";
 import { mergePortalHaFirewallsForDisplay } from "@/lib/portal-firewall-ha-merge";
 
 const GRADE_COLORS: Record<string, string> = {
@@ -1122,24 +1122,36 @@ export default function ClientPortal() {
   );
 
   const handleDownloadPdf = useCallback(
-    (entry: PortalSavedReportEntry) => {
+    async (entry: PortalSavedReportEntry) => {
       if (!entry.markdown?.trim()) {
-        toast.error("Nothing to print", { description: "This report section is empty." });
+        toast.error("Nothing to export", { description: "This report section is empty." });
         return;
       }
-      const inner = buildReportHtml(entry.markdown);
-      const html = buildPdfHtml(inner, entry.label, reportExportBranding, { theme: "light" });
-      const w = window.open("", "_blank");
-      if (!w) {
-        toast.error("Pop-up blocked", { description: "Allow pop-ups to print or save as PDF." });
-        return;
+      const coverLines = [
+        customerName ? `Customer: ${customerName}` : "",
+        reportExportBranding.companyName || "",
+        new Date().toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+      ].filter(Boolean);
+      try {
+        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+        const blob = await generateMarkdownReportPdfBlob(entry.markdown, {
+          title: entry.label,
+          coverLines,
+        });
+        saveAs(blob, `${sanitizeFilenameBase(entry.label)}.pdf`);
+      } catch {
+        const inner = buildReportHtml(entry.markdown);
+        const html = buildPdfHtml(inner, entry.label, reportExportBranding, { theme: "light" });
+        if (!openHtmlForPrint(html)) {
+          toast.error("Pop-up blocked", { description: "Allow pop-ups to print or save as PDF." });
+        }
       }
-      w.document.write(html);
-      w.document.close();
-      w.focus();
-      setTimeout(() => w.print(), 300);
     },
-    [reportExportBranding],
+    [reportExportBranding, customerName],
   );
 
   if (loading || !authChecked) {
@@ -2050,7 +2062,7 @@ export default function ClientPortal() {
                                           size="sm"
                                           disabled={!hasMd}
                                           className="rounded-xl border-brand-accent/15 gap-1.5 text-xs"
-                                          onClick={() => handleDownloadPdf(entry)}
+                                          onClick={() => void handleDownloadPdf(entry)}
                                         >
                                           <FileText className="h-3.5 w-3.5" />
                                           PDF

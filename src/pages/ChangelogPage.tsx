@@ -517,6 +517,13 @@ function ChangelogPageInner() {
                 it.
               </li>
               <li>
+                <strong className="text-foreground">Assess — Save Reports</strong>: the primary{" "}
+                <strong className="text-foreground">Save Reports</strong> action (and save error /
+                retry) sit in the top toolbar next to <em>Back to Dashboard</em> above the report
+                preview; the footer under the preview keeps <em>Back to Dashboard</em> and{" "}
+                <em>Start Over</em> only.
+              </li>
+              <li>
                 <strong className="text-foreground">Sign out</strong>: workspace header sign-out
                 clears session immediately, resets a stale <em>Skip sign-in</em> choice after you
                 had signed in, and navigates to Assess (<code className="text-xs">/</code>) so the
@@ -527,16 +534,17 @@ function ChangelogPageInner() {
                 <strong className="text-foreground">Report exports — PDF and Word</strong>: print
                 PDF keeps <strong className="text-foreground">A4 landscape</strong> with tighter
                 table breaks for wide recommendation tables, header row grouping, and a
-                medium-density tier for 7–9 columns; MSP logos in the document body are capped when
-                Tailwind is not loaded in the print window, the duplicate MSP logo in the document
-                body is hidden when the navy header already shows it (subtitle text stays), and
-                Download PDF includes a short orientation hint. Word exports stay landscape with{" "}
+                medium-density tier for 7–9 columns; PDF print uses auto column layout for those
+                dense tables so long evidence cells are not squeezed into equal-width columns, and
+                backtick spans in table cells render as plain text (no shaded code pills); MSP logos
+                in the document body are capped when Tailwind is not loaded in the print window, the
+                duplicate MSP logo in the document body is hidden when the navy header already shows
+                it (subtitle text stays). Word exports stay landscape with{" "}
                 <strong className="text-foreground">autofit</strong> tables for five or fewer
-                columns and a wider first column for larger tables; E2E pdfmake downloads use
-                landscape A4 for parity. In the live document preview (and any{" "}
-                <code className="text-xs">.doc-section</code> shell), the MSP branding logo uses a
-                bounded flex slot so large intrinsic SVG/raster dimensions cannot blow out the
-                layout, and images from report markdown are capped (
+                columns and a wider first column for larger tables. In the live document preview
+                (and any <code className="text-xs">.doc-section</code> shell), the MSP branding logo
+                uses a bounded flex slot so large intrinsic SVG/raster dimensions cannot blow out
+                the layout, and images from report markdown are capped (
                 <code className="text-xs">max-width: 100%</code>,{" "}
                 <code className="text-xs">max-height</code> clamp).{" "}
                 <code className="text-xs">buildReportHtml</code> now removes{" "}
@@ -544,9 +552,31 @@ function ChangelogPageInner() {
                 <code className="text-xs">style</code> on all nodes), and the rendered body uses{" "}
                 <code className="text-xs">report-body-html</code> with unlayered{" "}
                 <code className="text-xs">!important</code> caps so model HTML cannot override
-                sizing. Print HTML uses a top-level <code className="text-xs">@page</code> rule (
-                <code className="text-xs">297mm 210mm</code>) so Safari picks up A4 landscape; the
-                main app print stylesheet matches for Cmd+P on report views.
+                sizing. Print HTML adds a <code className="text-xs">@page</code> rule in a{" "}
+                <code className="text-xs">media=&quot;print&quot;</code> block at the top of the
+                head (plus the same rule in the main stylesheet) and opens the document in a new tab
+                from a <code className="text-xs">blob:</code> URL (with a blank-document fallback)
+                so WebKit is more likely to respect A4 landscape; Safari’s print dialog may still
+                default to Portrait—choose Landscape if needed. The main app print stylesheet
+                matches for Cmd+P on report views.
+              </li>
+              <li>
+                <strong className="text-foreground">Report PDF — real file download</strong>:{" "}
+                <strong className="text-foreground">Download PDF</strong> on Assess (document
+                preview), shared report links, Report Centre saved viewer, and the client portal now
+                saves an <strong className="text-foreground">A4 landscape</strong>{" "}
+                <code className="text-xs">.pdf</code> built in-browser via pdfmake from the report
+                markdown (headings, lists, GFM tables, basic inline emphasis). No system print
+                dialog or Safari orientation toggle is required. If pdf generation fails, the app
+                falls back to the existing HTML print tab.
+              </li>
+              <li>
+                <strong className="text-foreground">Word export — inline data-URI logos</strong>:{" "}
+                markdown like <code className="text-xs">![alt](data:image/png;base64,…)</code> is
+                decoded and embedded as a real image in the <code className="text-xs">.docx</code>{" "}
+                (scaled from PNG dimensions, caps on very large files) instead of dumping the base64
+                string as body text. WebP data URIs are replaced with a short note to use PNG or
+                JPEG for branding.
               </li>
               <li>
                 <strong className="text-foreground">Report library — quick email</strong>: the row

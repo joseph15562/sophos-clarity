@@ -6,7 +6,7 @@ import {
   buildInsuranceReadinessPrintHtml,
   type InsuranceAnswer,
 } from "@/lib/insurance-readiness";
-import { buildPdfHtml } from "@/lib/report-export";
+import { buildPdfHtml, printHtmlInHiddenIframe } from "@/lib/report-export";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { toast } from "sonner";
 
@@ -52,32 +52,10 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
       theme: "light",
       omitPdfToc: true,
     });
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("title", "Insurance readiness print");
-    iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
-    document.body.appendChild(iframe);
-    const idoc = iframe.contentDocument ?? iframe.contentWindow?.document;
-    const win = iframe.contentWindow;
-    if (!idoc || !win) {
-      document.body.removeChild(iframe);
+    if (!printHtmlInHiddenIframe(html)) {
       toast.error("Could not prepare print view. Try again or use a different browser.");
       return;
     }
-    idoc.open();
-    idoc.write(html);
-    idoc.close();
-    const cleanup = () => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    };
-    win.focus();
-    setTimeout(() => {
-      try {
-        win.print();
-      } finally {
-        setTimeout(cleanup, 2_000);
-      }
-    }, 200);
     toast.success("Print dialog opened — choose Save as PDF if you prefer a file.");
   };
 

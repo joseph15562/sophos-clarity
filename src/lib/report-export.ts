@@ -13,6 +13,7 @@ import {
   Packer,
   Paragraph,
   TextRun,
+  ImageRun,
   HeadingLevel,
   AlignmentType,
   Table,
@@ -179,6 +180,123 @@ function buildDocxTable(tableLines: string[]): Table {
   });
 }
 
+/** Max base64 length (~6M chars) for a single embedded Word image */
+const MAX_DOCX_IMAGE_B64_CHARS = 6_000_000;
+
+type DocxEmbedImage = {
+  alt: string;
+  type: "png" | "jpg" | "gif" | "bmp";
+  data: Uint8Array;
+};
+
+const DOCX_IMG_PLACEHOLDER_LINE = /^__FC_DOCX_IMG_(\d+)__$/;
+
+function base64ToUint8Array(b64: string): Uint8Array {
+  if (typeof globalThis.atob === "function") {
+    const bin = globalThis.atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  const NodeBuffer = (
+    globalThis as unknown as { Buffer?: { from(s: string, enc: string): Uint8Array } }
+  ).Buffer;
+  if (NodeBuffer?.from) {
+    return Uint8Array.from(NodeBuffer.from(b64, "base64"));
+  }
+  throw new Error("No base64 decoder available");
+}
+
+function readPngIhdrDimensions(bytes: Uint8Array): { w: number; h: number } | null {
+  if (bytes.length < 24) return null;
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) return null;
+  const w = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+  const h = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1 || w > 16384 || h > 16384) {
+    return null;
+  }
+  return { w, h };
+}
+
+function docxImageTransformation(
+  mime: DocxEmbedImage["type"],
+  data: Uint8Array,
+): { width: number; height: number } {
+  const maxW = 440;
+  const maxH = 260;
+  if (mime === "png") {
+    const dim = readPngIhdrDimensions(data);
+    if (dim) {
+      let w = dim.w;
+      let h = dim.h;
+      if (w > maxW) {
+        h = Math.round((h * maxW) / w);
+        w = maxW;
+      }
+      if (h > maxH) {
+        w = Math.round((w * maxH) / h);
+        h = maxH;
+      }
+      return { width: Math.max(48, w), height: Math.max(32, h) };
+    }
+  }
+  return { width: 320, height: 120 };
+}
+
+/**
+ * Replace `![alt](data:image/*;base64,...)` with placeholders and collect binaries for {@link ImageRun}.
+ * Without this, docx would emit the base64 as plain text (broken compliance reports with inline logos).
+ */
+function extractDataUriMarkdownImagesForDocx(markdown: string): {
+  text: string;
+  images: DocxEmbedImage[];
+} {
+  const webpStripped = markdown.replace(
+    /!\[([^\]]*)\]\(\s*data:image\/webp[^)]*\)/gi,
+    (_m, alt: string) =>
+      `\n\n[Image "${String(alt).replace(/"/g, "'")}" — WebP is not embedded in Word; use PNG or JPEG for branding.]\n\n`,
+  );
+
+  const images: DocxEmbedImage[] = [];
+
+  const dataUriRe = new RegExp(
+    "!\\[([^\\]]*)\\]\\(\\s*data:image\\/(png|jpeg|jpg|gif|bmp)\\s*;\\s*base64\\s*,\\s*([\\s\\S]*?)\\s*\\)",
+    "gi",
+  );
+
+  const text = webpStripped.replace(
+    dataUriRe,
+    (full, alt: string, mimeExt: string, b64body: string) => {
+      const b64 = b64body.replace(/\s/g, "");
+      if (b64.length > MAX_DOCX_IMAGE_B64_CHARS) {
+        return `\n\n[Image "${String(alt).replace(/"/g, "'")}" omitted — file too large for Word export.]\n\n`;
+      }
+      const ext = mimeExt.toLowerCase();
+      const type: DocxEmbedImage["type"] =
+        ext === "jpg" || ext === "jpeg"
+          ? "jpg"
+          : ext === "gif"
+            ? "gif"
+            : ext === "bmp"
+              ? "bmp"
+              : "png";
+      try {
+        const data = base64ToUint8Array(b64);
+        if (data.length < 32) {
+          return `\n\n[Image "${String(alt).replace(/"/g, "'")}" could not be decoded for Word export.]\n\n`;
+        }
+        const idx = images.length;
+        images.push({ alt: String(alt), type, data });
+        return `\n\n__FC_DOCX_IMG_${idx}__\n\n`;
+      } catch {
+        return `\n\n[Image "${String(alt).replace(/"/g, "'")}" could not be decoded for Word export.]\n\n`;
+      }
+    },
+  );
+
+  return { text, images };
+}
+
 function parseInlineFormatting(text: string): TextRun[] {
   const runs: TextRun[] = [];
   const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;
@@ -199,13 +317,48 @@ function parseInlineFormatting(text: string): TextRun[] {
   return runs.length > 0 ? runs : [new TextRun(text)];
 }
 
-function markdownToDocxElements(md: string): (Paragraph | Table)[] {
+function markdownToDocxElements(
+  md: string,
+  embeddedImages: DocxEmbedImage[] = [],
+): (Paragraph | Table)[] {
   const lines = md.split("\n");
   const elements: (Paragraph | Table)[] = [];
   let i = 0;
 
   while (i < lines.length) {
     const trimmed = lines[i].trim();
+
+    const imgPh = trimmed.match(DOCX_IMG_PLACEHOLDER_LINE);
+    if (imgPh) {
+      const idx = Number(imgPh[1]);
+      const img = embeddedImages[idx];
+      if (img) {
+        const { width, height } = docxImageTransformation(img.type, img.data);
+        const altSafe = (img.alt || "Image").slice(0, 120);
+        elements.push(
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 160, before: 80 },
+            children: [
+              new ImageRun({
+                type: img.type,
+                data: img.data,
+                transformation: { width, height },
+                altText: { name: altSafe, description: altSafe },
+              }),
+            ],
+          }),
+        );
+      } else {
+        elements.push(
+          new Paragraph({
+            children: [new TextRun({ text: "[Missing image data for Word export]" })],
+          }),
+        );
+      }
+      i++;
+      continue;
+    }
 
     if (isTableRow(trimmed)) {
       const tableLines: string[] = [];
@@ -376,6 +529,8 @@ export function buildPdfHtml(
   const pagedMediaPageRule = isSeHealthPdfLayout
     ? `@page { size: 210mm 297mm; margin: 12mm 14mm 14mm 14mm; }`
     : `@page { size: 297mm 210mm; margin: 12mm 14mm 14mm 14mm; }`;
+  /** Some WebKit builds only pick up @page when declared in a print-only stylesheet at the top of head. */
+  const printMediaPageBlock = `<style type="text/css" media="print">\n    ${pagedMediaPageRule}\n  </style>`;
 
   const sophosLogoDark = `<svg viewBox="0 0 600 65" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4.48,4.35v28.3c0,4.8,2.6,9.21,6.79,11.54l29.46,16.35.19.11,29.6-16.45c4.19-2.33,6.79-6.74,6.79-11.53V4.35H4.48ZM51.89,37.88c-2.2,1.22-4.67,1.86-7.18,1.86l-27.32-.08,15.32-8.54c1.48-.83,3.14-1.26,4.84-1.27l28.92-.09-14.57,8.13ZM51.47,23.9c-1.48.83-3.14,1.26-4.84,1.27l-28.92.09,14.57-8.13c2.2-1.22,4.67-1.86,7.18-1.86l27.32.08-15.32,8.54Z"/><g fill="#fff"><path d="M578.8,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4s0-12.88,0-12.88h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86,0,2.12-1.72,3.77-3.84,3.77h-60.53v12.88h60.53c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M228.84,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM228.84,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><path d="M483.22,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM483.22,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><polygon points="410.52 4.53 410.52 24.96 360.14 24.96 360.14 4.53 347.24 4.53 347.24 58.42 360.14 58.42 360.14 37.86 410.52 37.86 410.52 58.42 423.42 58.42 423.42 4.53 410.52 4.53"/><path d="M155.11,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4V4.44h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86s-1.72,3.77-3.84,3.77h-60.53v12.88s60.53,0,60.53,0c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M319.66,4.53h-43.49s-5.2,0-5.2,0h-7.7s0,53.89,0,53.89h12.9s0-14.44,0-14.44h43.49c10.88,0,19.73-8.85,19.73-19.73,0-10.88-8.85-19.73-19.73-19.73ZM319.66,31.08h-43.49s0-13.66,0-13.66h43.49c3.77,0,6.83,3.06,6.83,6.83,0,3.77-3.06,6.83-6.83,6.83Z"/></g></svg>`;
 
@@ -418,6 +573,7 @@ export function buildPdfHtml(
 <html lang="en" data-theme="${theme}"${pdfProfileAttr} data-hide-duplicate-body-logo="${hideDuplicateBodyLogo ? "true" : "false"}">
 <head>
   <meta charset="utf-8">
+  ${printMediaPageBlock}
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${titleSafe} — ${companyNameSafe || "Sophos FireComply"}</title>
   <style>
@@ -787,6 +943,14 @@ export function buildPdfHtml(
         table-layout: fixed !important;
         border-collapse: collapse !important;
       }
+      /*
+       * Medium/wide compliance-style tables: fixed layout splits width evenly and crushes long
+       * evidence columns. Auto layout lets the browser allocate width from cell content.
+       */
+      table.pdf-table--medium,
+      table.pdf-table--wide {
+        table-layout: auto !important;
+      }
       table:not(.pdf-table--wide):not(.pdf-table--medium) tr {
         page-break-inside: avoid;
       }
@@ -839,6 +1003,26 @@ export function buildPdfHtml(
       .pdf-table--wide tr,
       .pdf-table--medium tr {
         page-break-inside: auto !important;
+      }
+      /* Backticks in markdown become <code>; in dense tables the pill style reads as heavy “tags”. */
+      table td code,
+      table th code {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        font-weight: inherit !important;
+        color: inherit !important;
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+      }
+      table.pdf-table--medium td,
+      table.pdf-table--wide td {
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
       }
       td {
         border: 1px solid #cbd5e1 !important;
@@ -966,10 +1150,163 @@ export function buildPdfHtml(
 </html>`;
 }
 
+/**
+ * Open a full HTML document for printing. Prefers a blob: URL so Safari/WebKit is more likely to
+ * respect `@page` size than `about:blank` + `document.write`.
+ */
+export function openHtmlForPrint(html: string): boolean {
+  if (typeof window === "undefined") return false;
+
+  const fallbackWrite = (): boolean => {
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) return false;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    window.setTimeout(() => {
+      try {
+        w.print();
+      } catch {
+        /* ignore */
+      }
+    }, 300);
+    return true;
+  };
+
+  try {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (!w) {
+      URL.revokeObjectURL(url);
+      return fallbackWrite();
+    }
+
+    const cleanup = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        /* ignore */
+      }
+    };
+    w.addEventListener("afterprint", cleanup, { once: true });
+    window.setTimeout(cleanup, 10 * 60_000);
+
+    const schedulePrint = () => {
+      window.setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch {
+          /* ignore */
+        }
+      }, 150);
+    };
+
+    if (w.document.readyState === "complete") {
+      schedulePrint();
+    } else {
+      w.addEventListener("load", schedulePrint, { once: true });
+    }
+    return true;
+  } catch {
+    return fallbackWrite();
+  }
+}
+
+/**
+ * Load full HTML into a hidden iframe and print (when opening a new tab is undesirable).
+ * Uses a blob URL first for the same `@page` behavior as {@link openHtmlForPrint}.
+ */
+export function printHtmlInHiddenIframe(html: string): boolean {
+  if (typeof document === "undefined" || typeof window === "undefined") return false;
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "FireComply print");
+  iframe.style.cssText =
+    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow;
+  if (!win) {
+    iframe.remove();
+    return false;
+  }
+
+  const removeIframe = () => {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  const fallbackWrite = (): boolean => {
+    const idoc = iframe.contentDocument ?? win.document;
+    try {
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
+    } catch {
+      removeIframe();
+      return false;
+    }
+    win.focus();
+    window.setTimeout(() => {
+      try {
+        win.print();
+      } catch {
+        /* ignore */
+      }
+      window.setTimeout(removeIframe, 2_000);
+    }, 300);
+    return true;
+  };
+
+  try {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const cleanup = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        /* ignore */
+      }
+      removeIframe();
+    };
+
+    let cleaned = false;
+    const runCleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      cleanup();
+    };
+
+    iframe.addEventListener(
+      "load",
+      () => {
+        window.setTimeout(() => {
+          try {
+            win.focus();
+            win.print();
+          } catch {
+            /* ignore */
+          }
+          win.addEventListener("afterprint", runCleanup, { once: true });
+          window.setTimeout(runCleanup, 2_000);
+        }, 100);
+      },
+      { once: true },
+    );
+    iframe.src = url;
+    return true;
+  } catch {
+    return fallbackWrite();
+  }
+}
+
 // ── Word export ──
 
 /** Generate Word blob from markdown */
 export async function generateWordBlob(markdown: string, branding: BrandingData): Promise<Blob> {
+  const { text: mdForDocx, images: docxImages } = extractDataUriMarkdownImagesForDocx(markdown);
+
   const headerParagraphs: Paragraph[] = [];
   if (branding.companyName) {
     headerParagraphs.push(
@@ -1045,7 +1382,7 @@ export async function generateWordBlob(markdown: string, branding: BrandingData)
             size: { orientation: PageOrientation.LANDSCAPE },
           },
         },
-        children: [...headerParagraphs, ...markdownToDocxElements(markdown)],
+        children: [...headerParagraphs, ...markdownToDocxElements(mdForDocx, docxImages)],
       },
     ],
   });

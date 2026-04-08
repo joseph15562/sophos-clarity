@@ -20,13 +20,14 @@ vi.mock("next-themes", () => ({
 
 vi.mock("@/lib/report-html", () => ({
   extractTocHeadings: vi.fn(() => []),
-  buildReportHtml: vi.fn(() => "<div data-testid=\"report-html\">report</div>"),
+  buildReportHtml: vi.fn(() => '<div data-testid="report-html">report</div>'),
 }));
 
 vi.mock("@/lib/report-export", () => ({
   buildPdfHtml: vi.fn(() => "<html><body>pdf</body></html>"),
   generateWordBlob: vi.fn(async () => new Blob()),
   generatePptxBlob: vi.fn(async () => new Blob()),
+  openHtmlForPrint: vi.fn(() => true),
 }));
 
 vi.mock("file-saver", () => ({

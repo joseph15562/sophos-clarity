@@ -87,6 +87,21 @@ export function AssessDocumentPreviewSection({
             <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
             Back to Dashboard
           </Button>
+          {!isViewerOnly && (
+            <button
+              type="button"
+              onClick={() => onSaveReports(true)}
+              disabled={savingReports}
+              className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
+                reportsSaved
+                  ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                  : "bg-[#2006F7] text-white hover:bg-[#10037C]"
+              }`}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
+            </button>
+          )}
           <div className="flex-1" />
           {!localMode && !isViewerOnly && (
             <div className="flex flex-wrap gap-2">
@@ -112,6 +127,19 @@ export function AssessDocumentPreviewSection({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {hasReports && !isLoading && saveError && (
+        <div className="no-print mb-2">
+          <FlowStatusCard
+            variant="error"
+            title="Could not save reports"
+            description="Your generated content is still in the browser. Fix the issue and try again."
+            errorDetail={saveError}
+            onRetry={onRetrySave}
+            retryLabel="Retry save"
+          />
         </div>
       )}
 
@@ -188,46 +216,20 @@ export function AssessDocumentPreviewSection({
       </Suspense>
 
       {hasReports && !isLoading && (
-        <div className="no-print space-y-3">
-          {saveError && (
-            <FlowStatusCard
-              variant="error"
-              title="Could not save reports"
-              description="Your generated content is still in the browser. Fix the issue and try again."
-              errorDetail={saveError}
-              onRetry={onRetrySave}
-              retryLabel="Retry save"
-            />
-          )}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={onBackToDashboard} className="gap-2">
-              <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
-              Back to Dashboard
-            </Button>
-            {!isViewerOnly && (
-              <button
-                onClick={() => onSaveReports(true)}
-                disabled={savingReports}
-                className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
-                  reportsSaved
-                    ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                    : "bg-[#2006F7] text-white hover:bg-[#10037C]"
-                }`}
-              >
-                <Save className="h-3.5 w-3.5" />
-                {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
-              </button>
-            )}
-            <div className="flex-1" />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onStartOver}
-              className="text-muted-foreground hover:text-foreground text-xs"
-            >
-              Start Over
-            </Button>
-          </div>
+        <div className="no-print flex flex-wrap items-center gap-3 mt-3">
+          <Button variant="outline" onClick={onBackToDashboard} className="gap-2">
+            <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
+            Back to Dashboard
+          </Button>
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onStartOver}
+            className="text-muted-foreground hover:text-foreground text-xs"
+          >
+            Start Over
+          </Button>
         </div>
       )}
     </>

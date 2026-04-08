@@ -10,7 +10,8 @@ import {
 } from "@/lib/saved-reports";
 import { displayCustomerNameForUi } from "@/lib/sophos-central";
 import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
-import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
+import { buildPdfHtml, generateWordBlob, openHtmlForPrint } from "@/lib/report-export";
+import { sanitizePdfFilenamePart } from "@/lib/pdf-utils";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { Button } from "@/components/ui/button";
 import { SafeHtml } from "@/components/SafeHtml";
@@ -124,6 +125,7 @@ function SavedReportViewerInner() {
 
   const baseTitle = "Firewall Configuration Assessment Report";
   const wordFilename = `${customerTitle || "Report"}-${baseTitle.replace(/\s+/g, "-")}.docx`;
+  const pdfFilename = `${sanitizePdfFilenamePart(customerTitle || "Report")}-${baseTitle.replace(/\s+/g, "-")}.pdf`;
   const savedLabel = new Date(pkg.createdAt).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -138,15 +140,28 @@ function SavedReportViewerInner() {
     saveAs(blob, wordFilename);
   };
 
-  const handlePdf = () => {
-    const el = reportContentRef.current;
-    if (!el) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" }));
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 300);
+  const handlePdf = async () => {
+    if (!markdown.trim()) return;
+    const coverLines = [
+      customerTitle ? `Customer: ${customerTitle}` : "",
+      pkg.environment ? `Environment: ${pkg.environment}` : "",
+      new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    ].filter(Boolean);
+    try {
+      const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+      const blob = await generateMarkdownReportPdfBlob(markdown, { title: baseTitle, coverLines });
+      saveAs(blob, pdfFilename);
+    } catch (err) {
+      console.warn("FireComply: saved report PDF fell back to print", err);
+      const el = reportContentRef.current;
+      if (!el) return;
+      const html = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
+      openHtmlForPrint(html);
+    }
   };
 
   const scrollTo = (elementId: string) => {
@@ -218,7 +233,7 @@ function SavedReportViewerInner() {
                 <Button
                   type="button"
                   size="sm"
-                  onClick={handlePdf}
+                  onClick={() => void handlePdf()}
                   disabled={!markdown.trim()}
                   className="gap-1.5 h-8 shrink-0 whitespace-nowrap bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
                 >

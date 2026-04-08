@@ -50,7 +50,8 @@ const REPORT_HTML_SANITIZE: PurifyConfig = {
  * so we only fix concatenated header+separator+body. Do NOT split wide rows with many empty
  * cells (e.g. firewall rules), which would contain many " | | " and get broken.
  */
-function normalizeMarkdownTables(md: string): string {
+/** Exported for PDF / other parsers that must match {@link buildReportHtml} table handling. */
+export function normalizeMarkdownTables(md: string): string {
   const rowBoundary = " | | ";
   return md
     .split("\n")

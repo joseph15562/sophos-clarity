@@ -50,6 +50,7 @@ import {
   buildPdfHtml,
   generateWordBlob,
   generatePptxBlob,
+  openHtmlForPrint,
   type ReportExportTheme,
 } from "@/lib/report-export";
 import JSZip from "jszip";
@@ -782,23 +783,25 @@ function ReportContent({
     if (!el || !markdown) return;
 
     const title = pdfFilename.replace(/\.pdf$/i, "");
-    /** CI / Playwright: real .pdf bytes so E2E can assert download (see VITE_E2E_PDF_DOWNLOAD). */
-    if (import.meta.env.VITE_E2E_PDF_DOWNLOAD === "1") {
-      const { generateExecutiveReportPdfBlob } = await import("@/lib/executive-report-pdfmake");
-      const blob = await generateExecutiveReportPdfBlob(markdown, title);
+    const coverLines = [
+      branding.customerName ? `Customer: ${branding.customerName}` : "",
+      branding.companyName || "",
+      new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    ].filter(Boolean);
+
+    try {
+      const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+      const blob = await generateMarkdownReportPdfBlob(markdown, { title, coverLines });
       saveAs(blob, pdfFilename);
-      return;
+    } catch (err) {
+      console.warn("FireComply: PDF download fell back to browser print", err);
+      const html = buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme });
+      if (!openHtmlForPrint(html)) return;
     }
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme }));
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 300);
   };
 
   const handleWord = async () => {
@@ -879,11 +882,11 @@ function ReportContent({
               <FileText className="h-4 w-4 shrink-0" /> Download Word
             </Button>
             <Button
-              onClick={handlePdf}
+              onClick={() => void handlePdf()}
               className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-pdf"
               data-testid="export-download-pdf"
-              title="Opens print preview in a new tab. Choose Save as PDF. The page requests A4 landscape; if Safari still shows Portrait, select Landscape in the print dialog."
+              title="Downloads an A4 landscape PDF. If generation fails, a print tab opens instead—choose Save as PDF."
             >
               <Download className="h-4 w-4 shrink-0" /> Download PDF
             </Button>
