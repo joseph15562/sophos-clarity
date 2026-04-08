@@ -768,6 +768,7 @@ function ReportContent({
   const [shareExpiresAt, setShareExpiresAt] = useState("");
   const [shareError, setShareError] = useState("");
   const [extractedOpen, setExtractedOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [geminiCooldownRemaining, setGeminiCooldownRemaining] = useState(0);
   const exportTheme: ReportExportTheme = isDark ? "dark" : "light";
 
@@ -804,34 +805,42 @@ function ReportContent({
 
   const handlePdf = async () => {
     const el = docRef.current;
-    if (!el || !markdown) return;
+    if (!el || !markdown || pdfLoading) return;
 
-    const title = pdfFilename.replace(/\.pdf$/i, "");
-    const themedHtml = buildPdfHtml(el.innerHTML, title, branding, { theme: "light" });
-
+    setPdfLoading(true);
     try {
-      const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
-      const blob = await renderPdfViaServer(themedHtml, { landscape: true });
-      saveAs(blob, pdfFilename);
-    } catch (serverErr) {
-      console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+      const title = pdfFilename.replace(/\.pdf$/i, "");
+      const themedHtml = buildPdfHtml(el.innerHTML, title, branding, { theme: "light" });
+
       try {
-        const coverLines = [
-          branding.customerName ? `Customer: ${branding.customerName}` : "",
-          branding.companyName || "",
-          new Date().toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-        ].filter(Boolean);
-        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-        const blob = await generateMarkdownReportPdfBlob(markdown, { title, coverLines });
+        const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+        const blob = await renderPdfViaServer(themedHtml, { landscape: true });
         saveAs(blob, pdfFilename);
-      } catch (pdfmakeErr) {
-        console.warn("FireComply: pdfmake also failed, falling back to browser print", pdfmakeErr);
-        if (!openHtmlForPrint(themedHtml)) return;
+      } catch (serverErr) {
+        console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+        try {
+          const coverLines = [
+            branding.customerName ? `Customer: ${branding.customerName}` : "",
+            branding.companyName || "",
+            new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
+          ].filter(Boolean);
+          const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+          const blob = await generateMarkdownReportPdfBlob(markdown, { title, coverLines });
+          saveAs(blob, pdfFilename);
+        } catch (pdfmakeErr) {
+          console.warn(
+            "FireComply: pdfmake also failed, falling back to browser print",
+            pdfmakeErr,
+          );
+          if (!openHtmlForPrint(themedHtml)) return;
+        }
       }
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -925,12 +934,18 @@ function ReportContent({
             </Button>
             <Button
               onClick={() => void handlePdf()}
+              disabled={pdfLoading}
               className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-pdf"
               data-testid="export-download-pdf"
               title="Downloads an A4 landscape PDF. If generation fails, a print tab opens instead—choose Save as PDF."
             >
-              <Download className="h-4 w-4 shrink-0" /> Download PDF
+              {pdfLoading ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 shrink-0" />
+              )}{" "}
+              {pdfLoading ? "Generating…" : "Download PDF"}
             </Button>
           </>
         )}

@@ -765,6 +765,7 @@ export default function ClientPortal() {
   const [authChecked, setAuthChecked] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [isMspUser, setIsMspUser] = useState(false);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState<"dashboard" | "findings" | "compliance" | "reports">(
@@ -1149,39 +1150,48 @@ export default function ClientPortal() {
         toast.error("Nothing to export", { description: "This report section is empty." });
         return;
       }
-      const inner = buildReportHtml(entry.markdown);
-      const themedHtml = buildPdfHtml(inner, entry.label, reportExportBranding, { theme: "light" });
-      const filename = `${sanitizeFilenameBase(entry.label)}.pdf`;
 
+      setPdfLoadingId(entry.id);
       try {
-        const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
-        const blob = await renderPdfViaServer(themedHtml, { landscape: true });
-        saveAs(blob, filename);
-      } catch (serverErr) {
-        console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+        const inner = buildReportHtml(entry.markdown);
+        const themedHtml = buildPdfHtml(inner, entry.label, reportExportBranding, {
+          theme: "light",
+        });
+        const filename = `${sanitizeFilenameBase(entry.label)}.pdf`;
+
         try {
-          const coverLines = [
-            customerName ? `Customer: ${customerName}` : "",
-            reportExportBranding.companyName || "",
-            new Date().toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }),
-          ].filter(Boolean);
-          const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-          const blob = await generateMarkdownReportPdfBlob(entry.markdown, {
-            title: entry.label,
-            coverLines,
-          });
+          const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+          const blob = await renderPdfViaServer(themedHtml, { landscape: true });
           saveAs(blob, filename);
-        } catch {
-          if (!openHtmlForPrint(themedHtml)) {
-            toast.error("Pop-up blocked", {
-              description: "Allow pop-ups to print or save as PDF.",
+        } catch (serverErr) {
+          console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+          try {
+            const coverLines = [
+              customerName ? `Customer: ${customerName}` : "",
+              reportExportBranding.companyName || "",
+              new Date().toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+            ].filter(Boolean);
+            const { generateMarkdownReportPdfBlob } =
+              await import("@/lib/assessment-report-pdfmake");
+            const blob = await generateMarkdownReportPdfBlob(entry.markdown, {
+              title: entry.label,
+              coverLines,
             });
+            saveAs(blob, filename);
+          } catch {
+            if (!openHtmlForPrint(themedHtml)) {
+              toast.error("Pop-up blocked", {
+                description: "Allow pop-ups to print or save as PDF.",
+              });
+            }
           }
         }
+      } finally {
+        setPdfLoadingId(null);
       }
     },
     [reportExportBranding, customerName],
@@ -2093,12 +2103,16 @@ export default function ClientPortal() {
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          disabled={!hasMd}
+                                          disabled={!hasMd || pdfLoadingId === entry.id}
                                           className="rounded-xl border-brand-accent/15 gap-1.5 text-xs"
                                           onClick={() => void handleDownloadPdf(entry)}
                                         >
-                                          <FileText className="h-3.5 w-3.5" />
-                                          PDF
+                                          {pdfLoadingId === entry.id ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <FileText className="h-3.5 w-3.5" />
+                                          )}
+                                          {pdfLoadingId === entry.id ? "Generating…" : "PDF"}
                                         </Button>
                                       </div>
                                     </div>

@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { saveAs } from "file-saver";
-import { FileText, Download, ArrowLeft } from "lucide-react";
+import { FileText, Download, ArrowLeft, Loader2 } from "lucide-react";
 import {
   loadSavedReportPackageById,
   savedPackageToMarkdown,
@@ -24,6 +24,7 @@ function SavedReportViewerInner() {
   const { user, org, isGuest, isLoading } = useAuth();
   const [pkg, setPkg] = useState<SavedReportPackage | null | undefined>(undefined);
   const [tocOpen, setTocOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const reportContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,37 +154,43 @@ function SavedReportViewerInner() {
   };
 
   const handlePdf = async () => {
-    if (!markdown.trim()) return;
+    if (!markdown.trim() || pdfLoading) return;
     const el = reportContentRef.current;
     if (!el) return;
-    const themedHtml = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
 
+    setPdfLoading(true);
     try {
-      const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
-      const blob = await renderPdfViaServer(themedHtml, { landscape: true });
-      saveAs(blob, pdfFilename);
-    } catch (serverErr) {
-      console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+      const themedHtml = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
+
       try {
-        const coverLines = [
-          customerTitle ? `Customer: ${customerTitle}` : "",
-          pkg.environment ? `Environment: ${pkg.environment}` : "",
-          new Date().toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-        ].filter(Boolean);
-        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-        const blob = await generateMarkdownReportPdfBlob(markdown, {
-          title: baseTitle,
-          coverLines,
-        });
+        const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+        const blob = await renderPdfViaServer(themedHtml, { landscape: true });
         saveAs(blob, pdfFilename);
-      } catch (pdfmakeErr) {
-        console.warn("FireComply: pdfmake also failed, falling back to print", pdfmakeErr);
-        openHtmlForPrint(themedHtml);
+      } catch (serverErr) {
+        console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+        try {
+          const coverLines = [
+            customerTitle ? `Customer: ${customerTitle}` : "",
+            pkg.environment ? `Environment: ${pkg.environment}` : "",
+            new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
+          ].filter(Boolean);
+          const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+          const blob = await generateMarkdownReportPdfBlob(markdown, {
+            title: baseTitle,
+            coverLines,
+          });
+          saveAs(blob, pdfFilename);
+        } catch (pdfmakeErr) {
+          console.warn("FireComply: pdfmake also failed, falling back to print", pdfmakeErr);
+          openHtmlForPrint(themedHtml);
+        }
       }
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -257,10 +264,15 @@ function SavedReportViewerInner() {
                   type="button"
                   size="sm"
                   onClick={() => void handlePdf()}
-                  disabled={!markdown.trim()}
+                  disabled={!markdown.trim() || pdfLoading}
                   className="gap-1.5 h-8 shrink-0 whitespace-nowrap bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
                 >
-                  <Download className="h-3.5 w-3.5 shrink-0" /> Download PDF
+                  {pdfLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 shrink-0" />
+                  )}{" "}
+                  {pdfLoading ? "Generating…" : "Download PDF"}
                 </Button>
               </div>
               <span className="text-[10px] text-white/40">Saved {savedLabel}</span>
