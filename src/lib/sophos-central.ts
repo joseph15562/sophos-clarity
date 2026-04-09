@@ -471,6 +471,7 @@ export async function getCachedFirewalls(
   tenantId?: string,
 ): Promise<
   Array<{
+    rowId: string;
     firewallId: string;
     centralTenantId: string;
     serialNumber: string;

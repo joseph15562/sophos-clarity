@@ -39,6 +39,7 @@ import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { RiskScoreResult } from "@/lib/risk-score";
 import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
+import type { ComplianceFramework } from "@/lib/compliance-context-options";
 import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
 import { cn } from "@/lib/utils";
 import {
@@ -351,7 +352,7 @@ export function AnalysisTabs({
   exportReviewerSignoff = null,
   aggregatedSelectedFrameworks,
 }: AnalysisTabsProps) {
-  const complianceFrameworks =
+  const complianceFrameworks: string[] =
     aggregatedSelectedFrameworks && aggregatedSelectedFrameworks.length > 0
       ? aggregatedSelectedFrameworks
       : branding.selectedFrameworks;
@@ -1330,7 +1331,7 @@ export function AnalysisTabs({
                   analysisResults={analysisResult}
                   branding={{
                     customerName: branding.customerName,
-                    selectedFrameworks: complianceFrameworks,
+                    selectedFrameworks: complianceFrameworks as ComplianceFramework[],
                   }}
                   reviewerSignoff={exportReviewerSignoff}
                 />

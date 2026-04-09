@@ -108,18 +108,18 @@ function dataUriToPdfImage(uri: string, compact?: boolean): Content {
     return {
       image: uri,
       width: 140,
-      maxHeight: 40,
+      height: 40,
       alignment: "left",
       margin: [0, 2, 0, 4],
-    };
+    } as Content;
   }
   return {
     image: uri,
     width: 200,
-    maxHeight: 56,
+    height: 56,
     alignment: "left",
     margin: [0, 0, 0, 12],
-  };
+  } as Content;
 }
 
 /** Paragraph / table cell: emit data-URI images instead of dropping image/link tokens in inlineToRich. */

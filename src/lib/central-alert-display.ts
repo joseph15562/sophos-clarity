@@ -9,7 +9,7 @@ function trimStr(v: unknown): string | undefined {
 function managedAgentAsRecord(a: CentralAlert): Record<string, unknown> | null {
   const ma = a.managedAgent;
   if (!ma || typeof ma !== "object") return null;
-  return ma as Record<string, unknown>;
+  return ma as unknown as Record<string, unknown>;
 }
 
 /** True when `managedAgent.type` refers to an endpoint / computer (not a firewall). */
@@ -78,7 +78,7 @@ function resolveEndpointStyleDeviceName(a: CentralAlert): string | undefined {
     : undefined;
   if (fromMa) return fromMa;
 
-  const raw = a as Record<string, unknown>;
+  const raw = a as unknown as Record<string, unknown>;
   const topLevel =
     trimStr(raw.managedAgentName) ??
     trimStr(raw.managed_agent_name) ??

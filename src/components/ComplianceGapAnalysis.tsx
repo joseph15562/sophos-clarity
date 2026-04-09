@@ -65,7 +65,7 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
       }
     }
     return items;
-  }, [firstResult, selectedFrameworks]);
+  }, [mergedResult, selectedFrameworks]);
 
   const sorted = useMemo(() => {
     const arr = [...gaps];

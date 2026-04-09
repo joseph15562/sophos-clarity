@@ -665,7 +665,8 @@ async function consumeSSEStream(
               "Report generation hit the server time limit — the text below may be incomplete. Try Retry, generate one firewall at a time, or use fewer frameworks. (Long runs need a paid Supabase tier or a higher stream budget on the Edge function.)",
             );
           }
-          const choice = parsed.choices?.[0] as Record<string, unknown> | undefined;
+          const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
+          const choice = choices?.[0];
           const delta = choice?.delta as Record<string, unknown> | undefined;
           const content = delta?.content as string | undefined;
           const finishReason = (choice?.finish_reason ?? delta?.finish_reason) as
@@ -709,8 +710,10 @@ async function consumeSSEStream(
               "Report generation hit the server time limit — the text below may be incomplete. Try Retry, generate one firewall at a time, or use fewer frameworks. (Long runs need a paid Supabase tier or a higher stream budget on the Edge function.)",
             );
           }
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) onDelta(content);
+          const fbChoices = parsed.choices as Array<Record<string, unknown>> | undefined;
+          const fbContent = (fbChoices?.[0]?.delta as Record<string, unknown> | undefined)
+            ?.content as string | undefined;
+          if (fbContent) onDelta(fbContent);
         } catch (err) {
           console.warn("[parseStreamChunk] fallback", err);
         }

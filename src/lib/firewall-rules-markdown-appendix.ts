@@ -80,7 +80,7 @@ export function maybeAppendFirewallRulesExportAppendix(
   const got = countFirewallRulesSectionTableDataRows(markdown);
   if (got < 0 || got >= expected) return markdown;
 
-  const tableMd = markdownTableFromFirewallRulesTable(table);
+  const tableMd = markdownTableFromFirewallRulesTable(table!);
   if (!tableMd) return markdown;
 
   const appendix = [
