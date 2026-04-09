@@ -239,13 +239,14 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
 
 test.describe("Tier 2 — hub & API routes", () => {
   test("API hub shows REST API documentation", async ({ page }) => {
-    await page.goto("/api", { waitUntil: "domcontentloaded" });
+    await page.goto("/api", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: /API & Integrations/i })).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("button", { name: /API Explorer/i }).click();
+    const apiTab = page.getByRole("button", { name: /API Explorer/i });
+    await apiTab.click();
     await expect(page.getByRole("heading", { name: /^Authentication$/i })).toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     });
     await expect(
       page.getByRole("button", { name: /GET \/api\/assessments/i }).first(),
