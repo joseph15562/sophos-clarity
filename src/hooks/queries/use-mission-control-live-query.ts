@@ -310,8 +310,6 @@ export function useMissionControlLiveQuery(
     const threatFromCentral = buildThreatFromAlerts(alerts);
     const centralThreatTotal = threatFromCentral.reduce((s, d) => s + d.blocked + d.ips + d.web, 0);
     const threatFromAssess = buildThreatFromAssessments(assessmentTs);
-    const assessThreatTotal = threatFromAssess.reduce((s, d) => s + d.blocked, 0);
-
     const useCentralThreat = centralThreatTotal > 0;
     const threatActivity = useCentralThreat ? threatFromCentral : threatFromAssess;
     const threatChartSource: "central" | "assessments" = useCentralThreat

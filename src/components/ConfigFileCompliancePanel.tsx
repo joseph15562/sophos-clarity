@@ -70,7 +70,7 @@ export function ConfigFileCompliancePanel({
   const applyGeoPatch = useCallback(
     (updates: Partial<Pick<ConfigComplianceScope, "environment" | "country" | "state">>) => {
       const nextEnv = updates.environment !== undefined ? updates.environment : scope.environment;
-      let nextCountry = updates.country !== undefined ? updates.country : scope.country;
+      const nextCountry = updates.country !== undefined ? updates.country : scope.country;
       let nextState = updates.state !== undefined ? updates.state : scope.state;
       if (updates.country !== undefined && updates.country !== "United States") {
         nextState = "";
