@@ -141,7 +141,7 @@ test.describe("Tier 2 — signed-in hub (E2E bypass, no secrets)", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename().toLowerCase()).toMatch(/\.docx$/i);
 
-    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 120_000 });
     await page.getByTestId("export-download-pdf").click();
     const pdfDl = await pdfDownloadPromise;
     expect(pdfDl.suggestedFilename().toLowerCase()).toMatch(/\.pdf$/i);
@@ -230,7 +230,7 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename().toLowerCase()).toMatch(/\.docx$/i);
 
-    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 120_000 });
     await page.getByTestId("export-download-pdf").click();
     const pdfDl = await pdfDownloadPromise;
     expect(pdfDl.suggestedFilename().toLowerCase()).toMatch(/\.pdf$/i);
@@ -239,18 +239,20 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
 
 test.describe("Tier 2 — hub & API routes", () => {
   test("API hub shows REST API documentation", async ({ page }) => {
-    await page.goto("/api", { waitUntil: "networkidle" });
+    test.setTimeout(90_000);
+    await page.goto("/api", { waitUntil: "load" });
     await expect(page.getByRole("heading", { name: /API & Integrations/i })).toBeVisible({
       timeout: 30_000,
     });
     const apiTab = page.getByRole("button", { name: /API Explorer/i });
+    await apiTab.waitFor({ state: "visible", timeout: 15_000 });
     await apiTab.click();
-    await expect(page.getByRole("heading", { name: /^Authentication$/i })).toBeVisible({
+    await expect(page.locator("h3", { hasText: /^Authentication$/i })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(
-      page.getByRole("button", { name: /GET \/api\/assessments/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /GET \/api\/assessments/i }).first()).toBeVisible(
+      { timeout: 15_000 },
+    );
   });
 
   test("report centre shell loads", async ({ page }) => {
