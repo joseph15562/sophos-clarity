@@ -117,7 +117,7 @@ export async function handleSendSavedLibraryReportRoutes(
   }
 
   const safeFile =
-    subjectName.replace(/[^\w\-]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) ||
+    subjectName.replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) ||
     "report";
   const emailHtml = buildSophosEmailHtml(
     "Firewall Configuration Assessment Report",
