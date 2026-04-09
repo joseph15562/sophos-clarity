@@ -1,121 +1,190 @@
 # Sophos FireComply
 
-**AI-assisted firewall configuration assessment and compliance reporting for MSPs.**
+**Multi-tenant MSP platform for Sophos firewall security posture management, compliance reporting, and automated assessment.**
 
-Sophos FireComply transforms raw Sophos XGS firewall HTML configuration exports into client-ready documentation — technical reports, executive briefs, and compliance evidence packs — in minutes, not hours.
-
-Upload a config. Get a professional assessment. Export it. Done.
-
-## License
-
-[MIT](LICENSE) — free to use, modify, and distribute subject to the license terms. Third-party dependencies remain under their own licenses (`node_modules/*/LICENSE`, `package.json` metadata).
+FireComply gives MSPs a single pane of glass across their entire Sophos firewall estate — deterministic best-practice scoring, AI-generated reports, branded client portals, drift detection, and fleet-wide analytics. For Sophos SEs, a dedicated Health Check workflow turns manual 3-hour firewall reviews into 15-minute professional engagements.
 
 ---
 
-## Problem
+## What It Does
 
-MSPs and security consultants spend hours manually reviewing Sophos firewall configurations, writing assessment reports, and mapping findings to compliance frameworks. The process is repetitive, error-prone, and doesn't scale across a fleet of managed firewalls.
-
-## Solution
-
-Sophos FireComply automates the entire workflow:
-
-1. **Upload** — drag and drop one or more Sophos XGS configuration HTML exports
-2. **Analyse** — a deterministic findings engine instantly identifies misconfigurations, security gaps, and best-practice violations
-3. **Generate** — AI produces professional narrative reports with anonymised data (IPs, names, and identifiers never leave the browser)
-4. **Export** — download as Word (.docx), PDF, PowerPoint (.pptx), or bundled ZIP
-
-No firewall credentials. No API keys to Sophos Central required. No sensitive data sent to third parties.
+| Surface                | Purpose                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| **Assess Workbench**   | Upload configs, run deterministic analysis, generate AI reports, manage compliance scope |
+| **Fleet Command**      | Unified view of every firewall across every customer — scores, status, map, filters      |
+| **Mission Control**    | MSP dashboard — KPIs, Central alerts, threat charts, portfolio health                    |
+| **Customer Directory** | Customer portfolio management — health tracking, onboarding, risk scores                 |
+| **Client Portal**      | Branded customer-facing portals with score, history, findings, compliance, reports       |
+| **Drift Monitor**      | Config change detection between assessment snapshots                                     |
+| **Portfolio Insights** | Cross-customer analytics, trend charts, risk matrix, recommendations                     |
+| **Report Centre**      | Saved report library with scheduling, email delivery, archives, bulk actions             |
+| **Integrations Hub**   | Sophos Central, ConnectWise, Autotask, Slack, Teams, webhooks, API keys                  |
+| **Connector Agent**    | On-premises Electron agent for automated config collection via Sophos XML API            |
+| **SE Health Check**    | Purpose-built SE workflow — secure upload link, qualifying questions, branded PDF        |
 
 ---
 
-## Key Features
+## Key Capabilities
 
-### Deterministic Findings Engine
+### Deterministic Analysis Engine
 
-Rule-based analysis that surfaces real issues — duplicate/overlapping firewall rules, WAN rules without web filtering or IPS, logging gaps, broad source/destination patterns, MFA status, and SSL/TLS inspection coverage. Every finding is evidence-backed with extracted configuration facts.
+37 best-practice checks across 12 categories (Device Hardening, Visibility & Monitoring, Encryption & Inspection, Rule Hygiene, Network Protection, DoS & Spoof, VPN Security, Active Threat Response, Synchronized Security, Web Protection, Zero-Day Protection, Central Orchestration). Scored 0–100 with grades A–F. Every finding is evidence-backed with extracted configuration facts.
 
-### Inspection Posture Dashboard
+### Compliance Framework Mapping
 
-Visual coverage bars showing web filtering, IPS, and application control coverage across all WAN-facing rules. See at a glance where protection is strong and where gaps exist.
+39 compliance frameworks (GDPR, Cyber Essentials, NCSC, ISO 27001, PCI DSS, HIPAA, NIST 800-53, NIS2, DfE/KCSIE, SOC 2, and 29 others) with control-by-control evidence mapping — pass / partial / not met status, evidence citations, and remediation guidance.
 
-### Sophos Best Practice Checks
+### Four AI Report Types
 
-70+ checks aligned to Sophos recommended configuration guidelines, covering network protection, web filtering, logging, admin security, VPN, wireless, and more. Results scored per-category with pass/partial/fail status and licence-aware scoping.
+| Report                      | Audience                      | Length                   |
+| --------------------------- | ----------------------------- | ------------------------ |
+| **Full Technical Handover** | Engineers, auditors           | 15–20 pages per firewall |
+| **Executive Summary**       | IT managers, C-suite          | 5–8 pages                |
+| **Compliance Readiness**    | Compliance officers, auditors | 10–15 pages per firewall |
+| **SE Health Check**         | Customers, SEs                | 10–13 pages              |
 
-### Three Report Types
+The three MSP reports generate as a single combined document. The SE Health Check report includes template-generated (not AI) Engineer Notes for numerical accuracy.
 
-| Report                       | Purpose                                                                                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Technical Report**         | Per-firewall assessment: rules, NAT, interfaces, policies, security posture, and recommendations       |
-| **Executive Brief**          | Multi-firewall estate summary with risk matrix, cross-estate findings, and strategic recommendations   |
-| **Compliance Evidence Pack** | Framework-mapped control evidence (Cyber Essentials, GDPR, PCI DSS, NIST, ISO 27001) with gap analysis |
+### Data Privacy by Architecture
 
-### Compliance Heatmap
-
-Interactive matrix mapping extracted configuration facts to multiple compliance frameworks simultaneously. Each control is graded pass/partial/fail with evidence citations.
-
-### Security Posture Scorecard
-
-Deterministic scorecard grading 9 categories — Web Filtering, Intrusion Prevention, Application Control, Authentication, Logging, Rule Hygiene, Admin Access, Anti-Malware, and Network Security — as Good / Needs Review / High Risk. Each score is evidence-based with explanations referencing extracted configuration facts. Visible in the Overview tab alongside the risk gauge.
-
-### Risk Scoring and Estate Comparison
-
-Weighted risk scoring per firewall with category breakdowns. When multiple configs are loaded, compare firewalls side-by-side with finding deltas, score differences, and grade changes.
-
-### Data Anonymisation
-
-Client-side replacement of IP addresses, customer names, and network identifiers with RFC 5737 TEST-NET ranges before any data reaches the AI model. Real values are restored locally in the final rendered report. Sensitive configuration data never leaves the browser.
+- **Client-side parsing** — config files are parsed in the browser, never uploaded to a server
+- **Anonymisation** — hostnames, IPs, and identifiers replaced with tokens before reaching the AI model
+- **Streaming de-anonymisation** — real values restored in the response stream, never stored server-side
+- **Row-Level Security** — all database access scoped by organisation via Supabase RLS
 
 ### Multi-Format Export
 
-Word (.docx), PDF (styled HTML), PowerPoint (.pptx), and ZIP bundles with consistent formatting and branding.
+PDF (Headless Chromium), Word (.docx), PowerPoint (.pptx), styled HTML, CSV, JSON, ZIP bundles, email delivery (Resend), and shareable read-only links.
 
-### Demo Mode
+### Connector Agent
 
-One-click "Try Demo Config" button on the landing page loads a synthetic Sophos XGS configuration export so evaluators and judges can explore the full analysis and reporting experience without needing their own firewall config.
+Lightweight Electron agent for Windows, macOS, and Linux. Connects to Sophos firewalls via the XML API, pulls config exports on a schedule, runs analysis, and pushes results to the workspace. Supports heartbeat monitoring, remote scan triggers, and auto-updates.
 
-### Fleet Management (SE Health Check)
+### Sophos Central Integration
 
-Purpose-built workflow for Sophos SEs to manage health check assessments at scale — upload requests, scheduled reports, saved baselines, config diff comparison, and assessment history tracking.
+Partner-level Central API integration for fleet discovery, firmware/HA/alert enrichment, tenant mapping, and geo-location. Powers Mission Control alerts and threat charts.
+
+### PSA & Messaging Integrations
+
+ConnectWise Cloud (OAuth), ConnectWise Manage (ticket creation), Datto Autotask (ticket creation), Slack, Microsoft Teams, webhooks (`assessment_complete`, `score_change`, `critical_finding`, `agent_offline`), and scoped service keys for RMM/API access.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Browser (React SPA)                   │
-│                                                         │
-│  HTML Upload → Client-side Extraction → Anonymisation   │
-│       ↓                                                 │
-│  Deterministic Analysis Engine (findings, scores, BP)   │
-│       ↓                                                 │
-│  Anonymised JSON → Supabase Edge Function (Deno)        │
-│       ↓                                                 │
-│  Google Gemini → Streaming Markdown → Rendered Report   │
-│       ↓                                                 │
-│  PDF / Word / PowerPoint / ZIP Export                    │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Browser (React SPA)                          │
+│                                                                     │
+│  Config Upload → Client-side Extraction → Anonymisation             │
+│       ↓                                                             │
+│  Deterministic Analysis Engine (37 checks, 39 frameworks)           │
+│       ↓                                                             │
+│  Anonymised JSON → Supabase Edge Function (Deno)                    │
+│       ↓                                                             │
+│  Gemini / Claude / ChatGPT → SSE Stream → De-anonymise → Render    │
+│       ↓                                                             │
+│  PDF / Word / PPTX / HTML / CSV / JSON / ZIP / Email / Share Link   │
+├─────────────────────────────────────────────────────────────────────┤
+│                    Supabase (PostgreSQL + Auth)                      │
+│  RLS-scoped orgs · saved reports · scheduled jobs · portal configs  │
+│  Central credentials (AES-GCM) · agent heartbeats · score history   │
+├─────────────────────────────────────────────────────────────────────┤
+│                    Connector Agent (Electron)                        │
+│  On-prem · XML API → config export → analysis → push to workspace   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
-
-### AI Workflow
-
-1. The browser extracts structured data from HTML tables, detail blocks, and text elements
-2. IP addresses and identifiers are replaced with anonymised placeholders client-side
-3. Compact JSON is sent to a Supabase Edge Function
-4. The edge function streams AI-generated markdown from Google Gemini back to the browser via SSE
-5. The browser renders the markdown, restores original values, and makes the report available for export
-
-The AI never sees real customer network data.
 
 ### Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Recharts
-- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions on Deno)
-- **AI Model**: Google Gemini (streaming via OpenAI-compatible endpoint)
-- **Export**: docx, pdfmake, pptxgenjs, JSZip
-- **Design**: Sophos brand guidelines (Zalando Sans typography, Sophos colour palette)
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Recharts
+- **Backend:** Supabase (PostgreSQL, Auth, Edge Functions on Deno)
+- **AI:** Google Gemini (default), pluggable to Claude or ChatGPT (OpenAI-compatible endpoint)
+- **Export:** Headless Chromium (PDF), docx, pptxgenjs, JSZip
+- **Agent:** Electron, Sophos XML API, SNMP
+- **Email:** Resend API
+- **CI/CD:** GitHub Actions, Husky, lint-staged, Vitest, Playwright
+- **Design:** Sophos brand guidelines (Inter typography, Sophos colour palette)
+
+---
+
+## Documentation
+
+### Start Here
+
+The [`docs/start-here/`](docs/start-here/) folder contains everything you need to get started:
+
+| Guide                                                                                      | What it covers                                                   |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| **[Elevator Pitch](docs/start-here/01-elevator-pitch.md)**                                 | 10-second, 30-second, and audience-specific pitches              |
+| **[Why FireComply for MSPs](docs/start-here/10-why-firecomply-for-msps.md)**               | Business value, commercial angle, what changes for MSPs          |
+| **[MSP Customer Onboarding](docs/start-here/11-msp-customer-onboarding.md)**               | End-to-end onboarding: first assessment to continuous monitoring |
+| **[MSP Workflows & Best Practices](docs/start-here/18-msp-workflows-best-practices.md)**   | QBR prep, incident response, compliance audits, upsell, handoffs |
+| **[Why FireComply for SEs](docs/start-here/02-why-firecomply-for-ses.md)**                 | SE-specific benefits: speed, consistency, credibility            |
+| **[SE Workflows & Best Practices](docs/start-here/03-se-workflows-and-best-practices.md)** | Pre-sales health check, improvement reviews, demo workflow       |
+| **[Using with a Customer](docs/start-here/04-using-firecomply-with-a-customer.md)**        | Before/during/after the meeting, customer FAQ                    |
+
+**Styled HTML version:** [`docs/start-here/FireComply — Documentation.html`](docs/start-here/FireComply%20—%20Documentation.html) — all guides in one browsable page with sidebar navigation.
+
+### Feature Walkthroughs
+
+| Guide                                                                        | Feature                                                     |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Assessment Workbench](docs/start-here/05-walkthrough-msp-assess.md)         | Upload, analyse, generate reports, manage compliance        |
+| [Fleet Command](docs/start-here/12-walkthrough-fleet-command.md)             | Unified fleet view, map, search/filter, per-firewall detail |
+| [Mission Control](docs/start-here/13-walkthrough-mission-control.md)         | Dashboard KPIs, alerts, threat charts, portfolio health     |
+| [Client Portal](docs/start-here/14-walkthrough-client-portal.md)             | Branded portals: branding, sections, access control, slugs  |
+| [Drift Monitor & Insights](docs/start-here/15-walkthrough-drift-insights.md) | Config change tracking, cross-customer analytics            |
+| [Integrations Hub](docs/start-here/16-walkthrough-integrations.md)           | Central, ConnectWise, Autotask, Slack, Teams, webhooks      |
+| [Report Centre](docs/start-here/17-walkthrough-report-centre.md)             | Report library, scheduling, email delivery, archives        |
+| [Connector Agent](docs/start-here/07-walkthrough-connector-agent.md)         | Install, add firewalls, automate config collection          |
+| [AI Reports & Deliverables](docs/start-here/08-walkthrough-ai-reports.md)    | Report types, prompt engineering, export formats            |
+| [SE Health Check](docs/start-here/06-walkthrough-se-health-check.md)         | Request config, review on a call, deliver branded report    |
+
+### Product Brief
+
+- **[PDF](docs/Sophos%20FireComply%20—%20Product%20Brief.pdf)** — printable product brief
+- **[HTML](docs/Sophos%20FireComply%20—%20Product%20Brief.html)** — interactive version with screenshots
+
+### Technical & Operations
+
+| Document                                                                | Topic                        |
+| ----------------------------------------------------------------------- | ---------------------------- |
+| [Data Privacy](docs/DATA-PRIVACY.md)                                    | How customer data is handled |
+| [Threat Model (STRIDE)](docs/threat-model-stride-oneshot.md)            | Security threat analysis     |
+| [Tenant Model](docs/TENANT-MODEL.md)                                    | Multi-tenancy architecture   |
+| [Self-Hosted](docs/SELF-HOSTED.md)                                      | Self-hosting guide           |
+| [Supported SFOS Versions](docs/SUPPORTED-SFOS-VERSIONS.md)              | Compatible firmware versions |
+| [Scale Triggers](docs/SCALE-TRIGGERS.md)                                | When to scale infrastructure |
+| [Sophos Central Setup](docs/sophos-central-setup.md)                    | Connecting to Central API    |
+| [Firewall API Setup](docs/firewall-api-setup.md)                        | XML API for connector agents |
+| [Connector Agent SDK](docs/firecomply-connector-sophos-firewall-sdk.md) | Agent technical details      |
+| [SE Health Check Report](docs/se-health-check-report.md)                | Report structure and content |
+
+### API
+
+- **[OpenAPI Spec](docs/api/openapi.yaml)** — API schema
+- **[Edge Routes](docs/api/edge-routes.md)** — Supabase Edge Function endpoints
+- **[Client Data Layer](docs/api/client-data-layer.md)** — Frontend data access patterns
+
+### Architecture Decision Records
+
+- [`docs/adr/`](docs/adr/) — architectural decisions and rationale
+
+### Plans & Specs
+
+- [`docs/plans/`](docs/plans/) — feature plans, specs, and backlog items
+
+### Other
+
+| Document                                             | Topic                               |
+| ---------------------------------------------------- | ----------------------------------- |
+| [2-Minute Demo Script](docs/2_MINUTE_DEMO_SCRIPT.md) | Scripted walkthrough for live demos |
+| [Product Assessment](docs/PRODUCT-ASSESSMENT.md)     | Feature-level product evaluation    |
+| [Roadmap](docs/ROADMAP.md)                           | Planned features and priorities     |
+| [Changelog Policy](docs/CHANGELOG-POLICY.md)         | How in-app changelog is maintained  |
+| [UI Notifications](docs/UI-NOTIFICATIONS.md)         | Notification system design          |
+| [Demo Account](docs/DEMO-ACCOUNT.md)                 | How public demo mode works          |
 
 ---
 
@@ -131,18 +200,14 @@ The AI never sees real customer network data.
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/joseph15562/sophos-firecomply.git
 cd sophos-firecomply
 
-# Install dependencies
 npm install
 
-# Configure environment variables
 cp .env.example .env
 # Edit .env with your Supabase project URL and anon key
 
-# Start the development server
 npm run dev
 ```
 
@@ -152,32 +217,30 @@ The app will be available at `http://localhost:8080`.
 
 #### Frontend (`.env`)
 
-| Variable                        | Required | Description                                                     |
-| ------------------------------- | -------- | --------------------------------------------------------------- |
-| `VITE_SUPABASE_URL`             | Yes      | Your Supabase project URL (`https://<project-ref>.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase anon/public key (JWT with role `anon`)                 |
-| `VITE_APP_VERSION`              | No       | Optional version string shown in reports                        |
+| Variable                        | Required | Description                     |
+| ------------------------------- | -------- | ------------------------------- |
+| `VITE_SUPABASE_URL`             | Yes      | Your Supabase project URL       |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase anon/public key        |
+| `VITE_APP_VERSION`              | No       | Version string shown in reports |
 
-#### Edge Functions (set via Supabase Dashboard → Edge Functions → Secrets)
+#### Edge Functions (Supabase Dashboard → Edge Functions → Secrets)
 
-| Variable                                      | Required | Description                                                                                                                                                         |
-| --------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SUPABASE_URL`                                | Yes      | Same Supabase project URL                                                                                                                                           |
-| `SUPABASE_SERVICE_ROLE_KEY`                   | Yes      | Service role key (admin access — never expose client-side)                                                                                                          |
-| `SUPABASE_ANON_KEY`                           | Yes      | Anon key for RLS-scoped queries                                                                                                                                     |
-| `GEMINI_API_KEY`                              | Yes      | Google Gemini API key                                                                                                                                               |
-| `GEMINI_REPORT_MODEL`                         | No       | Model for reports (default: `gemini-2.5-flash`)                                                                                                                     |
-| `GEMINI_CHAT_MODEL`                           | No       | Model for chat (default: `gemini-2.5-flash-lite`)                                                                                                                   |
-| `GEMINI_REPORT_MAX_OUTPUT_TOKENS`             | No       | Cap on completion tokens for non-chat `parse-config` calls (default `32768`, max `65536`)                                                                           |
-| `PARSE_CONFIG_STREAM_BUDGET_MS`               | No       | Wall-clock ms before `parse-config` stops proxying Gemini (default `138000` ~2.3m — under Supabase free ~150s limit). On paid (~400s), set e.g. `385000`.           |
-| `PARSE_CONFIG_MAX_REPORT_COMPLETIONS_PER_MIN` | No       | Optional FireComply cap: completed **report** runs per user per rolling minute. **Default off** (`0`). Set a positive integer to enable (multi-tenant abuse guard). |
-| `PARSE_CONFIG_MAX_CHAT_COMPLETIONS_PER_MIN`   | No       | Same for **assistant** (default off). Set a positive integer to enable.                                                                                             |
-| `RESEND_API_KEY`                              | No       | Resend API key for email delivery                                                                                                                                   |
-| `REPORT_FROM_EMAIL`                           | No       | Sender address for emailed reports                                                                                                                                  |
-| `ALLOWED_ORIGIN`                              | No       | CORS origin restriction for edge functions                                                                                                                          |
-| `CENTRAL_ENCRYPTION_KEY`                      | No       | Encryption key for Sophos Central integration                                                                                                                       |
-
-**Gemini quotas:** Google’s **free / low-quota** tiers apply **strict per-minute limits**; you can still get HTTP **429** in short bursts even when an AI Studio usage chart looks fine. The app does **not** auto-retry 429 on the client (that only burns quota); after a limit, **Retry** stays disabled for ~65s, and the Edge function may try a **fallback model** if configured. **MSP production use** should enable **billing** on the Google Cloud project that owns `GEMINI_API_KEY`. **FireComply** does **not** apply its own per-minute completion caps by default (only Google’s limits apply); you can opt in with `PARSE_CONFIG_MAX_*` secrets above if you need app-side throttling.
+| Variable                                      | Required | Description                                                |
+| --------------------------------------------- | -------- | ---------------------------------------------------------- |
+| `SUPABASE_URL`                                | Yes      | Same Supabase project URL                                  |
+| `SUPABASE_SERVICE_ROLE_KEY`                   | Yes      | Service role key (admin access — never expose client-side) |
+| `SUPABASE_ANON_KEY`                           | Yes      | Anon key for RLS-scoped queries                            |
+| `GEMINI_API_KEY`                              | Yes      | Google Gemini API key                                      |
+| `GEMINI_REPORT_MODEL`                         | No       | Model for reports (default: `gemini-2.5-flash`)            |
+| `GEMINI_CHAT_MODEL`                           | No       | Model for chat (default: `gemini-2.5-flash-lite`)          |
+| `GEMINI_REPORT_MAX_OUTPUT_TOKENS`             | No       | Max tokens for reports (default `32768`, max `65536`)      |
+| `PARSE_CONFIG_STREAM_BUDGET_MS`               | No       | Wall-clock budget for streaming (default `138000` ~2.3m)   |
+| `PARSE_CONFIG_MAX_REPORT_COMPLETIONS_PER_MIN` | No       | Per-user report rate limit (default off)                   |
+| `PARSE_CONFIG_MAX_CHAT_COMPLETIONS_PER_MIN`   | No       | Per-user chat rate limit (default off)                     |
+| `RESEND_API_KEY`                              | No       | Resend API key for email delivery                          |
+| `REPORT_FROM_EMAIL`                           | No       | Sender address for emailed reports                         |
+| `ALLOWED_ORIGIN`                              | No       | CORS origin restriction                                    |
+| `CENTRAL_ENCRYPTION_KEY`                      | No       | AES-GCM encryption key for Central credentials             |
 
 ### Commands
 
@@ -190,17 +253,15 @@ npm run test:e2e     # Run end-to-end tests (Playwright)
 npm run preview      # Preview production build locally
 ```
 
-### Supabase Edge functions (Deno)
-
-Git **pre-push** (Husky) runs `npm run format:check:deno`, matching CI quality gates. If it fails, fix formatting then push again:
+#### Supabase Edge Functions (Deno)
 
 ```bash
-npm run format:deno        # apply deno fmt under supabase/functions
-npm run format:check:deno  # verify (same as CI / pre-push)
+npm run format:deno        # Apply deno fmt
+npm run format:check:deno  # Verify formatting (same as CI / pre-push)
 npm run test:deno          # Deno tests for Edge code
 ```
 
-Install [Deno](https://deno.land/) locally for these commands.
+Git pre-push (Husky) runs `npm run format:check:deno` automatically.
 
 ---
 
@@ -223,108 +284,43 @@ supabase secrets set GEMINI_API_KEY=your-key-here
 
 ---
 
-## Privacy and Security
+## Privacy & Security
 
-- **No credentials required** — works entirely from HTML configuration exports, not live firewall access
-- **Client-side extraction** — configuration parsing happens in the browser; raw HTML is never uploaded to a server
-- **Data anonymisation** — IP addresses, hostnames, and customer identifiers are replaced with safe placeholders before reaching the AI model
-- **No data persistence** — generated reports are not stored server-side unless the user explicitly saves them
-- **Row Level Security** — all Supabase database access is scoped by organisation via RLS policies
-- **XSS-hardened rendering** — all AI-generated markdown is sanitized via DOMPurify with explicit FORBID_TAGS/FORBID_ATTR before DOM injection
-- **CORS-restricted backend** — edge functions only accept requests from configured origins (configurable via `ALLOWED_ORIGIN`)
-- **Request validation** — body size limits (5 MB for AI, 10 MB for API), payload shape validation, and empty-section rejection
-- **Per-user rate limiting** — AI report generation is throttled per authenticated user to prevent credit abuse
-- **JWT authentication** — all AI and API endpoints require a valid Supabase auth token; unauthenticated requests are rejected
-
-### Supabase Configuration Notes
-
-The `supabase/config.toml` sets `verify_jwt = false` for `parse-config` and `sophos-central`. This is intentional — these functions handle CORS preflight (OPTIONS) requests that don't carry JWTs. Authentication is enforced inside each function via `supabase.auth.getUser()`.
-
-To restrict origins in production, set the `ALLOWED_ORIGIN` secret to your deployed domain:
-
-```bash
-supabase secrets set ALLOWED_ORIGIN=https://your-domain.com
-```
+- **No credentials required** — works from HTML/XML configuration exports, not live firewall access
+- **Client-side extraction** — config parsing happens in the browser; raw files are never uploaded
+- **Data anonymisation** — IPs, hostnames, and identifiers replaced before AI processing
+- **No data persistence** — reports are not stored server-side unless explicitly saved
+- **Row Level Security** — all database access scoped by organisation via RLS
+- **XSS-hardened rendering** — AI markdown sanitized via DOMPurify with FORBID_TAGS/FORBID_ATTR
+- **CORS-restricted backend** — edge functions only accept requests from configured origins
+- **Request validation** — body size limits (5 MB AI, 10 MB API), payload shape validation
+- **Per-user rate limiting** — AI generation throttled per authenticated user
+- **JWT authentication** — all AI and API endpoints require valid Supabase auth tokens
+- **AES-GCM encryption** — Sophos Central credentials encrypted at rest with HKDF key derivation
 
 ---
 
-## Limitations
+## Demo Mode
 
-- Extraction coverage depends on the Sophos XGS firmware version and export format; some sections in newer firmware may not be fully parsed
-- AI-generated recommendations are best-practice-aligned guidance, not formal security audits or compliance certifications
-- The deterministic findings engine covers the most common misconfigurations but is not exhaustive across all possible Sophos features
-- Large exports (many hundreds of rules) may produce larger-than-ideal AI payloads; the app handles this with chunking but generation time increases
+Click **"Try Demo Mode"** on the login page to explore the full platform with sample data — no account required. Demo mode includes:
 
----
-
-## Target Users
-
-- MSP security engineers and network consultants
-- Sophos channel partners and SEs
-- vCISO and GRC consultants
-- Post-sales assessment and onboarding teams
-
----
-
-## Roadmap
-
-- [x] Demo mode with synthetic sample config for evaluators
-- [x] Security Posture Scorecard (deterministic, evidence-based)
-- [x] Extraction coverage reporting and unsupported section visibility
-- [x] Backend abuse protection and rate limiting
-- [x] XSS-hardened markdown rendering (DOMPurify)
-- [x] Code splitting for improved initial load performance
-- [ ] Model fallback / graceful degraded mode when AI backend is unavailable
-
----
-
-## Demo Flow for Judges
-
-If you are evaluating this app and do not have a Sophos firewall config export:
-
-1. Visit the deployed app URL
-2. Click **Try Demo Config** on the landing page — this loads a synthetic sample Sophos XGS configuration (no real customer data)
-3. The deterministic analysis runs instantly — review findings, risk score, Security Posture Scorecard, inspection posture, and best-practice checks
-4. Click **Generate Report** to see AI-assisted documentation streamed in real time
-5. Export to Word, PDF, PowerPoint, or ZIP
-6. Or use the **SE Health Check** flow at `/health-check` for the full SE-facing experience (requires auth)
-7. Load a second config to see fleet comparison, estate risk ranking, and compliance heatmap
+- Pre-loaded firewall config with deterministic analysis results
+- Sample Fleet Command with 8 firewalls across 5 fictional customers
+- Mission Control with mock KPIs, alerts, and charts
+- Customer Directory with health tracking and portfolio pulse
+- Report Centre with sample saved reports
+- All feature surfaces populated with realistic demo data
 
 The entire flow from demo config to exported report takes under 2 minutes.
 
 ---
 
-## Why This Stands Out
+## Target Users
 
-**For an AI build competition, Sophos FireComply demonstrates:**
-
-1. **Privacy by architecture, not by policy** — customer IP addresses, hostnames, and identifiers are replaced with RFC 5737 documentation-range placeholders _before_ the AI model sees any data. Anonymisation is client-side and deterministic — the AI never receives real customer network information. This is a technical guarantee, not a policy promise.
-
-2. **Deterministic facts + AI narrative — never the reverse** — a rule-based findings engine (70+ checks, 21 compliance frameworks, weighted risk scoring across 6 categories) runs entirely in the browser with zero AI involvement. AI is used only to transform those evidence-backed facts into professional prose. Findings are never hallucinated because the AI is writing about data it didn't generate.
-
-3. **Real vertical AI, not a wrapper** — this is not a chatbot with a Sophos skin. It understands Sophos XGS configuration structure at the HTML-table level, extracts structured data from firmware exports, scores against Sophos-specific best practices, maps to real compliance frameworks (Cyber Essentials, PCI DSS, NIST 800-53, ISO 27001, HIPAA, NIS2, and 15 others), and produces reports that reference actual configuration evidence. The domain knowledge is in the code, not just the prompts.
-
-4. **Two complete product surfaces** — the MSP assessment workbench (`/`) and the SE Health Check (`/health-check`) share infrastructure but serve different personas with different workflows, different data models, and different Sophos Central integration patterns. This is product thinking, not feature creep.
-
-5. **Production-grade engineering** — streaming SSE with model fallback chains, AES-GCM encryption with HKDF key derivation, constant-time HMAC comparison, HTML injection prevention, CI/CD with lint + typecheck + 310 unit tests + Playwright E2E + npm audit + auto-deploy, and a desktop connector agent for automated config collection. This is not a prototype.
-
-6. **Immediate, measurable value** — upload a config, get a professional assessment in under 2 minutes. The time savings are real: what takes hours of manual review becomes a click-and-export workflow. The demo config lets judges experience this without needing their own firewall.
-
----
-
-## What I Learned
-
-Building FireComply taught me more about AI engineering than any course or tutorial could have:
-
-**Prompt engineering is system design, not copywriting.** The biggest improvement in report quality didn't come from tweaking prompts — it came from changing _what the AI sees_. Sending anonymised, pre-structured JSON with deterministic findings already computed produced dramatically better output than sending raw config data and asking the model to "analyse" it. The lesson: the best prompt is a well-shaped input.
-
-**Streaming changes everything about UX.** The difference between waiting 60 seconds for a complete report and seeing the first paragraph appear in 2 seconds is the difference between "is it broken?" and "this is fast." Implementing SSE streaming end-to-end (Gemini API to edge function to browser with real-time de-anonymisation) was the single most impactful UX decision in the project.
-
-**Security and AI are in tension.** I wanted to use AI for everything, but the security audit I ran on my own code revealed that every data path to the AI model is a potential leak vector. Building the anonymisation pipeline forced me to think about what the AI _needs to see_ versus what it _currently sees_ — and the answer was always "less than you think." Client-side anonymisation before any API call became a core architectural principle, not an afterthought.
-
-**Building for two personas forces better architecture.** The SE Health Check and the MSP assessment started as the same codebase, but the moment I separated them into distinct workflows with distinct data models, the code quality of both improved. Shared infrastructure (auth, crypto, email, Central API) got cleaner because it had to serve two masters. Features that didn't serve either persona became obvious candidates for removal.
-
-**Kill features, don't add them.** The hardest engineering work in this project was removing code. I built and then cut an assessment scheduler, a change approval workflow, a peer benchmarking widget, and several other features that sounded good in isolation but made the product feel unfocused. Every removal made the remaining features better. The discipline to subtract is harder than the discipline to build.
+- **MSP security teams** — portfolio-wide posture management, compliance reporting, client portals
+- **Sophos Sales Engineers** — pre-sales and post-sales health checks
+- **Sophos channel partners** — customer assessments and compliance evidence
+- **vCISO and GRC consultants** — framework-mapped compliance documentation
 
 ---
 
