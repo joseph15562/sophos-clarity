@@ -262,7 +262,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="mx-6 flex rounded-2xl bg-muted/30 p-1 mb-2">
+      <div data-tour="auth-tabs" className="mx-6 flex rounded-2xl bg-muted/30 p-1 mb-2">
         <button
           onClick={() => {
             setMode("signin");
@@ -355,6 +355,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
               variant="outline"
               onClick={handlePasskeyLogin}
               disabled={passkeyLoading}
+              data-tour="auth-passkey"
               className="w-full gap-2"
             >
               {passkeyLoading ? (
@@ -384,6 +385,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
           <Button
             type="button"
             variant="outline"
+            data-tour="auth-demo"
             onClick={async () => {
               setError(null);
               setDemoLoading(true);
@@ -411,7 +413,10 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
           </Button>
         )}
 
-        <div className="rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-center">
+        <div
+          data-tour="auth-guest"
+          className="rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-center"
+        >
           <button
             type="button"
             onClick={onSkip}

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MOCK_DRIFT_HISTORY } from "@/lib/mock-data";
+import { MOCK_DRIFT_HISTORY, type DriftHistoryMarker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -296,6 +296,7 @@ function DriftMonitorInner() {
   const [diffOpen, setDiffOpen] = useState<string | null>("rules");
   const [historyCustomer, setHistoryCustomer] = useState<string>("__all__");
   const [showUnchanged, setShowUnchanged] = useState(false);
+  const [realDriftHistory, setRealDriftHistory] = useState<DriftHistoryMarker[]>([]);
 
   useEffect(() => {
     if (!org?.id) {
@@ -385,6 +386,55 @@ function DriftMonitorInner() {
     };
   }, [org?.id]);
 
+  useEffect(() => {
+    if (!org?.id) {
+      setRealDriftHistory([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("assessments")
+      .select("id, customer_name, created_at, overall_score")
+      .eq("org_id", org.id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        if (cancelled || !data || data.length === 0) return;
+        const byCustomer = new Map<string, typeof data>();
+        for (const row of data) {
+          const name = (row.customer_name ?? "").trim();
+          if (!name) continue;
+          if (!byCustomer.has(name)) byCustomer.set(name, []);
+          byCustomer.get(name)!.push(row);
+        }
+        const markers: DriftHistoryMarker[] = [];
+        for (const [custName, rows] of byCustomer) {
+          if (rows.length < 2) continue;
+          const sorted = [...rows].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          );
+          for (let i = 0; i < sorted.length - 1; i++) {
+            const curr = sorted[i];
+            const prev = sorted[i + 1];
+            const delta = curr.overall_score - prev.overall_score;
+            const label =
+              delta > 0 ? `Score +${delta}` : delta < 0 ? `Score ${delta}` : "Config re-assessed";
+            markers.push({
+              id: `real-${curr.id}`,
+              label,
+              date: curr.created_at.slice(0, 10),
+              customer: custName,
+            });
+          }
+        }
+        markers.sort((a, b) => b.date.localeCompare(a.date));
+        if (!cancelled) setRealDriftHistory(markers.slice(0, 20));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id]);
+
   const snapshots = allSnapshots.filter((s) => s.firewall === selectedFirewall);
   const selectedSnapshot = snapshots.find((s) => s.id === selectedSnapshotId) ?? null;
 
@@ -403,10 +453,15 @@ function DriftMonitorInner() {
   const toggleAlert = (id: string) =>
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)));
 
+  const driftHistorySource = realDriftHistory.length > 0 ? realDriftHistory : MOCK_DRIFT_HISTORY;
+  const driftHistoryCustomers = useMemo(
+    () => [...new Set(driftHistorySource.map((h) => h.customer))].sort(),
+    [driftHistorySource],
+  );
   const driftHistoryFiltered = useMemo(() => {
-    if (historyCustomer === "__all__") return MOCK_DRIFT_HISTORY;
-    return MOCK_DRIFT_HISTORY.filter((h) => h.customer === historyCustomer);
-  }, [historyCustomer]);
+    if (historyCustomer === "__all__") return driftHistorySource;
+    return driftHistorySource.filter((h) => h.customer === historyCustomer);
+  }, [historyCustomer, driftHistorySource]);
 
   if (loading) {
     return (
@@ -894,10 +949,12 @@ function DriftMonitorInner() {
                 onChange={(e) => setHistoryCustomer(e.target.value)}
                 className="rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs min-w-[160px]"
               >
-                <option value="__all__">All (demo)</option>
-                <option value="Vertex Partners">Vertex Partners</option>
-                <option value="Pennine BS">Pennine BS</option>
-                <option value="Northern Retail">Northern Retail</option>
+                <option value="__all__">All{realDriftHistory.length === 0 ? " (demo)" : ""}</option>
+                {driftHistoryCustomers.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

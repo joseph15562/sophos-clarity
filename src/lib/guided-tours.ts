@@ -2326,3 +2326,52 @@ export function startHealthCheckResultsTour(): void {
   ]);
   t.drive();
 }
+
+// ---------------------------------------------------------------------------
+// Login / Auth Gate Tour
+// ---------------------------------------------------------------------------
+export function startLoginTour() {
+  const t = createTour([
+    {
+      element: sel("auth-tabs"),
+      popover: {
+        title: "Sign In or Create Account",
+        description:
+          "Use 'Sign In' if you already have an account, or switch to 'Create Account' to register with your email. You'll receive a confirmation link before your first sign-in.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: sel("auth-passkey"),
+      popover: {
+        title: "Passkey Sign-In",
+        description:
+          "Sign in instantly with a passkey — your device's biometric (Face ID, Touch ID, or Windows Hello) or a hardware security key. No password needed. You can set up passkeys after your first email sign-in from Settings → Security.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: sel("auth-demo"),
+      popover: {
+        title: "Demo Mode",
+        description:
+          "Explore the full app with sample data — no account required. Assessments, reports, dashboards, and all features are pre-populated so you can see what FireComply does before signing up.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: sel("auth-guest"),
+      popover: {
+        title: "Guest Mode",
+        description:
+          "Start using the app immediately without an account. Upload configs and run assessments — everything stays in your browser. Sign in later to unlock cloud saves, teams, client portals, and email reports.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ]);
+  t.drive();
+}

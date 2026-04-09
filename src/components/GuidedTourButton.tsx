@@ -16,6 +16,7 @@ import {
   Zap,
   Gauge,
   LayoutTemplate,
+  LogIn,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 import type { TourCallbacks } from "@/lib/guided-tours";
 import {
   startGettingStartedTour,
+  startLoginTour,
   startDashboardTour,
   startRiskScoreTour,
   startComplianceTour,
@@ -131,6 +133,11 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
             <Compass className="h-3 w-3 text-[#00F2B3]" />
             Getting Started
           </DropdownMenuLabel>
+          {isGuest && (
+            <DropdownMenuItem onClick={() => startLoginTour()} className={ITEM}>
+              <LogIn className={ICON} style={{ color: "#00EDFF" }} /> Sign In, Passkey & Demo
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => startGettingStartedTour()} className={ITEM}>
             <Compass className={ICON} style={{ color: "#00F2B3" }} /> Getting Started
           </DropdownMenuItem>
