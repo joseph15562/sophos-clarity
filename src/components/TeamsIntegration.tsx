@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
-import { Users, Send } from "lucide-react";
+import { Check, Users, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,9 +45,24 @@ function saveConfig(config: TeamsConfig): void {
 export function TeamsIntegration() {
   const nextMutationSignal = useAbortableInFlight();
   const [config, setConfig] = useState<TeamsConfig>(loadConfig());
+  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
-  useEffect(() => {
+  const updateConfig = useCallback((updater: (prev: TeamsConfig) => TeamsConfig) => {
+    setConfig((prev) => {
+      const next = updater(prev);
+      setDirty(true);
+      setSaved(false);
+      return next;
+    });
+  }, []);
+
+  const handleSave = useCallback(() => {
     saveConfig(config);
+    setDirty(false);
+    setSaved(true);
+    toast.success("Teams integration saved.");
+    setTimeout(() => setSaved(false), 2000);
   }, [config]);
 
   const handleTest = useCallback(async () => {
@@ -94,7 +109,7 @@ export function TeamsIntegration() {
           <Label className="text-xs">Webhook URL</Label>
           <Input
             value={config.webhookUrl}
-            onChange={(e) => setConfig((c) => ({ ...c, webhookUrl: e.target.value }))}
+            onChange={(e) => updateConfig((c) => ({ ...c, webhookUrl: e.target.value }))}
             placeholder="https://outlook.office.com/webhook/..."
             className="mt-1 h-9 text-xs"
           />
@@ -107,7 +122,7 @@ export function TeamsIntegration() {
               <Checkbox
                 checked={config.triggers.assessmentComplete}
                 onCheckedChange={(v) =>
-                  setConfig((c) => ({
+                  updateConfig((c) => ({
                     ...c,
                     triggers: { ...c.triggers, assessmentComplete: !!v },
                   }))
@@ -119,7 +134,7 @@ export function TeamsIntegration() {
               <Checkbox
                 checked={config.triggers.scoreDrop}
                 onCheckedChange={(v) =>
-                  setConfig((c) => ({
+                  updateConfig((c) => ({
                     ...c,
                     triggers: { ...c.triggers, scoreDrop: !!v },
                   }))
@@ -131,7 +146,7 @@ export function TeamsIntegration() {
               <Checkbox
                 checked={config.triggers.slaBreach}
                 onCheckedChange={(v) =>
-                  setConfig((c) => ({
+                  updateConfig((c) => ({
                     ...c,
                     triggers: { ...c.triggers, slaBreach: !!v },
                   }))
@@ -142,10 +157,16 @@ export function TeamsIntegration() {
           </div>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handleTest} className="text-xs">
-          <Send className="h-3.5 w-3.5 mr-1.5" />
-          Test
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleSave} disabled={!dirty} className="text-xs">
+            {saved ? <Check className="h-3.5 w-3.5 mr-1.5" /> : null}
+            {saved ? "Saved" : "Save"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleTest} className="text-xs">
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            Test
+          </Button>
+        </div>
       </div>
     </div>
   );

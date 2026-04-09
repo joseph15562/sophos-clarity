@@ -45,6 +45,30 @@ function gradeFromNumericScore(s: number): string {
   return s >= 85 ? "A" : s >= 70 ? "B" : s >= 55 ? "C" : s >= 40 ? "D" : "F";
 }
 
+/** Count logical devices, merging HA peers (same hostname + model, distinct serials) into one. */
+function countLogicalFirewalls(
+  rows: Array<{
+    hostname?: string | null;
+    name?: string | null;
+    model?: string | null;
+    serial_number?: string | null;
+  }>,
+): number {
+  if (rows.length < 2) return rows.length;
+  const seen = new Set<string>();
+  let count = 0;
+  for (const r of rows) {
+    const host = (r.hostname ?? r.name ?? "").trim().toLowerCase();
+    const model = (r.model ?? "").trim().toLowerCase();
+    const key = host && model ? `${host}|${model}` : `__solo__${count}__${r.serial_number ?? ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      count++;
+    }
+  }
+  return count;
+}
+
 function metricsFromAssessmentSnapshot(a: AssessmentRow) {
   const fws = a.firewalls as FirewallSnapshot[] | null;
   if (!Array.isArray(fws) || fws.length === 0) {
@@ -121,7 +145,7 @@ export async function fetchCustomerDirectory(
       supabase
         .from("central_firewalls")
         .select(
-          "central_tenant_id, hostname, name, firmware_version, model, status_json, compliance_country",
+          "central_tenant_id, hostname, name, firmware_version, model, serial_number, status_json, compliance_country",
         )
         .eq("org_id", orgId),
       s,
@@ -219,6 +243,7 @@ export async function fetchCustomerDirectory(
     if (!tName || customerMap.has(tName)) continue;
     const tFws = firewalls.filter((fw) => fw.central_tenant_id === t.central_tenant_id);
     if (!tenantHasSignal(tName, t.central_tenant_id)) continue;
+    const logicalCount = countLogicalFirewalls(tFws);
     customerMap.set(tName, {
       id: t.central_tenant_id,
       name: tName,
@@ -227,8 +252,8 @@ export async function fetchCustomerDirectory(
       countryFlag: "",
       score: 0,
       grade: "F",
-      firewallCount: tFws.length,
-      unassessedCount: tFws.length,
+      firewallCount: logicalCount,
+      unassessedCount: logicalCount,
       lastAssessed: "Not assessed",
       daysAgo: 999,
       frameworks: [],
