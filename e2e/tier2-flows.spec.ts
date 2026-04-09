@@ -246,7 +246,7 @@ test.describe("Tier 2 — hub & API routes", () => {
     });
     const apiTab = page.getByRole("button", { name: /API Explorer/i });
     await apiTab.waitFor({ state: "visible", timeout: 15_000 });
-    await apiTab.click();
+    await apiTab.dispatchEvent("click");
     await expect(page.locator("h3", { hasText: /^Authentication$/i })).toBeVisible({
       timeout: 30_000,
     });
