@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sophos FireComply — Documentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --navy: #001a47;
+    --blue: #2006f7;
+    --blue-light: #4d3df9;
+    --blue-pale: #eeedff;
+    --blue-wash: #f5f4ff;
+    --cyan: #00d4aa;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --white: #ffffff;
+    --sidebar-w: 280px;
+    --header-h: 60px;
+    --green: #16a34a;
+    --amber: #f59e0b;
+    --red: #dc2626;
+    --orange: #f97316;
+    --purple: #7c3aed;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--navy);
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* ═══════ HEADER ═══════ */
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-h);
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    z-index: 100;
+    gap: 14px;
+  }
+  .site-header svg { width: 32px; height: 32px; flex-shrink: 0; }
+  .site-header .brand {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.3px;
+  }
+  .site-header .brand span {
+    font-weight: 400;
+    color: var(--gray-300);
+    margin-left: 6px;
+    padding-left: 10px;
+    border-left: 1px solid var(--gray-600);
+  }
+  .hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: auto;
+  }
+
+  /* ═══════ SIDEBAR ═══════ */
+  .sidebar {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    width: var(--sidebar-w);
+    height: calc(100vh - var(--header-h));
+    background: var(--gray-50);
+    border-right: 1px solid var(--gray-200);
+    overflow-y: auto;
+    padding: 16px 0;
+    z-index: 90;
+    transition: transform 0.25s ease;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 2px; }
+
+  .nav-group { margin-bottom: 8px; }
+  .nav-group-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    padding: 12px 20px 6px;
+  }
+  .nav-link {
+    display: block;
+    padding: 7px 20px 7px 24px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+    line-height: 1.4;
+  }
+  .nav-link:hover {
+    color: var(--blue);
+    background: var(--blue-wash);
+    border-left-color: var(--blue);
+  }
+  .nav-link.active {
+    color: var(--blue);
+    background: var(--blue-pale);
+    border-left-color: var(--blue);
+    font-weight: 600;
+  }
+  .nav-badge {
+    display: inline-block;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .nav-badge.msp { background: var(--blue-pale); color: var(--blue); }
+  .nav-badge.se { background: #fef3c7; color: #92400e; }
+
+  /* ═══════ MAIN CONTENT ═══════ */
+  .main {
+    margin-left: var(--sidebar-w);
+    margin-top: var(--header-h);
+    min-height: calc(100vh - var(--header-h));
+  }
+
+  .page-section {
+    display: none;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
+  }
+  .page-section.active { display: block; }
+
+  /* ═══════ TYPOGRAPHY ═══════ */
+  .doc-title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    color: var(--navy);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .doc-subtitle {
+    font-size: 15px;
+    color: var(--gray-600);
+    margin-bottom: 32px;
+    line-height: 1.6;
+    max-width: 680px;
+  }
+  .section-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 36px 0 12px;
+    letter-spacing: -0.3px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 28px 0 10px;
+  }
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 20px 0 8px;
+  }
+
+  p { margin-bottom: 14px; font-size: 14px; line-height: 1.7; color: var(--gray-700); }
+
+  ul, ol { margin: 0 0 16px 20px; font-size: 14px; color: var(--gray-700); }
+  li { margin-bottom: 6px; line-height: 1.6; }
+  li ul, li ol { margin-top: 6px; margin-bottom: 4px; }
+
+  strong { color: var(--navy); font-weight: 600; }
+
+  /* ═══════ BLOCKQUOTE (PITCHES) ═══════ */
+  blockquote {
+    background: var(--blue-wash);
+    border-left: 4px solid var(--blue);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0 20px;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--navy);
+    line-height: 1.7;
+  }
+
+  /* ═══════ TABLES ═══════ */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 16px 0 24px;
+    font-size: 13px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+  }
+  thead th {
+    background: var(--navy);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  tbody td {
+    padding: 9px 14px;
+    border-top: 1px solid var(--gray-100);
+    color: var(--gray-700);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  tbody tr:hover { background: var(--gray-50); }
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody tr:nth-child(even):hover { background: var(--gray-100); }
+
+  /* ═══════ INFO / TIP / WARNING BOXES ═══════ */
+  .info-box {
+    background: var(--blue-wash);
+    border: 1px solid var(--blue-pale);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--gray-700);
+  }
+  .info-box strong { color: var(--blue); }
+
+  .tip-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--gray-700);
+  }
+  .tip-box strong { color: var(--green); }
+
+  .warn-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #92400e;
+  }
+
+  /* ═══════ CODE ═══════ */
+  code {
+    background: var(--gray-100);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--blue);
+  }
+  pre {
+    background: var(--gray-800);
+    color: #e2e8f0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+
+  /* ═══════ STEP CARDS ═══════ */
+  .steps-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .step-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .step-card h4 { margin: 0 0 4px; font-size: 13px; color: var(--navy); }
+  .step-card p { font-size: 12px; margin: 0; color: var(--gray-600); line-height: 1.5; }
+
+  /* ═══════ FEATURE CARDS ═══════ */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .f-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 18px;
+    transition: box-shadow 0.15s;
+  }
+  .f-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .f-card .tag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+  .f-card h4 { font-size: 14px; margin: 0 0 6px; color: var(--navy); }
+  .f-card p { font-size: 12px; margin: 0; color: var(--gray-600); line-height: 1.5; }
+
+  /* ═══════ STAT STRIP ═══════ */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .stat-item {
+    text-align: center;
+    background: var(--blue-wash);
+    border-radius: 10px;
+    padding: 14px 10px;
+  }
+  .stat-item .num { font-size: 26px; font-weight: 800; color: var(--navy); }
+  .stat-item .label { font-size: 10px; color: var(--gray-500); margin-top: 2px; font-weight: 500; }
+
+  /* ═══════ CHECKLIST ═══════ */
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 13px;
+  }
+  .checklist li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--gray-300);
+    border-radius: 4px;
+  }
+
+  /* ═══════ COMPARISON (BEFORE/AFTER) ═══════ */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .compare-col {
+    padding: 16px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .compare-col.before { background: #fef2f2; border: 1px solid #fecaca; }
+  .compare-col.after  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .compare-col h4 { margin-top: 0; }
+  .compare-col ol, .compare-col ul { margin-left: 16px; }
+  .compare-col li { font-size: 12px; margin-bottom: 4px; }
+
+  /* ═══════ SEVERITY BADGES ═══════ */
+  .sev {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .sev.crit { background: var(--red); }
+  .sev.high { background: var(--orange); }
+  .sev.med  { background: var(--amber); }
+  .sev.low  { background: var(--gray-500); }
+  .sev.info { background: var(--gray-300); color: var(--gray-700); }
+
+  /* ═══════ HORIZONTAL RULE ═══════ */
+  hr {
+    border: none;
+    border-top: 1px solid var(--gray-200);
+    margin: 32px 0;
+  }
+
+  /* ═══════ FOOTER ═══════ */
+  .site-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--gray-500);
+    padding: 20px 24px 32px;
+    border-top: 1px solid var(--gray-200);
+    margin-top: 40px;
+  }
+
+  /* ═══════ RESPONSIVE ═══════ */
+  @media (max-width: 860px) {
+    .hamburger { display: block; }
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }
+    .main { margin-left: 0; }
+    .page-section { padding: 24px 20px 60px; }
+    .compare { grid-template-columns: 1fr; }
+  }
+
+  /* ═══════ PRINT ═══════ */
+  @media print {
+    .site-header, .sidebar, .hamburger { display: none !important; }
+    .main { margin-left: 0; }
+    .page-section { display: block !important; max-width: none; padding: 20px 0; break-after: page; }
+    .page-section + .page-section { border-top: 2px solid var(--navy); padding-top: 32px; }
+    body { font-size: 11px; }
+    h2 { font-size: 18px; }
+    table { font-size: 10px; }
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="site-header">
+  <svg viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M.24,10.78v25.07c0,4.25,2.3,8.16,6.02,10.22l26.1,14.48.17.09,26.22-14.57c3.71-2.06,6.01-5.97,6.01-10.22V10.78H.24ZM42.23,40.48c-1.94,1.08-4.14,1.65-6.36,1.64l-24.2-.07,13.57-7.57c1.31-.73,2.79-1.12,4.29-1.12l25.62-.08-12.91,7.2ZM41.86,28.09c-1.31.73-2.79,1.12-4.29,1.12l-25.62.08,12.91-7.2c1.94-1.08,4.14-1.65-6.36-1.64l24.2.07-13.57,7.57Z"/></svg>
+  <div class="brand">Sophos FireComply<span>Documentation</span></div>
+  <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle navigation">&#9776;</button>
+</header>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<nav class="sidebar" id="sidebar">
+  <div class="nav-group">
+    <div class="nav-group-title">Getting Started</div>
+    <a class="nav-link active" href="#pitch" onclick="showSection('pitch')">Elevator Pitch</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">MSP Platform</div>
+    <a class="nav-link" href="#why-msp" onclick="showSection('why-msp')">Why FireComply for MSPs <span class="nav-badge msp">MSP</span></a>
+    <a class="nav-link" href="#msp-onboarding" onclick="showSection('msp-onboarding')">Customer Onboarding <span class="nav-badge msp">MSP</span></a>
+    <a class="nav-link" href="#msp-workflows" onclick="showSection('msp-workflows')">MSP Workflows & Best Practices <span class="nav-badge msp">MSP</span></a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">Feature Walkthroughs — MSP</div>
+    <a class="nav-link" href="#wt-assess" onclick="showSection('wt-assess')">Assessment Workbench</a>
+    <a class="nav-link" href="#wt-fleet" onclick="showSection('wt-fleet')">Fleet Command</a>
+    <a class="nav-link" href="#wt-mission" onclick="showSection('wt-mission')">Mission Control</a>
+    <a class="nav-link" href="#wt-portal" onclick="showSection('wt-portal')">Client Portal</a>
+    <a class="nav-link" href="#wt-drift" onclick="showSection('wt-drift')">Drift Monitor & Insights</a>
+    <a class="nav-link" href="#wt-integrations" onclick="showSection('wt-integrations')">Integrations Hub</a>
+    <a class="nav-link" href="#wt-reports" onclick="showSection('wt-reports')">Report Centre</a>
+    <a class="nav-link" href="#wt-connector" onclick="showSection('wt-connector')">Connector Agent</a>
+    <a class="nav-link" href="#wt-ai" onclick="showSection('wt-ai')">AI Reports & Deliverables</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-title">SE Health Check</div>
+    <a class="nav-link" href="#why-se" onclick="showSection('why-se')">Why FireComply for SEs <span class="nav-badge se">SE</span></a>
+    <a class="nav-link" href="#se-workflows" onclick="showSection('se-workflows')">SE Workflows & Best Practices <span class="nav-badge se">SE</span></a>
+    <a class="nav-link" href="#se-customer" onclick="showSection('se-customer')">Using with a Customer <span class="nav-badge se">SE</span></a>
+    <a class="nav-link" href="#wt-healthcheck" onclick="showSection('wt-healthcheck')">SE Health Check Walkthrough <span class="nav-badge se">SE</span></a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ MAIN CONTENT ═══════════════════════════ -->
+<div class="main">
+
+<!-- ==================== ELEVATOR PITCH ==================== -->
+<section class="page-section active" id="pitch">
+  <div class="section-tag">Getting Started</div>
+  <h1 class="doc-title">FireComply — The Elevator Pitch</h1>
+  <p class="doc-subtitle">Quick-reference pitches for different audiences. Pick the one that fits.</p>
+
+  <h2>30-Second Pitch (MSP)</h2>
+  <blockquote>FireComply gives MSPs a single pane of glass for Sophos firewall security posture across their entire customer base. Connect Sophos Central and Connector Agents to automatically track every firewall's configuration, score it against 37 best-practice checks and 39 compliance frameworks, detect drift, and deliver branded reports — all from one workspace. Your customers get their own branded portal. You get a scalable, repeatable security assessment service you can bill for.</blockquote>
+
+  <h2>30-Second Pitch (SE)</h2>
+  <blockquote>FireComply turns raw Sophos firewall configuration exports into audit-grade security findings, compliance-mapped evidence, and client-ready reports — in minutes, not days. Upload a config, get a deterministic posture score against 37 Sophos best-practice checks and 39 compliance frameworks, then generate AI-powered technical, executive, and compliance reports with one click.</blockquote>
+
+  <h2>10-Second Pitch</h2>
+  <blockquote>Upload a Sophos firewall config. Get a best-practice score, compliance mapping, and professional reports — in two minutes. Scale it across hundreds of customers with automated collection, drift detection, and branded portals.</blockquote>
+
+  <h2>For MSP Partners (Business Value)</h2>
+  <blockquote>FireComply gives your team a repeatable, scalable way to assess every customer's firewall posture, track drift over time, and deliver branded compliance reports — without hiring a dedicated security analyst. It turns firewall management from a cost centre into a revenue stream.</blockquote>
+
+  <h2>For SEs (Internal)</h2>
+  <blockquote>FireComply is your health-check-in-a-box. Request a customer's config via a secure link, get it back pre-analysed, walk them through the score on a call, and email the report before the call ends. No manual analysis. No spreadsheets.</blockquote>
+
+  <h2>For Customers (What They See)</h2>
+  <blockquote>Your MSP provides you with a branded security portal showing your firewall's posture score, findings, compliance alignment, and downloadable reports — always current, always accessible.</blockquote>
+
+  <h2>Key Numbers</h2>
+  <div class="stat-strip">
+    <div class="stat-item"><div class="num">37</div><div class="label">Best-Practice Checks</div></div>
+    <div class="stat-item"><div class="num">39</div><div class="label">Compliance Frameworks</div></div>
+    <div class="stat-item"><div class="num">~2 min</div><div class="label">Upload to Report</div></div>
+    <div class="stat-item"><div class="num">4</div><div class="label">AI Report Types</div></div>
+    <div class="stat-item"><div class="num">7</div><div class="label">Export Formats</div></div>
+    <div class="stat-item"><div class="num">6</div><div class="label">Portal Sections</div></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Export formats</td><td>PDF, Word, PPTX, HTML, CSV, JSON, ZIP</td></tr>
+      <tr><td>Connector agent platforms</td><td>Windows, macOS, Linux</td></tr>
+      <tr><td>PSA integrations</td><td>ConnectWise Manage, Datto Autotask, ConnectWise Cloud</td></tr>
+      <tr><td>Messaging integrations</td><td>Slack, Microsoft Teams, Webhooks</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== WHY MSP ==================== -->
+<section class="page-section" id="why-msp">
+  <div class="section-tag">MSP Platform</div>
+  <h1 class="doc-title">Why FireComply for MSPs</h1>
+  <p class="doc-subtitle">How FireComply changes the economics and operations of managed firewall services.</p>
+
+  <h2>The Problem Today</h2>
+  <div class="card-grid">
+    <div class="f-card"><div class="tag">Visibility</div><h4>No single pane of glass</h4><p>You log into each customer's Central tenant individually. No unified posture view across your portfolio.</p></div>
+    <div class="f-card"><div class="tag">Scale</div><h4>Health checks don't scale</h4><p>1–3 hours per firewall. With 50+ customer firewalls, you'd need a full-time resource just to cycle through them annually.</p></div>
+    <div class="f-card"><div class="tag">Compliance</div><h4>Reactive compliance</h4><p>When a customer asks "are we Cyber Essentials compliant?", you either spend days auditing or give a best-guess answer.</p></div>
+    <div class="f-card"><div class="tag">Drift</div><h4>Drift goes unnoticed</h4><p>A customer's IT team changes a rule at 2am. Nobody knows until something breaks — or an auditor finds it.</p></div>
+    <div class="f-card"><div class="tag">Reporting</div><h4>Manual reporting</h4><p>You build reports in Word from scratch. Every customer gets a slightly different format. No library, no archive.</p></div>
+    <div class="f-card"><div class="tag">Customer Comms</div><h4>Ad-hoc communication</h4><p>You email PDFs and hope they read them. No self-service portal where customers can check their own posture.</p></div>
+  </div>
+
+  <h2>Before &amp; After</h2>
+  <div class="compare">
+    <div class="compare-col before">
+      <h4>Before: Fragmented, Manual, Reactive</h4>
+      <ol>
+        <li>Log into each customer's Central tenant separately</li>
+        <li>Download config export from each firewall</li>
+        <li>Manually review configs against a mental checklist</li>
+        <li>Write up findings in Word</li>
+        <li>Email to customer, hope they act on it</li>
+        <li>Repeat quarterly — or more realistically, annually</li>
+      </ol>
+    </div>
+    <div class="compare-col after">
+      <h4>After: Unified, Automated, Proactive</h4>
+      <ol>
+        <li><strong>Fleet Command</strong> — every firewall, every customer, one screen</li>
+        <li><strong>Connector Agents</strong> — automatic config collection on schedule</li>
+        <li><strong>Drift Monitor</strong> — alerts when configs change</li>
+        <li><strong>AI reports</strong> — Technical, Executive, Compliance in seconds</li>
+        <li><strong>Client Portals</strong> — branded self-service access</li>
+        <li><strong>Mission Control</strong> — real-time portfolio dashboard</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>Day-to-Day Feature Usage</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>When You'll Use It</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Mission Control</strong></td><td>Morning check — portfolio health, critical alerts, recent activity</td></tr>
+      <tr><td><strong>Fleet Command</strong></td><td>Reviewing firewall status, scores, firmware across all customers</td></tr>
+      <tr><td><strong>Customer Directory</strong></td><td>Managing portfolio, onboarding new customers, tracking health</td></tr>
+      <tr><td><strong>Assess Workbench</strong></td><td>Running detailed assessments, generating AI reports</td></tr>
+      <tr><td><strong>Report Centre</strong></td><td>Managing saved reports, scheduling deliveries, archiving</td></tr>
+      <tr><td><strong>Client Portal</strong></td><td>Customer-facing posture dashboards with your branding</td></tr>
+      <tr><td><strong>Connector Agents</strong></td><td>Automated config collection on a schedule</td></tr>
+      <tr><td><strong>Drift Monitor</strong></td><td>Catching config changes between scheduled scans</td></tr>
+      <tr><td><strong>Portfolio Insights</strong></td><td>Cross-customer analytics, risk trends, board-level reporting</td></tr>
+      <tr><td><strong>Integrations Hub</strong></td><td>Connecting Central, PSA tools, Slack/Teams notifications</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The Commercial Angle</h2>
+  <div class="card-grid">
+    <div class="f-card" style="border-left:4px solid var(--green)"><div class="tag">Revenue</div><h4>Assessment as a Service</h4><p>Charge for the initial assessment. The report quality justifies the fee.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--blue)"><div class="tag">Recurring</div><h4>Compliance Monitoring</h4><p>Monthly/quarterly retainer for continuous monitoring via agents + scheduled reports.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--purple)"><div class="tag">Efficiency</div><h4>QBR Materials in One Click</h4><p>Client Portals and saved reports give you everything for a QBR without any prep.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--amber)"><div class="tag">Upsell</div><h4>Upsell Identification</h4><p>The analysis flags specific Sophos product gaps (no DPI, no web filtering, no MDR) — each is a licence conversation.</p></div>
+  </div>
+</section>
+
+<!-- ==================== MSP ONBOARDING ==================== -->
+<section class="page-section" id="msp-onboarding">
+  <div class="section-tag">MSP Platform</div>
+  <h1 class="doc-title">MSP Customer Onboarding</h1>
+  <p class="doc-subtitle">End-to-end workflow: from first assessment to continuous monitoring and branded portal.</p>
+
+  <h2>Phase 1: Initial Assessment</h2>
+  <h3>Option A: Manual Upload (Quickest Start)</h3>
+  <ol>
+    <li>Ask the customer to export their firewall config (Sophos XGS → <strong>Backup &amp; firmware &gt; Export</strong>)</li>
+    <li>Open the <strong>Assess</strong> workbench — drag and drop the config file(s)</li>
+    <li>Set <strong>customer context</strong> — name, environment type, country, compliance frameworks</li>
+    <li>Review the deterministic analysis — posture score, findings, compliance alignment</li>
+    <li>Generate AI reports (Technical Handover + Executive Summary + Compliance Readiness)</li>
+    <li>Save to the Report Centre</li>
+  </ol>
+
+  <h3>Option B: Connector Agent (Automated, Recommended)</h3>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">1</div><h4>Register</h4><p>API Hub → Agents → Register Agent. Copy the API key.</p></div>
+    <div class="step-card"><div class="step-num">2</div><h4>Install</h4><p>Download for Windows, macOS, or Linux. Enter the API key.</p></div>
+    <div class="step-card"><div class="step-num">3</div><h4>Add Firewalls</h4><p>Enter hostname, port, API credentials, optional SNMP.</p></div>
+    <div class="step-card"><div class="step-num">4</div><h4>Auto-Sync</h4><p>Agent pulls configs on schedule and pushes to your workspace.</p></div>
+  </div>
+
+  <h3>Option C: Sophos Central Integration</h3>
+  <ol>
+    <li>Open <strong>Integrations Hub</strong> → <strong>Sophos Central</strong> card</li>
+    <li>Enter your Central partner API credentials (Client ID + Secret)</li>
+    <li>FireComply discovers all tenants and their firewalls</li>
+    <li>Firewalls appear in Fleet Command with Central-enriched data</li>
+    <li>Upload configs manually or via Connector Agent to score them</li>
+  </ol>
+
+  <h2>Phase 2: Customer Directory Setup</h2>
+  <ol>
+    <li>Navigate to <strong>Customer Directory</strong> (<code>/customers</code>)</li>
+    <li>Click <strong>Add Customer</strong> (or the customer appears automatically when you save an assessment)</li>
+    <li>Fill in details: name, sector, country, contact email, compliance environment</li>
+    <li>The customer card shows score, grade, firewall count, health status, last assessed date</li>
+  </ol>
+
+  <h2>Phase 3: Client Portal Configuration</h2>
+  <ol>
+    <li>From Customer Directory → click customer → <strong>Configure Portal</strong></li>
+    <li>Set branding: company logo, accent colour, welcome message, SLA info, contact details, footer text</li>
+    <li>Choose visible sections: Score, History, Findings, Compliance, Reports, Feedback</li>
+    <li>Set the <strong>vanity slug</strong> — e.g., <code>acme-security</code></li>
+    <li>Add <strong>portal viewers</strong> — customer staff email addresses</li>
+    <li>Share the portal URL with the customer</li>
+  </ol>
+
+  <h2>Phase 4: Continuous Monitoring</h2>
+  <div class="card-grid">
+    <div class="f-card"><div class="tag">Automated</div><h4>Connector Agent Schedule</h4><p>Agents pull configs daily/weekly. Scores update in Fleet Command and Customer Directory. Drift Monitor captures snapshots.</p></div>
+    <div class="f-card"><div class="tag">Automated</div><h4>Scheduled Reports</h4><p>Management Panel → Scheduled Reports. Set frequency (weekly/monthly/quarterly), recipients, report type, and sections.</p></div>
+    <div class="f-card"><div class="tag">Proactive</div><h4>Drift Monitoring</h4><p>Drift Monitor shows score changes, findings added/removed, and specific config changes between snapshots.</p></div>
+    <div class="f-card"><div class="tag">Proactive</div><h4>Alert Rules</h4><p>Notify when: score drops below threshold, critical findings introduced, config sections change, agent goes offline.</p></div>
+  </div>
+
+  <h2>Onboarding Checklist</h2>
+  <ul class="checklist">
+    <li>Customer config obtained (manual upload, connector agent, or Central)</li>
+    <li>Customer context set (name, environment, country, frameworks)</li>
+    <li>Initial assessment complete — score and findings reviewed</li>
+    <li>AI reports generated and saved to Report Centre</li>
+    <li>Customer added to Customer Directory</li>
+    <li>Client Portal configured with branding and vanity slug</li>
+    <li>Portal viewers added (customer staff emails)</li>
+    <li>Portal URL shared with customer</li>
+    <li>Connector Agent installed (if ongoing monitoring)</li>
+    <li>Scheduled reports configured (if automated delivery)</li>
+    <li>Integrations set up (Central, PSA, Slack/Teams as needed)</li>
+  </ul>
+</section>
+
+<!-- ==================== MSP WORKFLOWS ==================== -->
+<section class="page-section" id="msp-workflows">
+  <div class="section-tag">MSP Platform</div>
+  <h1 class="doc-title">MSP Workflows &amp; Best Practices</h1>
+  <p class="doc-subtitle">Six core workflows that MSPs use daily, weekly, and quarterly — with best practices for each.</p>
+
+  <h2>Workflow 1: New Customer Onboarding</h2>
+  <div class="info-box"><strong>Scenario:</strong> You've signed a new managed firewall customer. You need a baseline assessment, compliance posture, and a professional deliverable within the first week.</div>
+  <ol>
+    <li>Connect <strong>Sophos Central</strong> — discovers the customer's tenant and firewalls</li>
+    <li>Install a <strong>Connector Agent</strong> on a machine with network access to the firewall(s)</li>
+    <li>Set <strong>customer context</strong> — environment type, country, compliance frameworks</li>
+    <li>Run the full assessment — deterministic analysis + AI reports</li>
+    <li>Save to <strong>Report Centre</strong> — the customer's baseline is archived</li>
+    <li>Configure the <strong>Client Portal</strong> — brand it, set the vanity slug, add portal viewers</li>
+    <li>Set up <strong>scheduled reports</strong> — monthly or quarterly, auto-delivered</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Do the first assessment before the onboarding call. Walking through a live, populated portal on the kick-off call makes a strong first impression.</div>
+
+  <hr>
+
+  <h2>Workflow 2: Quarterly Business Review (QBR)</h2>
+  <div class="info-box"><strong>Scenario:</strong> It's QBR season. You need to present security posture, compliance status, and improvement trajectory to 15 customers in two weeks.</div>
+  <ol>
+    <li>Open <strong>Portfolio Insights</strong> → set range to 90 days → screenshot the portfolio trends</li>
+    <li>For each customer: review score trend, note open findings, pull the latest report</li>
+    <li>On the QBR call: share the <strong>Client Portal</strong> on screen — walk through score, history, findings</li>
+    <li>Reference improvement: "Your score has gone from 54% to 78% since we started"</li>
+    <li>After the call — email the report from Report Centre with one click</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Use Portfolio Pulse in Customer Directory for the executive stat — "72% of our managed estate is at Grade A or B" is a powerful number for boards.</div>
+
+  <hr>
+
+  <h2>Workflow 3: Responding to a Security Incident</h2>
+  <div class="info-box"><strong>Scenario:</strong> A customer reports suspicious activity. You need to check if their firewall config contributed to the exposure.</div>
+  <ol>
+    <li>Open <strong>Mission Control</strong> — check recent alerts for this customer</li>
+    <li>Open <strong>Fleet Command</strong> → search for customer → review status and score</li>
+    <li>Open <strong>Drift Monitor</strong> → check recent snapshots: did the config change? Were rules added or removed?</li>
+    <li>Open the latest assessment → review findings by severity</li>
+    <li>Generate a focused report if needed — the Technical Handover documents the config state at assessment time</li>
+  </ol>
+  <div class="warn-box"><strong>Important:</strong> Drift Monitor is your timeline. When the customer says "we didn't change anything", the snapshot history tells the truth.</div>
+
+  <hr>
+
+  <h2>Workflow 4: Compliance Audit Preparation</h2>
+  <div class="info-box"><strong>Scenario:</strong> A customer's compliance officer needs evidence that their firewall config meets Cyber Essentials / GDPR / ISO 27001 requirements.</div>
+  <ol>
+    <li>Load the customer's config in the <strong>Assess Workbench</strong></li>
+    <li>Set the correct compliance frameworks</li>
+    <li>Review deterministic compliance alignment</li>
+    <li>Generate the <strong>Compliance Readiness Report</strong> — control-by-control evidence tables with pass/partial/not met status</li>
+    <li>Share via Client Portal, direct email, or shared link</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Run a fresh assessment before the audit. Stale data undermines credibility. Use the Connector Agent's "scan now" capability.</div>
+
+  <hr>
+
+  <h2>Workflow 5: Upsell &amp; Expansion</h2>
+  <div class="info-box"><strong>Scenario:</strong> You want to identify upsell opportunities across your customer base.</div>
+  <p>Common upsell signals from the deterministic analysis:</p>
+  <table>
+    <thead><tr><th>Gap Found</th><th>Upsell Conversation</th></tr></thead>
+    <tbody>
+      <tr><td>No DPI (SSL/TLS inspection)</td><td>Xstream Protection</td></tr>
+      <tr><td>No web filtering on WAN rules</td><td>Web Protection licensing</td></tr>
+      <tr><td>No Sophos endpoints (Heartbeat)</td><td>Endpoint opportunity</td></tr>
+      <tr><td>No MDR</td><td>MDR upsell</td></tr>
+      <tr><td>No DNS Protection</td><td>DNS product conversation</td></tr>
+    </tbody>
+  </table>
+  <div class="tip-box"><strong>Tip:</strong> Use the Remediation Impact Simulator on a call: "If we enable DPI and web filtering, your score goes from 52% to 71% — that's the impact of Xstream Protection."</div>
+
+  <hr>
+
+  <h2>Workflow 6: Team Collaboration &amp; Handoffs</h2>
+  <div class="info-box"><strong>Scenario:</strong> An engineer on your team is leaving, or you're sharing workload across a team.</div>
+  <ul>
+    <li>Everything is in the <strong>workspace</strong> — no data lives on individual machines (except Connector Agent installs)</li>
+    <li>Add team members via <strong>Management Panel → Team</strong>: <strong>Admin</strong> (full access) or <strong>Viewer</strong> (read-only)</li>
+    <li>All assessments, reports, and customer data are shared across the workspace</li>
+    <li>Client Portal configurations are org-wide — any team member can manage them</li>
+  </ul>
+
+  <hr>
+
+  <h2>General MSP Best Practices</h2>
+  <ol>
+    <li><strong>Connect Sophos Central first, install agents second.</strong> Central gives you instant fleet visibility; agents give you config analysis.</li>
+    <li><strong>Set up Client Portals for every customer.</strong> Even if the customer never logs in, having a branded portal ready for QBRs saves time.</li>
+    <li><strong>Use scheduled reports as your retention tool.</strong> Regular, automated deliverables remind customers why they pay you.</li>
+    <li><strong>Lead with the deterministic layer.</strong> AI generates the reports, but the score, findings, and compliance mapping are computed locally — same config always produces the same result.</li>
+    <li><strong>Anonymisation is your privacy story.</strong> Data is anonymised before it leaves the browser. The AI never sees real hostnames or IPs.</li>
+    <li><strong>Check the Changelog</strong> (<code>/changelog</code>) before customer meetings.</li>
+    <li><strong>Use the in-app guided tours</strong> when onboarding team members.</li>
+  </ol>
+</section>
+
+<!-- ==================== ASSESS WORKBENCH ==================== -->
+<section class="page-section" id="wt-assess">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Assessment Workbench</h1>
+  <p class="doc-subtitle">The core analysis engine. Upload firewall configs, run analysis, generate reports, and manage customer compliance.</p>
+
+  <h2>Step 1: Upload a Configuration</h2>
+  <ol>
+    <li>Navigate to the <strong>Assess</strong> tab (the default landing page)</li>
+    <li>Drag and drop a Sophos firewall export file (HTML or XML entities)</li>
+    <li>FireComply parses the config <strong>client-side</strong> in your browser — nothing is sent to a server</li>
+    <li>The <strong>Extraction Summary</strong> shows what was parsed: section count, coverage, and any parsing notes</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> You can upload multiple firewall configs at once for a multi-firewall estate assessment.</div>
+
+  <h2>Step 2: Set Customer Context</h2>
+  <table>
+    <thead><tr><th>Setting</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Customer name</strong></td><td>Used in report headers and cover pages</td></tr>
+      <tr><td><strong>Environment type</strong></td><td>Education, Healthcare, Finance, Government, etc. (16 options)</td></tr>
+      <tr><td><strong>Country</strong></td><td>Determines default compliance framework suggestions (20 countries + US states)</td></tr>
+      <tr><td><strong>Compliance frameworks</strong></td><td>Select from 39 frameworks — auto-suggested based on environment and country</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Step 3: Review Deterministic Analysis</h2>
+  <h3>Hero Outcome Panel</h3>
+  <p>Overall posture score and grade (A–F), critical/high issue counts, compliance readiness indicator, top actions to improve score.</p>
+  <h3>Security Posture Scorecard</h3>
+  <p>12 categories: Device Hardening, Visibility &amp; Monitoring, Encryption &amp; Inspection, Rule Hygiene, Network Protection, DoS &amp; Spoof Protection, VPN Security, Active Threat Response, Synchronized Security, Web Protection, Zero-Day Protection, Central Orchestration. Each shows pass/fail/verify counts with expandable evidence.</p>
+  <h3>Risk Widgets</h3>
+  <p>Findings by severity, findings by category, and compliance alignment against selected frameworks.</p>
+  <h3>Remediation Impact Simulator</h3>
+  <p>Toggle recommended fixes on/off. Score, grade, and coverage recalculate in real-time. Use this on customer calls to prioritise remediation.</p>
+
+  <h2>Step 4: Generate AI Reports</h2>
+  <p>Three report types generated as a single combined document:</p>
+  <div class="card-grid">
+    <div class="f-card" style="border-left:4px solid var(--blue)"><div class="tag">MSP Report 1/3</div><h4>Full Technical Handover</h4><p>Per-firewall deep-dive: every rule, interface, zone, NAT entry, with security recommendations and remediation. 15–20 pages per firewall.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--purple)"><div class="tag">MSP Report 2/3</div><h4>Executive Summary</h4><p>Non-technical overview: risk matrix, strategic recommendations, per-firewall summary. 5–8 pages.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--green)"><div class="tag">MSP Report 3/3</div><h4>Compliance Readiness</h4><p>Framework-mapped evidence tables with pass/partial/fail per control. 10–15 pages per firewall.</p></div>
+  </div>
+
+  <h2>Step 5: Export &amp; Deliver</h2>
+  <table>
+    <thead><tr><th>Format</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PDF</strong></td><td>Server-rendered with Headless Chromium</td></tr>
+      <tr><td><strong>Word (.docx)</strong></td><td>Full-fidelity Markdown-to-docx conversion</td></tr>
+      <tr><td><strong>PPTX</strong></td><td>Presentation-ready slides</td></tr>
+      <tr><td><strong>Styled HTML</strong></td><td>Self-contained, printable</td></tr>
+      <tr><td><strong>ZIP</strong></td><td>Bundles reports/ + presentations/ folders</td></tr>
+      <tr><td><strong>Share link</strong></td><td>Read-only URL with optional Word/PDF download</td></tr>
+      <tr><td><strong>Email</strong></td><td>Direct delivery to a recipient</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Step 6: Save &amp; Schedule</h2>
+  <p>Click <strong>Save</strong> to persist the assessment to your Report Centre library. Reports can be scheduled for automatic regeneration and archived for historical reference.</p>
+
+  <h2>AI Chat Assistant</h2>
+  <p>After analysis, the AI Chat panel answers follow-up questions with full context: "Which rules have logging disabled?", "How does this config align with Cyber Essentials?", "What would you prioritise for this education environment?"</p>
+</section>
+
+<!-- ==================== FLEET COMMAND ==================== -->
+<section class="page-section" id="wt-fleet">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Fleet Command</h1>
+  <p class="doc-subtitle">Your operational view of every firewall across every customer. Network operations centre for Sophos firewall posture.</p>
+
+  <h2>Stats Row</h2>
+  <div class="stat-strip">
+    <div class="stat-item"><div class="num">—</div><div class="label">Total Firewalls</div></div>
+    <div class="stat-item"><div class="num">—</div><div class="label">Average Score</div></div>
+    <div class="stat-item"><div class="num">—</div><div class="label">Critical Findings</div></div>
+    <div class="stat-item"><div class="num">—</div><div class="label">Licence Alerts</div></div>
+    <div class="stat-item"><div class="num">—</div><div class="label">Customer Sites</div></div>
+  </div>
+
+  <h2>Fleet List</h2>
+  <p>Firewalls grouped by customer (Central tenant or Connector Agent customer bucket). Each row shows:</p>
+  <table>
+    <thead><tr><th>Column</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Hostname</td><td>Firewall device name</td></tr>
+      <tr><td>Score &amp; Grade</td><td>0–100 posture score and A–F grade</td></tr>
+      <tr><td>Status</td><td>Online, Offline, Stale, Suspended</td></tr>
+      <tr><td>Source</td><td>Central, Agent, or Both</td></tr>
+      <tr><td>Model / Firmware</td><td>Hardware model and SFOS version</td></tr>
+      <tr><td>Last Assessed</td><td>When the last assessment ran</td></tr>
+      <tr><td>Config Link</td><td>Whether a manual upload is linked</td></tr>
+      <tr><td>Critical Findings</td><td>Badge with count of critical-severity findings</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Map Tab</h2>
+  <p>World map with pins for every firewall. Pins positioned using GPS coordinates you set, Central geo-location fallback, or country centroid. Useful for QBR geographic coverage demos.</p>
+
+  <h2>Filters &amp; Search</h2>
+  <table>
+    <thead><tr><th>Filter</th><th>Options</th></tr></thead>
+    <tbody>
+      <tr><td>Search</td><td>Hostname, customer, model, tenant (press <code>/</code> to focus)</td></tr>
+      <tr><td>Grade</td><td>All, A, B, C, D, F</td></tr>
+      <tr><td>Status</td><td>All, Online, Offline, Suspended, Stale</td></tr>
+      <tr><td>Config Link</td><td>All, Linked, Unlinked</td></tr>
+      <tr><td>Spotlight</td><td>Needs attention, Weak scores (C–F)</td></tr>
+      <tr><td>Sort</td><td>Hostname, customer+hostname, score asc/desc, last assessed</td></tr>
+    </tbody>
+  </table>
+  <p>Click <strong>Export CSV</strong> to download the filtered fleet as a spreadsheet.</p>
+
+  <h2>Firewall Detail Panel</h2>
+  <p>Click any row to expand. Set per-firewall compliance context (country, US state, map coordinates). Actions: <strong>View Assessment</strong>, <strong>Latest Report</strong>, <strong>View in Central</strong>. Drag-and-drop upload directly onto a card to run analysis.</p>
+</section>
+
+<!-- ==================== MISSION CONTROL ==================== -->
+<section class="page-section" id="wt-mission">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Mission Control</h1>
+  <p class="doc-subtitle">The MSP dashboard — high-level portfolio overview, alerts, and activity. Open it first thing in the morning.</p>
+
+  <h2>KPI Row</h2>
+  <div class="card-grid">
+    <div class="f-card"><div class="tag">KPI 1</div><h4>Total Customers</h4><p>Directory count with sparkline showing 90-day assessment run trend.</p></div>
+    <div class="f-card"><div class="tag">KPI 2</div><h4>Fleet Devices</h4><p>Total firewall count. Subline splits online vs not-online.</p></div>
+    <div class="f-card"><div class="tag">KPI 3</div><h4>Critical Alerts</h4><p>Central alerts (critical/high). Sparkline shows 90-day alert volume.</p></div>
+    <div class="f-card"><div class="tag">KPI 4</div><h4>Compliance Score</h4><p>Ring chart: average posture score across portfolio.</p></div>
+  </div>
+
+  <h2>Threat / Activity Chart</h2>
+  <p>Stacked area chart (last 30 days). With Central: firewall alert types. Without Central: assessment runs per day.</p>
+
+  <h2>Recent Alerts</h2>
+  <p>Up to 12 Central alerts with severity, summary, customer, device, time, and an <strong>Investigate</strong> link to Central.</p>
+
+  <h2>Top Customers by Risk</h2>
+  <p>Horizontal bar chart: highest-risk customers ranked by alert count (Central) or lowest scores (fallback).</p>
+
+  <h2>Fleet Health</h2>
+  <p>Pie chart: online (green), offline (red), stale (amber), unknown (grey). A healthy MSP portfolio should be overwhelmingly green.</p>
+
+  <h2>Quick Actions</h2>
+  <div class="steps-row">
+    <div class="step-card"><h4>New Assessment</h4><p>Opens the Assess workbench</p></div>
+    <div class="step-card"><h4>Generate Report</h4><p>Opens the Report Centre</p></div>
+    <div class="step-card"><h4>Add Customer</h4><p>Opens Customer Directory</p></div>
+    <div class="step-card"><h4>Playbooks</h4><p>Opens Playbooks page</p></div>
+  </div>
+
+  <h2>How to Use Mission Control</h2>
+  <table>
+    <thead><tr><th>Cadence</th><th>What to Check</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Daily</strong></td><td>KPI row for spikes, recent alerts, fleet health for offline devices</td></tr>
+      <tr><td><strong>Weekly</strong></td><td>Compliance score trend, top customers by risk, report generation activity</td></tr>
+      <tr><td><strong>Board reporting</strong></td><td>Total customers, fleet size, alert volumes, portfolio compliance score</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== CLIENT PORTAL ==================== -->
+<section class="page-section" id="wt-portal">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Client Portal</h1>
+  <p class="doc-subtitle">Give your customers a branded, self-service view of their firewall security posture — no workspace account needed.</p>
+
+  <h2>Branding Options</h2>
+  <table>
+    <thead><tr><th>Setting</th><th>What it does</th><th>Default</th></tr></thead>
+    <tbody>
+      <tr><td>Company logo</td><td>Shown in the portal header</td><td>FireComply logo</td></tr>
+      <tr><td>Company name</td><td>Displayed alongside the logo</td><td>Your org name</td></tr>
+      <tr><td>Accent colour</td><td>Primary brand colour throughout</td><td><code>#2006F7</code></td></tr>
+      <tr><td>Welcome message</td><td>Text on the portal landing/hero area</td><td>—</td></tr>
+      <tr><td>SLA information</td><td>Response times, coverage hours</td><td>—</td></tr>
+      <tr><td>Contact email / phone</td><td>Shown in footer/contact section</td><td>—</td></tr>
+      <tr><td>Footer text</td><td>Custom footer message</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Visible Sections</h2>
+  <div class="card-grid">
+    <div class="f-card"><h4>Score</h4><p>Posture gauge with overall score (0–100) and grade (A–F)</p></div>
+    <div class="f-card"><h4>History</h4><p>Score trend chart over time — shows improvement trajectory</p></div>
+    <div class="f-card"><h4>Findings</h4><p>Severity-filtered findings list with expandable detail per firewall</p></div>
+    <div class="f-card"><h4>Compliance</h4><p>Framework alignment (Cyber Essentials, NCSC, ISO 27001, GDPR)</p></div>
+    <div class="f-card"><h4>Reports</h4><p>Downloadable saved reports — PDF and Word</p></div>
+    <div class="f-card"><h4>Feedback</h4><p>Customer satisfaction form (stars + free text)</p></div>
+  </div>
+
+  <h2>Vanity Slug &amp; Access Control</h2>
+  <p>Each portal gets a unique URL (e.g., <code>yourapp.com/portal/acme-security</code>). Must be 12–48 characters, lowercase, hyphens allowed. Access is controlled by <strong>portal viewers</strong> — add customer email addresses. MSP workspace members always have full access.</p>
+
+  <h2>How MSPs Use Client Portals</h2>
+  <table>
+    <thead><tr><th>Use Case</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Initial handoff</strong></td><td>Walk the customer through the portal on the kick-off call</td></tr>
+      <tr><td><strong>QBR support</strong></td><td>Share screen showing score, history, findings, reports</td></tr>
+      <tr><td><strong>Reduce tickets</strong></td><td>Direct customers to their portal instead of emailing reports</td></tr>
+      <tr><td><strong>White-label</strong></td><td>With your logo and accent colour, it looks like your own product</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== DRIFT & INSIGHTS ==================== -->
+<section class="page-section" id="wt-drift">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Drift Monitor &amp; Portfolio Insights</h1>
+  <p class="doc-subtitle">Track configuration changes between assessments and analyse cross-customer portfolio trends.</p>
+
+  <h2>Drift Monitor</h2>
+  <p>Requires Connector Agents pushing configs on a schedule. Each push creates a snapshot; consecutive snapshots are compared.</p>
+
+  <h3>Snapshot Timeline</h3>
+  <table>
+    <thead><tr><th>Column</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Date</td><td>When the snapshot was captured</td></tr>
+      <tr><td>Score before / after</td><td>Posture score comparison</td></tr>
+      <tr><td>Findings added</td><td>New findings since last snapshot</td></tr>
+      <tr><td>Findings removed</td><td>Resolved findings since last snapshot</td></tr>
+      <tr><td>Config changes</td><td>Specific configuration changes detected</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Cross-Customer Drift History</h3>
+  <p>Shows recent config changes across your entire portfolio. Filter by customer. Each marker shows when a score changed between consecutive runs.</p>
+
+  <h3>Alert Rules</h3>
+  <p>Notify when: score drops below threshold, critical findings introduced, config sections change, agent goes offline.</p>
+
+  <h2>Portfolio Insights</h2>
+
+  <h3>Time Range</h3>
+  <p>Select: 7 days, 30 days, 90 days, 12 months, or custom date range.</p>
+
+  <h3>Key Widgets</h3>
+  <div class="card-grid">
+    <div class="f-card"><h4>Risk Strip</h4><p>Headline risk statistics — total findings by severity, customers at risk, compliance gaps.</p></div>
+    <div class="f-card"><h4>Threat Landscape</h4><p>Stacked area chart. With Central: real alert data by type. Without: assessment activity.</p></div>
+    <div class="f-card"><h4>Customer Risk Matrix</h4><p>Scatter plot: score vs exposure. Click any point for detail + jump links to Assess and Fleet.</p></div>
+    <div class="f-card"><h4>Recommendations</h4><p>AI-generated recommendations based on live portfolio data. Dismissible.</p></div>
+    <div class="f-card"><h4>Compliance Charts</h4><p>Framework alignment across your customer base by sector.</p></div>
+    <div class="f-card"><h4>Score Trend</h4><p>Portfolio-wide score trend over time — shows overall improvement.</p></div>
+  </div>
+</section>
+
+<!-- ==================== INTEGRATIONS ==================== -->
+<section class="page-section" id="wt-integrations">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Integrations Hub</h1>
+  <p class="doc-subtitle">Connect FireComply to your existing MSP toolstack — Central, PSA, messaging, and automation.</p>
+
+  <h2>Sophos Central</h2>
+  <div class="info-box"><strong>Core integration.</strong> Discovers all tenants and firewalls from your Central partner account. Enriches Fleet Command with firmware, HA, alerts, and geo-location. Powers Mission Control alerts.</div>
+
+  <h2>PSA Integrations</h2>
+  <div class="card-grid">
+    <div class="f-card" style="border-left:4px solid var(--blue)"><h4>ConnectWise Cloud</h4><p>Syncs customer and device data via OAuth client credentials. Automatic customer discovery.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--green)"><h4>ConnectWise Manage</h4><p>Creates tickets from assessment findings. Bulk ticket creation from the Assess workbench.</p></div>
+    <div class="f-card" style="border-left:4px solid var(--purple)"><h4>Datto Autotask</h4><p>Creates tickets from findings in your Autotask PSA. Same workflow as ConnectWise Manage.</p></div>
+  </div>
+
+  <h2>Messaging</h2>
+  <div class="card-grid">
+    <div class="f-card"><h4>Slack</h4><p>Assessment completion alerts, score change notifications, critical finding alerts, agent offline warnings.</p></div>
+    <div class="f-card"><h4>Microsoft Teams</h4><p>Same notifications via incoming webhooks.</p></div>
+  </div>
+
+  <h2>Webhooks</h2>
+  <table>
+    <thead><tr><th>Event</th><th>When it fires</th></tr></thead>
+    <tbody>
+      <tr><td><code>assessment_complete</code></td><td>An assessment finishes (manual or agent)</td></tr>
+      <tr><td><code>score_change</code></td><td>A firewall's score changes between assessments</td></tr>
+      <tr><td><code>critical_finding</code></td><td>A new critical-severity finding is detected</td></tr>
+      <tr><td><code>agent_offline</code></td><td>A connector agent stops sending heartbeats</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Scoped Service Keys</h2>
+  <p>Org-level API keys for programmatic access — useful for RMM integrations, custom scripts, or third-party tooling.</p>
+
+  <h2>Day 1 Setup Order</h2>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">1</div><h4>Sophos Central</h4><p>Connect first for fleet discovery</p></div>
+    <div class="step-card"><div class="step-num">2</div><h4>Connector Agents</h4><p>Install for automated config collection</p></div>
+    <div class="step-card"><div class="step-num">3</div><h4>Slack / Teams</h4><p>Connect for real-time notifications</p></div>
+    <div class="step-card"><div class="step-num">4</div><h4>PSA</h4><p>Connect ConnectWise or Autotask for tickets</p></div>
+  </div>
+</section>
+
+<!-- ==================== REPORT CENTRE ==================== -->
+<section class="page-section" id="wt-reports">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Report Centre &amp; Scheduled Reports</h1>
+  <p class="doc-subtitle">Your report library — every assessment report, across all customers, with scheduling, email delivery, and bulk actions.</p>
+
+  <h2>Report Library</h2>
+  <table>
+    <thead><tr><th>Column</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Customer</td><td>Which customer the report belongs to</td></tr>
+      <tr><td>Type</td><td>Full Handover, Executive Summary, or Audit Checklist</td></tr>
+      <tr><td>Pages</td><td>Estimated page count</td></tr>
+      <tr><td>Date</td><td>When the report was saved</td></tr>
+      <tr><td>Status</td><td>Ready (active) or Archived</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Per-Report Actions</h2>
+  <table>
+    <thead><tr><th>Action</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Preview</td><td>Loads full HTML report in a preview pane</td></tr>
+      <tr><td>Download</td><td>Downloads as PDF (Headless Chromium)</td></tr>
+      <tr><td>Share</td><td>Generates a read-only share link</td></tr>
+      <tr><td>Email</td><td>Quick-send directly to a recipient via Resend</td></tr>
+      <tr><td>Archive</td><td>Moves to Archives section (hidden from portals)</td></tr>
+      <tr><td>ZIP</td><td>Bulk download all selected reports</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Scheduled Reports</h2>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">1</div><h4>Create Schedule</h4><p>Management Panel → Settings → Scheduled Reports</p></div>
+    <div class="step-card"><div class="step-num">2</div><h4>Configure</h4><p>Name, frequency (weekly/monthly/quarterly), report type, sections, recipients</p></div>
+    <div class="step-card"><div class="step-num">3</div><h4>Enable</h4><p>Toggle on. Reports generate and deliver automatically.</p></div>
+    <div class="step-card"><div class="step-num">4</div><h4>Monitor</h4><p>Send now, preview, edit, or delete any schedule.</p></div>
+  </div>
+
+  <div class="info-box"><strong>Backend pipeline:</strong> A Supabase Edge Function queries due schedules, inserts jobs into <code>job_outbox</code> with idempotency keys (no duplicates), then the job pipeline generates and delivers via email.</div>
+</section>
+
+<!-- ==================== CONNECTOR AGENT ==================== -->
+<section class="page-section" id="wt-connector">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">Connector Agent</h1>
+  <p class="doc-subtitle">Lightweight Electron app that automates firewall config collection via the Sophos XML API.</p>
+
+  <h2>Manual Upload vs Connector Agent</h2>
+  <div class="compare">
+    <div class="compare-col before">
+      <h4>Manual Upload</h4>
+      <ul>
+        <li>Someone remembers to export the config</li>
+        <li>Config sits on someone's desktop</li>
+        <li>Assessments go stale between reviews</li>
+        <li>One firewall at a time</li>
+        <li>No drift detection</li>
+      </ul>
+    </div>
+    <div class="compare-col after">
+      <h4>Connector Agent</h4>
+      <ul>
+        <li>Automated on a schedule (daily, weekly)</li>
+        <li>Results push directly to FireComply</li>
+        <li>Fleet and Mission Control update automatically</li>
+        <li>Monitor dozens of firewalls per agent</li>
+        <li>Drift Monitor catches changes between scans</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Setup</h2>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">1</div><h4>Register Agent</h4><p>Management Panel → Connector Agents → Register Agent. Copy the API key.</p></div>
+    <div class="step-card"><div class="step-num">2</div><h4>Prepare Firewalls</h4><p>Create a read-only API profile and user on each Sophos XGS. Enable API access.</p></div>
+    <div class="step-card"><div class="step-num">3</div><h4>Install</h4><p>Download for Windows, macOS, or Linux. Enter the API key.</p></div>
+    <div class="step-card"><div class="step-num">4</div><h4>Add Firewalls</h4><p>Enter host, port, API credentials. Click Test API to verify.</p></div>
+  </div>
+
+  <h2>What Happens After a Scan</h2>
+  <ul>
+    <li><strong>Fleet Command</strong> updates with latest posture scores</li>
+    <li><strong>Mission Control</strong> KPIs recalculate</li>
+    <li><strong>Drift Monitor</strong> detects changes since the last scan</li>
+    <li><strong>Stale assessment alerts</strong> clear automatically</li>
+    <li>The connector's heartbeat timestamp updates in the web app</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Issue</th><th>Solution</th></tr></thead>
+    <tbody>
+      <tr><td>"Auth failed" in logs</td><td>Verify API username/password. Ensure API access is enabled in Admin Settings.</td></tr>
+      <tr><td>"Connection refused"</td><td>Check firewall IP/hostname and port. Ensure port 4444 is reachable.</td></tr>
+      <tr><td>SNMP timeout</td><td>SNMP is optional. Ensure SNMP is enabled and community string matches.</td></tr>
+      <tr><td>Agent shows "Disconnected"</td><td>Check outbound HTTPS connectivity to your FireComply workspace.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== AI REPORTS ==================== -->
+<section class="page-section" id="wt-ai">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">AI Reports &amp; Deliverables</h1>
+  <p class="doc-subtitle">Four report types — three AI-powered MSP reports and one SE Health Check report. Exportable in 7+ formats.</p>
+
+  <h2>The Four Report Types</h2>
+  <div class="card-grid">
+    <div class="f-card" style="border-left:4px solid var(--blue)">
+      <div class="tag">MSP Report 1/3</div>
+      <h4>Full Technical Handover</h4>
+      <p>Per-firewall deep-dive: every rule, interface, zone, NAT entry, auth server, IPS engine, wireless network, SSL/TLS setting, with per-section security recommendations and remediation steps. <strong>15–20 pages per firewall.</strong></p>
+    </div>
+    <div class="f-card" style="border-left:4px solid var(--purple)">
+      <div class="tag">MSP Report 2/3</div>
+      <h4>Executive Summary</h4>
+      <p>Non-technical estate overview: per-firewall summary, numbered risk matrix with severity ratings, strategic recommendations, appendix. <strong>5–8 pages.</strong></p>
+    </div>
+    <div class="f-card" style="border-left:4px solid var(--green)">
+      <div class="tag">MSP Report 3/3</div>
+      <h4>Compliance Readiness</h4>
+      <p>Framework-mapped evidence tables: control-by-control evidence mapping for GDPR, Cyber Essentials, NCSC, ISO 27001, PCI DSS, etc. with pass/partial/fail status. <strong>10–15 pages per firewall.</strong></p>
+    </div>
+    <div class="f-card" style="border-left:4px solid var(--amber)">
+      <div class="tag">SE Health Check</div>
+      <h4>Sophos Firewall Health Check</h4>
+      <p>Executive summary with best-practice score and grade, baseline checklist, findings table with severity, AI-style SE Engineer Notes (template-generated for accuracy). <strong>10–13 pages.</strong></p>
+    </div>
+  </div>
+
+  <h2>The Prompt Engineering Pipeline</h2>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">1</div><h4>Section Omission</h4><p>120+ low-value config sections stripped client-side. Saves 30–50% of input tokens.</p></div>
+    <div class="step-card"><div class="step-num">2</div><h4>Payload Pruning</h4><p>Empty strings, arrays, and objects recursively removed.</p></div>
+    <div class="step-card"><div class="step-num">3</div><h4>Anonymisation</h4><p>Hostnames, IPs, identifiers replaced with tokens before leaving the browser.</p></div>
+    <div class="step-card"><div class="step-num">4</div><h4>Prompt Assembly</h4><p>Base prompt + Shared Rules + Dynamic Context = System Prompt. Model generates via SSE streaming.</p></div>
+  </div>
+
+  <h2>Shared Assessment Rules</h2>
+  <p>Domain-specific rules that prevent common AI mistakes:</p>
+  <table>
+    <thead><tr><th>Rule</th><th>What it prevents</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Web filter scope</strong></td><td>Only flag missing filtering for WAN-destination rules with HTTP/HTTPS/ANY. Don't flag LAN-to-LAN.</td></tr>
+      <tr><td><strong>VPN profiles</strong></td><td>Only flag weaknesses when profile is actively referenced. Unused = compliant.</td></tr>
+      <tr><td><strong>SSL/TLS engine</strong></td><td>These are DPI engine settings, not TLS-terminating. Don't recommend NCSC TLS 1.2+ for inspection engine.</td></tr>
+      <tr><td><strong>External logging</strong></td><td>Central counts as external log forwarding. Central-managed firewalls satisfy the syslog requirement.</td></tr>
+      <tr><td><strong>API service accounts</strong></td><td>Read-only admin accounts can't use interactive MFA. Document compensating controls instead.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Model Configuration</h2>
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Temperature</td><td><code>0.1</code> (near-deterministic)</td></tr>
+      <tr><td>Reasoning effort</td><td>Low (quality/cost balance)</td></tr>
+      <tr><td>Max tokens</td><td>32,768–65,536</td></tr>
+      <tr><td>Fallback</td><td>Automatic if primary rate-limits</td></tr>
+      <tr><td>Provider</td><td>Gemini default; pluggable to Claude or ChatGPT</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Export Formats</h2>
+  <table>
+    <thead><tr><th>Format</th><th>Available From</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PDF</strong></td><td>Assess, Health Check, Report Centre</td><td>Server-rendered with Headless Chromium; pdfmake fallback</td></tr>
+      <tr><td><strong>Word (.docx)</strong></td><td>Assess, Report Centre</td><td>Full-fidelity Markdown-to-docx</td></tr>
+      <tr><td><strong>PPTX</strong></td><td>Assess</td><td>Presentation-ready slides</td></tr>
+      <tr><td><strong>Styled HTML</strong></td><td>Assess, Health Check</td><td>Self-contained, printable</td></tr>
+      <tr><td><strong>CSV</strong></td><td>Assess (risk register), Health Check (findings)</td><td>Spreadsheet-friendly</td></tr>
+      <tr><td><strong>JSON</strong></td><td>Health Check (summary)</td><td>Machine-readable</td></tr>
+      <tr><td><strong>ZIP</strong></td><td>Assess, Health Check</td><td>Bundles multiple formats</td></tr>
+      <tr><td><strong>Email</strong></td><td>Assess, Health Check, Report Centre</td><td>Direct delivery via Resend API</td></tr>
+      <tr><td><strong>Share link</strong></td><td>Assess, Health Check</td><td>Read-only URL with download toggles</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== WHY SE ==================== -->
+<section class="page-section" id="why-se">
+  <div class="section-tag">SE Health Check</div>
+  <h1 class="doc-title">Why FireComply for Sales Engineers</h1>
+  <p class="doc-subtitle">How FireComply turns a 3–4 hour manual health check into a 15-minute professional workflow.</p>
+
+  <h2>Before &amp; After</h2>
+  <div class="compare">
+    <div class="compare-col before">
+      <h4>Before: 3–4 Hours Per Health Check</h4>
+      <ol>
+        <li>Receive config export</li>
+        <li>Open HTML in browser, manually review ~30 areas</li>
+        <li>Take notes in a spreadsheet</li>
+        <li>Write up findings in Word</li>
+        <li>Format, brand, send to customer</li>
+        <li>Repeat from scratch next time</li>
+      </ol>
+    </div>
+    <div class="compare-col after">
+      <h4>After: 15 Minutes Per Health Check</h4>
+      <ol>
+        <li>Request config via secure link</li>
+        <li>FireComply analyses against 37 checks automatically</li>
+        <li>Walk through the score on a call — qualifying questions adjust it live</li>
+        <li>Click "Send to customer" — branded PDF arrives in their inbox</li>
+        <li>Past reviews saved — compare drift next time</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>SE-Specific Benefits</h2>
+  <div class="card-grid">
+    <div class="f-card"><h4>Consistency</h4><p>Every health check uses the same 37-check framework. No more "I check 20 things, you check 15."</p></div>
+    <div class="f-card"><h4>Speed</h4><p>Deterministic analysis in seconds. AI report in ~30 seconds. You spend time on the call, not the prep.</p></div>
+    <div class="f-card"><h4>Credibility</h4><p>Formal findings table with severity, provenance, and AI-generated Engineer Notes in your voice.</p></div>
+    <div class="f-card"><h4>Central Enrichment</h4><p>When the customer connects Central: firmware, HA status, managed state, alert count. No separate tab.</p></div>
+    <div class="f-card"><h4>Score as Conversation Tool</h4><p>"66% / Grade C" is immediately understood. Qualifying questions let you tailor the score on the fly.</p></div>
+    <div class="f-card"><h4>Saved History</h4><p>Every health check is persisted. Return in 6 months and show the customer their improvement.</p></div>
+  </div>
+</section>
+
+<!-- ==================== SE WORKFLOWS ==================== -->
+<section class="page-section" id="se-workflows">
+  <div class="section-tag">SE Health Check</div>
+  <h1 class="doc-title">SE Workflows &amp; Best Practices</h1>
+  <p class="doc-subtitle">Core workflows for Sales Engineers — pre-sales, post-sales, MSP onboarding, and quick demos.</p>
+
+  <h2>Workflow 1: Pre-Sales Health Check</h2>
+  <div class="info-box"><strong>Scenario:</strong> A prospect is evaluating Sophos or renewing. You want to show the value of Xstream Protection by reviewing their current config.</div>
+  <ol>
+    <li>Open <strong>SE Health Check</strong> → click <strong>"Request Config Upload"</strong></li>
+    <li>Customer receives a branded email with instructions and a secure upload link</li>
+    <li>Customer uploads and optionally connects Central</li>
+    <li>You get notified → load the config → set the licence tier</li>
+    <li><strong>Walk through qualifying questions</strong> on the call — each toggle adjusts the score live</li>
+    <li>Click <strong>"Send to customer"</strong> to email the PDF before the call ends</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Set the licence tier before the call. The score changes significantly between Standard and Xstream.</div>
+
+  <hr>
+
+  <h2>Workflow 2: Post-Sales Improvement Review</h2>
+  <div class="info-box"><strong>Scenario:</strong> You sold Xstream Protection 6 months ago. Time to show the customer their improvement.</div>
+  <ol>
+    <li>Open the customer's <strong>previous health check</strong></li>
+    <li>Request a new config upload (or use connector)</li>
+    <li>Walk through the <strong>score improvement</strong> — "Last time 52% Grade D, now 78% Grade B"</li>
+    <li>Highlight <strong>findings resolved</strong> and any <strong>new issues</strong></li>
+    <li>Send the updated report</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Reference the previous report. "We flagged 4 fully open rules — you've resolved 3." Use this as a renewal tool.</div>
+
+  <hr>
+
+  <h2>Workflow 3: Quick Internal Demo</h2>
+  <div class="info-box"><strong>Scenario:</strong> You need to show a colleague or partner what FireComply does in 2 minutes.</div>
+  <ol>
+    <li>Go to the login page → click <strong>"Try Demo Mode"</strong></li>
+    <li>Walk through: Hero outcome panel → Security Posture Scorecard → Remediation Impact Simulator → Generate a report</li>
+    <li>If time: show Fleet, Customers, Mission Control with demo data</li>
+  </ol>
+  <div class="tip-box"><strong>Tip:</strong> Lead with the outcome, not the upload. Use the <a href="../2_MINUTE_DEMO_SCRIPT.md">2-minute demo script</a> for structure.</div>
+
+  <hr>
+
+  <h2>General Best Practices</h2>
+  <ol>
+    <li><strong>Use the in-app guided tours</strong> when showing FireComply to someone for the first time</li>
+    <li><strong>The deterministic layer is your credibility.</strong> Findings and scores are computed locally — lead with this</li>
+    <li><strong>Never share raw config data.</strong> FireComply anonymises before AI processing. Mention this to security-conscious customers</li>
+    <li><strong>Use the Remediation Impact Simulator</strong> on calls — turns a static report into an interactive conversation</li>
+    <li><strong>Check the Changelog</strong> (<code>/changelog</code>) before customer meetings</li>
+  </ol>
+</section>
+
+<!-- ==================== USING WITH CUSTOMER ==================== -->
+<section class="page-section" id="se-customer">
+  <div class="section-tag">SE Health Check</div>
+  <h1 class="doc-title">Using FireComply with a Customer</h1>
+  <p class="doc-subtitle">Before, during, and after the meeting — with customer FAQ answers you can use verbatim.</p>
+
+  <h2>Before the Meeting</h2>
+  <ul class="checklist">
+    <li>Know the customer's environment type (Education, Healthcare, Finance, etc.)</li>
+    <li>Know their country and any specific compliance requirements</li>
+    <li>Check if they have Sophos Central — have them prepare API credentials</li>
+    <li>Decide whether to request config upload in advance (recommended) or upload live</li>
+    <li>If pre-sales: know which licence tier they're evaluating</li>
+  </ul>
+
+  <h2>During the Meeting</h2>
+
+  <h3>Opening (2 minutes)</h3>
+  <p>Share your screen showing the SE Health Check results. Start with the <strong>best-practice score</strong>: "Your firewall scored 66% against Sophos best practices, which is a Grade C." Frame positively: "Out of 37 checks, 22 passed."</p>
+
+  <h3>Walking Through Findings (10–15 minutes)</h3>
+  <p>Use the <strong>category view</strong>: Device Hardening, Visibility &amp; Monitoring, Encryption &amp; Inspection, etc. For each failed check: what it looks for, what it found, the Sophos recommendation, and how to remediate.</p>
+  <p>Use qualifying questions as natural discussion points:</p>
+  <ul>
+    <li>"I see Security Heartbeat isn't configured — do you have Sophos-managed endpoints?" → sales opportunity</li>
+    <li>"MDR threat feeds aren't in the export — is that enabled?" → MDR conversation</li>
+    <li>"No SSL/TLS decrypt rules — is there a reason DPI isn't active?" → DPI discussion</li>
+  </ul>
+
+  <h3>Adjusting the Score Live (2 minutes)</h3>
+  <p>Toggle qualifying questions — the score recalculates in real-time. "If we acknowledge MDR is configured and exclude Guest zone from DPI, your score goes from 66% to 74%."</p>
+
+  <h3>Closing (2 minutes)</h3>
+  <p>Click <strong>"Send to customer"</strong> — the branded PDF arrives during the call. Or share a read-only link they can bookmark.</p>
+
+  <h2>After the Meeting</h2>
+  <table>
+    <thead><tr><th>Audience</th><th>What to Send</th><th>Format</th></tr></thead>
+    <tbody>
+      <tr><td>Technical contact</td><td>Full health check report</td><td>PDF (emailed from the tool)</td></tr>
+      <tr><td>IT Manager</td><td>Same report — the Executive Summary section is built-in</td><td>PDF</td></tr>
+      <tr><td>C-Suite / Board</td><td>Executive Summary AI report (from MSP Assess)</td><td>PDF or shared link</td></tr>
+      <tr><td>Compliance Officer</td><td>Compliance Readiness Report (from MSP Assess)</td><td>PDF with framework evidence tables</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Common Customer Questions</h2>
+  <h3>"Is my config data safe?"</h3>
+  <blockquote>Yes. The config is parsed client-side in your browser. When AI reports are generated, the data is anonymised — hostnames and IPs are replaced with tokens before leaving the browser. No raw config is stored server-side.</blockquote>
+
+  <h3>"Do I need a FireComply account?"</h3>
+  <blockquote>No. The upload portal works with just the secure link — no account required. The SE handles everything on their end.</blockquote>
+
+  <h3>"How does the score work?"</h3>
+  <blockquote>The score is based on 37 Sophos best-practice checks, weighted by category and severity. It's deterministic — same config always produces the same score. The AI is only used for the written report, not the score itself.</blockquote>
+
+  <h3>"What firewalls are supported?"</h3>
+  <blockquote>Sophos XGS and SFOS (XG) firewalls. Both HTML exports (from the web console) and XML entities exports (from backup or API) are supported.</blockquote>
+</section>
+
+<!-- ==================== SE HEALTH CHECK WALKTHROUGH ==================== -->
+<section class="page-section" id="wt-healthcheck">
+  <div class="section-tag">Feature Walkthrough</div>
+  <h1 class="doc-title">SE Health Check Walkthrough</h1>
+  <p class="doc-subtitle">The full workflow — from requesting a config upload to delivering a branded PDF report.</p>
+
+  <h2>The Full Workflow</h2>
+
+  <h3>1. Request a Customer Config Upload</h3>
+  <ol>
+    <li>Click <strong>"Request Config Upload"</strong></li>
+    <li>Fill in: Customer name, Contact person, Email address, Link expiry (1–30 days)</li>
+    <li>Click <strong>Send</strong> — the customer receives a branded email with instructions, a drag-and-drop upload portal, and optional Central API connection</li>
+  </ol>
+
+  <h3>2. Customer Uploads (Their Side)</h3>
+  <ol>
+    <li>They receive a professional email from FireComply</li>
+    <li>They click the link and see a branded upload page</li>
+    <li>They drag and drop their <code>entities.xml</code> file</li>
+    <li>Optionally enter Sophos Central API credentials for enrichment</li>
+    <li>Done — no account needed</li>
+  </ol>
+
+  <h3>3. SE Gets Notified</h3>
+  <p>You receive an email: "Configuration Uploaded" with an "Open FireComply" button. The config appears in your Upload Requests panel.</p>
+
+  <h3>4. Load and Review</h3>
+  <p>Click <strong>"Load Config"</strong>. Set the licence tier (Xstream Protection, Standard, or Individual Modules). Everything pre-populates.</p>
+
+  <h3>5. Qualifying Questions</h3>
+  <table>
+    <thead><tr><th>Question</th><th>Why It Matters</th></tr></thead>
+    <tbody>
+      <tr><td>Security Heartbeat excluded (no Sophos endpoints)</td><td>Heartbeat check excluded from scoring</td></tr>
+      <tr><td>MDR threat feeds configured (export gap)</td><td>MDR config doesn't appear in export — SE confirms verbally</td></tr>
+      <tr><td>NDR Essentials enabled (export gap)</td><td>Confirm on the appliance</td></tr>
+      <tr><td>DNS Protection configured (export gap)</td><td>DNS Protection IPs may not appear in config export</td></tr>
+      <tr><td>DPI exclusion zones</td><td>Zones where deploying the signing certificate isn't practical</td></tr>
+      <tr><td>Web filter exempt rules</td><td>Rules intentionally excluded from web filter compliance</td></tr>
+    </tbody>
+  </table>
+  <p>Each toggle adjusts the best-practice score in real-time.</p>
+
+  <h3>6. Review the Score</h3>
+  <p>Score (0–100) and Grade (A–F), Passed / Failed / Verify counts, Findings by severity, Per-category breakdown, Priority next steps.</p>
+
+  <h3>7. SE Engineer Notes</h3>
+  <blockquote>"I reviewed the configuration export as part of this health check. The appliance is licenced with Sophos Firewall Xstream Protection. Overall the appliance scored 66% against Sophos best practices, earning a Grade C..."</blockquote>
+  <div class="info-box"><strong>Template-generated (not AI)</strong> — the numbers are always mathematically accurate. Read them aloud on the call or include in the report.</div>
+
+  <h3>8. Export &amp; Deliver</h3>
+  <table>
+    <thead><tr><th>Action</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Send to customer</td><td>Emails branded PDF directly to customer's email</td></tr>
+      <tr><td>Send to SE</td><td>Emails report to the logged-in SE's email</td></tr>
+      <tr><td>Share link</td><td>Generates a read-only URL the customer can bookmark</td></tr>
+      <tr><td>PDF</td><td>Download as branded PDF</td></tr>
+      <tr><td>HTML</td><td>Download as self-contained HTML</td></tr>
+      <tr><td>Summary JSON</td><td>Machine-readable summary</td></tr>
+      <tr><td>Findings CSV</td><td>Spreadsheet-friendly findings export</td></tr>
+      <tr><td>ZIP</td><td>PDF + HTML bundled together</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9. Save for Follow-Up</h3>
+  <p>The health check is automatically saved. Return anytime to review, compare against a new upload, or show improvement.</p>
+
+  <div class="tip-box"><strong>Tips:</strong> Use Central connection whenever possible — it adds firmware, HA, and managed state for free. Send the report before the call ends — the customer seeing it arrive in real-time is impressive. Qualifying questions are upsell opportunities.</div>
+
+  <div class="site-footer">
+    &copy; Copyright 2026. Sophos Ltd. All rights reserved. &nbsp;|&nbsp; 2026-04 EN
+  </div>
+</section>
+
+</div><!-- /main -->
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const section = document.getElementById(id);
+  if (section) {
+    section.classList.add('active');
+    section.scrollIntoView({ behavior: 'instant', block: 'start' });
+    window.scrollTo(0, 0);
+  }
+  const link = document.querySelector(`a[href="#${id}"]`);
+  if (link) link.classList.add('active');
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar.classList.contains('open')) sidebar.classList.remove('open');
+}
+window.addEventListener('hashchange', () => {
+  const id = location.hash.slice(1);
+  if (id) showSection(id);
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const id = location.hash.slice(1);
+  if (id) showSection(id);
+});
+</script>
+</body>
+</html>
