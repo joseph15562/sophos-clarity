@@ -94,6 +94,19 @@ const PDF_OVERLAY_CSS = `
     line-height: 1.22 !important;
   }
 
+  /* Backtick <code> in table cells: strip pill styling so it reads as plain text */
+  table td code,
+  table th code {
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
   /* Hide the interactive dark/light toggle */
   .theme-toggle { display: none !important; }
   .report-footer { display: none !important; }
