@@ -718,6 +718,8 @@ function IntegrationsTab() {
   const [cwManageLinked, setCwManageLinked] = useState(false);
   const [autotaskLinked, setAutotaskLinked] = useState(false);
   const [hasServiceKeys, setHasServiceKeys] = useState(false);
+  const [teamsLinked, setTeamsLinked] = useState(false);
+  const [slackLinked, setSlackLinked] = useState(false);
   const [openPanel, setOpenPanel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -775,6 +777,28 @@ function IntegrationsTab() {
   }, [org?.id, openPanel]);
 
   useEffect(() => {
+    const checkLocal = () => {
+      try {
+        const teams = localStorage.getItem("firecomply-teams-config");
+        setTeamsLinked(
+          !!teams && !!(JSON.parse(teams) as { webhookUrl?: string }).webhookUrl?.trim(),
+        );
+      } catch {
+        setTeamsLinked(false);
+      }
+      try {
+        const slack = localStorage.getItem("firecomply-slack-config");
+        setSlackLinked(
+          !!slack && !!(JSON.parse(slack) as { webhookUrl?: string }).webhookUrl?.trim(),
+        );
+      } catch {
+        setSlackLinked(false);
+      }
+    };
+    checkLocal();
+  }, [openPanel]);
+
+  useEffect(() => {
     if (!openPanel) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -817,6 +841,20 @@ function IntegrationsTab() {
         ...item,
         status: hasServiceKeys ? ("connected" as const) : ("available" as const),
         action: hasServiceKeys ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "teams") {
+      return {
+        ...item,
+        status: teamsLinked ? ("connected" as const) : ("available" as const),
+        action: teamsLinked ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "slack") {
+      return {
+        ...item,
+        status: slackLinked ? ("connected" as const) : ("available" as const),
+        action: slackLinked ? "Configure" : "Connect",
       };
     }
     return item;
