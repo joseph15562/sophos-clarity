@@ -600,7 +600,7 @@ function IntegrationCard({
 
 function EndpointRow({ ep }: { ep: ApiReferenceEndpoint }) {
   const [expanded, setExpanded] = useState(false);
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "";
   const fullUrl = resolveApiReferenceEndpointUrl(supabaseUrl, ep);
   const responseDoc = `${ep.responseShape}\n\n— Example —\n\n${ep.exampleResponse}`;
   return (

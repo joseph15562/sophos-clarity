@@ -343,7 +343,7 @@ export function resolveApiReferenceEndpointUrl(
   supabaseProjectUrl: string,
   ep: ApiReferenceEndpoint,
 ): string {
-  const root = supabaseProjectUrl.replace(/\/$/, "");
+  const root = (supabaseProjectUrl || "").replace(/\/$/, "");
   switch (ep.deployment) {
     case "api":
       return `${root}/functions/v1/api${ep.path.startsWith("/") ? ep.path : `/${ep.path}`}`;

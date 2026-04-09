@@ -239,41 +239,16 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
 
 test.describe("Tier 2 — hub & API routes", () => {
   test("API hub shows REST API documentation", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(60_000);
     await page.goto("/api", { waitUntil: "load" });
     await expect(page.getByRole("heading", { name: /API & Integrations/i })).toBeVisible({
       timeout: 30_000,
     });
-
-    const clicked = await page.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll("button")).find((b) =>
-        b.textContent?.includes("API Explorer"),
-      );
-      if (!btn) return "button-not-found";
-      btn.click();
-      return "clicked";
+    const apiTab = page.getByRole("button", { name: /API Explorer/i });
+    await apiTab.click();
+    await expect(page.getByRole("heading", { name: /Authentication/i })).toBeVisible({
+      timeout: 15_000,
     });
-    expect(clicked).toBe("clicked");
-
-    const authHeading = page.locator("h3", { hasText: /^Authentication$/i });
-    const headingVisible = await authHeading
-      .waitFor({ state: "visible", timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!headingVisible) {
-      const diag = await page.evaluate(() => {
-        const h3s = Array.from(document.querySelectorAll("h3")).map((h) => h.textContent?.trim());
-        const active = Array.from(document.querySelectorAll("button"))
-          .filter((b) => b.className.includes("2006F7"))
-          .map((b) => b.textContent?.trim());
-        const bodySnippet = document.body.innerText.slice(0, 500);
-        return { h3s, activeButtons: active, bodySnippet };
-      });
-      console.log("API hub diagnostic:", JSON.stringify(diag, null, 2));
-    }
-
-    await expect(authHeading).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: /GET \/api\/assessments/i }).first()).toBeVisible(
       { timeout: 15_000 },
     );
