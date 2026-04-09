@@ -208,7 +208,7 @@ function UpdatesOverviewPanels() {
                   href="https://www.sophos.com/en-us/security-advisories/feed"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-primary underline-offset-2 hover:underline"
+                  className="text-primary underline underline-offset-2"
                 >
                   sophos.com/…/security-advisories/feed
                 </a>
@@ -289,7 +289,7 @@ function UpdatesOverviewPanels() {
               <span className="text-xs text-muted-foreground">
                 {PLATFORM_UPDATE_CARD.monthLabel}
               </span>
-              <span className="text-[10px] text-muted-foreground/80 font-mono">
+              <span className="text-[10px] text-muted-foreground font-mono">
                 ({PLATFORM_UPDATE_CARD.monthKey})
               </span>
             </div>
@@ -348,7 +348,7 @@ function UpdatesOverviewPanels() {
             <p className="font-medium text-foreground">No synced firewalls yet</p>
             <p>
               Connect Sophos Central and sync tenants so devices appear in{" "}
-              <Link to="/command" className="text-primary underline-offset-2 hover:underline">
+              <Link to="/command" className="text-primary underline underline-offset-2">
                 Fleet
               </Link>
               . This table will list reported model and firmware from that inventory.
@@ -405,7 +405,7 @@ function UpdatesOverviewPanels() {
         (centralFwQuery.data?.length ?? 0) > CHANGELOG_FW_CAP ? (
           <p className="text-[10px] text-muted-foreground">
             Showing first {CHANGELOG_FW_CAP} of {centralFwQuery.data?.length} synced firewalls. Open{" "}
-            <Link to="/command" className="text-primary underline-offset-2 hover:underline">
+            <Link to="/command" className="text-primary underline underline-offset-2">
               Fleet
             </Link>{" "}
             for the full list.
@@ -428,6 +428,7 @@ function ChangelogPageInner() {
         data-tour="tour-page-changelog"
       >
         <div className="space-y-2" data-tour="tour-changelog-hero">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">What&apos;s New</h1>
           <p className="text-xs text-muted-foreground">
             Technical changelog: <code className="text-xs">CHANGELOG.md</code> at the repository
             root (Keep a Changelog).
@@ -452,7 +453,7 @@ function ChangelogPageInner() {
                 Edge Function to proxy the official{" "}
                 <a
                   href="https://www.sophos.com/en-us/security-advisories/feed"
-                  className="text-primary underline-offset-2 hover:underline"
+                  className="text-primary underline underline-offset-2"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -461,7 +462,7 @@ function ChangelogPageInner() {
                 (aligned with the{" "}
                 <a
                   href="https://www.sophos.com/en-us/security-advisories"
-                  className="text-primary underline-offset-2 hover:underline"
+                  className="text-primary underline underline-offset-2"
                   target="_blank"
                   rel="noreferrer"
                 >

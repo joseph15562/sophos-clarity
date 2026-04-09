@@ -22,6 +22,7 @@ function TrustPageInner() {
         className="mx-auto max-w-3xl space-y-8 px-4 pt-10 assist-chrome-pad-bottom"
         data-tour="tour-page-trust"
       >
+        <h1 className="text-lg font-semibold tracking-tight text-foreground">Trust</h1>
         <section className="space-y-2" data-tour="tour-trust-hero">
           <h2 className="text-sm font-semibold tracking-tight">Overview</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">

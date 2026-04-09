@@ -548,6 +548,9 @@ function CustomerManagementInner() {
         className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 assist-chrome-pad-bottom"
         data-tour="tour-page-customers"
       >
+        <h1 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+          Customer Management
+        </h1>
         {org?.id && !isGuest && (
           <div className="mb-4" data-tour="tour-cust-settings">
             <WorkspaceSettingsStrip variant="customers" />
@@ -718,7 +721,10 @@ function CustomerManagementInner() {
                 value={customerSort}
                 onValueChange={(v) => setCustomerSort(v as CustomerSortKey)}
               >
-                <SelectTrigger className="h-10 w-full min-w-[160px] sm:w-[200px] text-xs bg-white/80 dark:bg-white/[0.06]">
+                <SelectTrigger
+                  aria-label="Sort customers"
+                  className="h-10 w-full min-w-[160px] sm:w-[200px] text-xs bg-white/80 dark:bg-white/[0.06]"
+                >
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>

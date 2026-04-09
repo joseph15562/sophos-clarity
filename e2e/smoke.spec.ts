@@ -12,7 +12,7 @@ test.describe("Smoke tests", () => {
   test("guest mode is accessible", async ({ page }) => {
     await page.goto("/");
     // Look for guest/skip button or the main upload area
-    const skipButton = page.getByRole("button", { name: /skip|guest|continue/i });
+    const skipButton = page.getByRole("button", { name: /skip|guest|continue/i }).first();
     if (await skipButton.isVisible()) {
       await skipButton.click();
       // Should show the upload area

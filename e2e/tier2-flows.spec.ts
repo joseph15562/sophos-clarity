@@ -247,7 +247,9 @@ test.describe("Tier 2 — hub & API routes", () => {
     await expect(page.getByRole("heading", { name: /^Authentication$/i })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole("button", { name: /GET \/api\/assessments/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /GET \/api\/assessments/i }).first(),
+    ).toBeVisible();
   });
 
   test("report centre shell loads", async ({ page }) => {
