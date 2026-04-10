@@ -263,6 +263,24 @@ npm run test:deno          # Deno tests for Edge code
 
 Git pre-push (Husky) runs `npm run format:check:deno` automatically.
 
+### Continuous Integration (GitHub Actions)
+
+Every push to `main` runs the full CI pipeline ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)):
+
+| Step                  | What it does                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| **Deno format check** | Verifies `deno fmt` compliance on all edge function code                                  |
+| **Deno tests**        | Runs Deno test suite for edge functions (auth, API routes, schemas)                       |
+| **ESLint**            | Lints the entire frontend codebase                                                        |
+| **TypeScript**        | Strict type-checking via `npm run typecheck` (`tsconfig.ci.json`)                         |
+| **Vitest**            | Unit tests with coverage thresholds                                                       |
+| **Build**             | Production Vite build with `VITE_E2E_AUTH_BYPASS=1` for E2E                               |
+| **Bundle budget**     | Asserts JS bundle size stays within limits (`scripts/assert-bundle-budget.mjs`)           |
+| **npm audit**         | Fails on moderate+ vulnerabilities in production dependencies                             |
+| **Playwright E2E**    | 51 tests across smoke, journeys, signed-in flows, accessibility, and viewport breakpoints |
+
+The pipeline also uploads Playwright HTML reports as build artifacts for debugging failures. Additional workflows handle connector agent builds ([`build-connector.yml`](.github/workflows/build-connector.yml)), dependency review on PRs ([`dependency-review.yml`](.github/workflows/dependency-review.yml)), and optional k6 load testing against staging ([`k6-sustained.yml`](.github/workflows/k6-sustained.yml)).
+
 ---
 
 ## Deployment
