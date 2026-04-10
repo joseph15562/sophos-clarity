@@ -50,7 +50,7 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
           key={id}
           type="button"
           onClick={() => onNavigate?.(id)}
-          className="group relative overflow-hidden flex flex-col items-start gap-2.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 text-left shadow-card transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer"
+          className="group relative isolate contain-paint overflow-hidden flex flex-col items-start gap-2.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 text-left shadow-card transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer"
           style={{ backgroundImage: `linear-gradient(145deg, ${color}12, ${color}05)` }}
         >
           <div className="absolute inset-0 pointer-events-none">
