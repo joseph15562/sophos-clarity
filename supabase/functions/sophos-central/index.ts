@@ -119,19 +119,25 @@ function decodeJwtPayloadUnsafe(token: string): Record<string, unknown> | null {
 
 /**
  * Hosted Edge does not expose SUPABASE_JWT_SECRET by default (see Supabase “Default secrets”).
- * If string compare to SUPABASE_ANON_KEY fails (drift), ask the API gateway to validate the JWT
- * and require claims role=anon + ref matching this project (reject service_role).
+ * If string compare to SUPABASE_ANON_KEY fails (drift), ask the API gateway to validate the key
+ * and require it to be a valid anon-level key for this project (reject service_role).
+ *
+ * Supports both legacy JWT anon keys and new sb_publishable_* format keys.
  */
 async function verifyGuestAnonViaSupabaseGateway(
   supabaseUrl: string,
   incoming: string,
 ): Promise<boolean> {
-  const payload = decodeJwtPayloadUnsafe(incoming);
-  if (!payload || payload["role"] !== "anon") return false;
-  const ref = payload["ref"];
-  const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
-  if (typeof ref !== "string" || ref !== expectedRef || !expectedRef) {
-    return false;
+  const isPublishableKey = incoming.startsWith("sb_publishable_");
+
+  if (!isPublishableKey) {
+    const payload = decodeJwtPayloadUnsafe(incoming);
+    if (!payload || payload["role"] !== "anon") return false;
+    const ref = payload["ref"];
+    const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
+    if (typeof ref !== "string" || ref !== expectedRef || !expectedRef) {
+      return false;
+    }
   }
 
   const base = supabaseUrl.replace(/\/$/, "");
