@@ -89,7 +89,7 @@ export function GuideToolsStep({ activeOverlay, setActiveOverlay }: Props) {
             ].map((f) => (
               <div
                 key={f.format}
-                className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+                className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
               >
                 <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
                   {f.icon}

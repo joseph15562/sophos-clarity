@@ -63,7 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       const staleBundle = isLikelyStaleBundleError(this.state.error);
       return (
-        <div className="rounded-xl border border-border/50 bg-card p-6 text-center space-y-3">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-6 text-center space-y-3">
           <div className="flex justify-center">
             <div className="h-10 w-10 rounded-full bg-severity-high/10 flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 text-severity-high" />

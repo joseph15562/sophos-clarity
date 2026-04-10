@@ -135,7 +135,7 @@ export function ConfigDiff({
       {/* Side-by-side risk scores */}
       {beforeScore && afterScore && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
               Before
             </p>
@@ -149,7 +149,7 @@ export function ConfigDiff({
               {beforeAnalysis!.findings.length} findings
             </p>
           </div>
-          <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
               After
             </p>
@@ -431,7 +431,7 @@ function TableDiffView({ tableDiff }: { tableDiff: import("@/lib/diff-config").T
   if (tableDiff.headers.length === 0 && tableDiff.rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden">
       {changedRows.length < tableDiff.rows.length && (
         <div className="px-3 py-1.5 bg-muted/40 border-b border-border flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">

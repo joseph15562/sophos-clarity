@@ -42,7 +42,7 @@ export function GuideStep({
   color: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-card p-3">
+    <div className="flex items-start gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3">
       <div className="flex items-center gap-2 shrink-0">
         <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#2006F7] text-white text-[9px] font-bold">
           {number}
@@ -144,7 +144,7 @@ export function FeatureButton({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-3 text-left hover:border-brand-accent/30 hover:bg-muted/30 transition-all group"
+      className="w-full flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3 text-left hover:border-brand-accent/30 hover:bg-muted/30 transition-all group"
     >
       <div
         className={`h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 ${color} group-hover:scale-110 transition-transform`}
@@ -543,7 +543,7 @@ export function MockTenantDashboard() {
       {customers.map((c) => (
         <div
           key={c.name}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <div className="h-8 w-8 rounded-lg bg-muted/30 flex items-center justify-center">
             <span className="text-sm font-bold" style={{ color: c.color }}>
@@ -719,7 +719,7 @@ export function MockSettingsPanel() {
       ].map((s) => (
         <div
           key={s.title}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <div className="h-6 w-6 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
             {s.icon}
@@ -746,7 +746,7 @@ export function MockTeamPanel() {
       {members.map((m) => (
         <div
           key={m.email}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <div className="h-8 w-8 rounded-full bg-brand-accent/10 flex items-center justify-center shrink-0">
             <span className="text-[11px] font-bold text-[#2006F7]">
@@ -785,7 +785,7 @@ export function MockTeamPanel() {
 export function MockSecurityPanel() {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
           <ShieldCheck className="h-4 w-4 text-[#00F2B3]" />
         </div>
@@ -799,7 +799,7 @@ export function MockSecurityPanel() {
           Enabled
         </div>
       </div>
-      <div className="rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
           <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
         </div>
@@ -843,7 +843,7 @@ export function MockAlertPanel() {
       {rules.map((r) => (
         <div
           key={r.name}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <div
             className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0"
@@ -948,7 +948,7 @@ export function MockRuleOptimiser() {
       {rules.map((r) => (
         <div
           key={r.id}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <span className="text-[9px] font-mono text-muted-foreground w-8 shrink-0">{r.id}</span>
           <div className="flex-1 min-w-0">
@@ -984,7 +984,7 @@ export function MockPolicyComplexity() {
         {metrics.map((m) => (
           <div
             key={m.label}
-            className="rounded-xl border border-border/50 bg-card p-2.5 text-center"
+            className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5 text-center"
           >
             <p className="text-lg font-bold text-foreground">{m.value}</p>
             <p className="text-[9px] font-medium text-foreground">{m.label}</p>
@@ -1040,7 +1040,7 @@ export function MockUnusedObjects() {
       {objects.map((o) => (
         <div
           key={o.name}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2"
         >
           <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
             {o.icon}
@@ -1127,7 +1127,10 @@ export function MockRemediationRoadmap() {
   return (
     <div className="space-y-2">
       {phases.map((p) => (
-        <div key={p.phase} className="rounded-xl border border-border/50 bg-card p-3">
+        <div
+          key={p.phase}
+          className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3"
+        >
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-3 w-3 text-muted-foreground" />
             <span className="text-[10px] font-semibold text-foreground">{p.phase}</span>
@@ -1155,7 +1158,7 @@ export function MockRemediationRoadmap() {
 export function MockPlaybooks() {
   return (
     <div className="space-y-2">
-      <div className="rounded-xl border border-border/50 bg-card p-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3">
         <div className="flex items-center gap-2 mb-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#EA0022]" />
           <p className="text-[10px] font-semibold text-foreground">Disable WAN Admin Services</p>
@@ -1179,7 +1182,7 @@ export function MockPlaybooks() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl border border-border/50 bg-card p-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#F29400]" />
           <p className="text-[10px] font-semibold text-foreground">Enable IPS on WAN Rules</p>
@@ -1189,7 +1192,7 @@ export function MockPlaybooks() {
         </div>
         <p className="text-[9px] text-muted-foreground mt-1 pl-5">4 steps · ~10 min per rule</p>
       </div>
-      <div className="rounded-xl border border-border/50 bg-card p-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#ca8a04]" />
           <p className="text-[10px] font-semibold text-foreground">Enforce TLS 1.2+ on VPNs</p>
@@ -1372,7 +1375,7 @@ export function MockScheduledReports() {
       {schedules.map((s) => (
         <div
           key={s.customer}
-          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5"
         >
           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
             <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />
@@ -1412,7 +1415,10 @@ export function MockWebhookPanel() {
   return (
     <div className="space-y-2">
       {hooks.map((h) => (
-        <div key={h.name} className="rounded-xl border border-border/50 bg-card p-3">
+        <div
+          key={h.name}
+          className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3"
+        >
           <div className="flex items-center gap-2 mb-1.5">
             <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
             <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>

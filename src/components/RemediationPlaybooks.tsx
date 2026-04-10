@@ -400,7 +400,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl border border-border/50 bg-card/70 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+                className="p-2 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
                 aria-label="SLA settings"
               >
                 <Settings2 className="h-3.5 w-3.5" />

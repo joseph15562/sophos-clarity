@@ -14,7 +14,7 @@ export function DoneWizardStep() {
           first analysis, or open Fleet / Customers if you use the connector or MSP directory.
         </p>
       </div>
-      <div className="rounded-xl border border-border/50 bg-card p-4 text-left space-y-2">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 text-left space-y-2">
         <p className="text-xs font-semibold text-foreground">What&apos;s next?</p>
         <ul className="space-y-1.5">
           <li className="flex items-start gap-2 text-[11px] text-muted-foreground">

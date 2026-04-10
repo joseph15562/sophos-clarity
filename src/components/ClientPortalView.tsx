@@ -57,7 +57,7 @@ export function ClientPortalView({
 
       <main id="main-content" className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         {/* Score display */}
-        <section className="rounded-xl border border-border/50 bg-card p-8 text-center">
+        <section className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-8 text-center">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Overall Security Score
           </p>
@@ -99,7 +99,7 @@ export function ClientPortalView({
 
         {/* Recent assessments */}
         {assessments.length > 0 && (
-          <section className="rounded-xl border border-border/50 bg-card p-6">
+          <section className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-6">
             <h2 className="text-sm font-semibold text-foreground mb-4">Recent Assessments</h2>
             <ul className="space-y-3">
               {assessments.slice(0, 10).map((a) => (

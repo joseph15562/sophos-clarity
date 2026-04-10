@@ -104,7 +104,7 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
               in under two minutes.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-5 py-4 text-center min-w-[110px]">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 px-5 py-4 text-center min-w-[110px]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Last score
             </p>

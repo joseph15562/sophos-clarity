@@ -49,7 +49,7 @@ export function AssessmentPulse({
 
   if (isGuest) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 flex items-start gap-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 flex items-start gap-3">
         <LogIn className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
         <p className="text-sm text-muted-foreground">Sign in to track score history</p>
       </div>
@@ -60,7 +60,7 @@ export function AssessmentPulse({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 space-y-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 space-y-3">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded" />
           <Skeleton className="h-4 w-40" />

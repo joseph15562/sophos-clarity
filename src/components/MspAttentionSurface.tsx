@@ -131,7 +131,7 @@ export function MspAttentionSurface({ orgId, orgName }: Props) {
 
   if (loading) {
     return (
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-border/50 bg-card/40 px-4 py-3 text-sm text-muted-foreground">
+      <div className="mb-4 flex items-center gap-2 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/40 px-4 py-3 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading workspace signals…
       </div>

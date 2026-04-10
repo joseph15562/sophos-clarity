@@ -253,17 +253,17 @@ function ReportSummaryHeader({
           <GradeRing grade={riskScore.grade} score={riskScore.overall} />
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rules</p>
                 <p className="text-lg font-bold text-foreground">{result.stats.totalRules}</p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Findings
                 </p>
                 <p className="text-lg font-bold text-foreground">{result.findings.length}</p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   WAN Rules
                 </p>
@@ -373,25 +373,25 @@ function ReportSummaryHeader({
           <GradeRing grade={avgGrade} score={avgScore} />
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Firewalls
                 </p>
                 <p className="text-lg font-bold text-foreground">{allResults.length}</p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Total Rules
                 </p>
                 <p className="text-lg font-bold text-foreground">{totalRules}</p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Total Findings
                 </p>
                 <p className="text-lg font-bold text-foreground">{totalFindings}</p>
               </div>
-              <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Avg Score
                 </p>

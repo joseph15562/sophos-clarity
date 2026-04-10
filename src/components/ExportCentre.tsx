@@ -81,7 +81,7 @@ export function ExportCentre({ analysisResults, branding, reviewerSignoff }: Pro
   ];
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card space-y-4">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 shadow-card space-y-4">
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
         Export Centre
       </h3>
@@ -117,7 +117,7 @@ export function ExportCentre({ analysisResults, branding, reviewerSignoff }: Pro
             type="button"
             disabled={!hasResults}
             onClick={() => card.onClick()}
-            className="flex flex-col items-start gap-2 rounded-xl border border-border/50 bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+            className="flex flex-col items-start gap-2 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer disabled:pointer-events-none disabled:opacity-50"
           >
             <card.icon className="h-6 w-6 text-muted-foreground" />
             <span className="font-medium">{card.title}</span>

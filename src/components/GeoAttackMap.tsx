@@ -83,7 +83,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
   const getDotColor = (d: IpWithGeo) => (d.cves.length > 0 ? "#EA0022" : "#F29400");
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 rounded-xl border border-border/50 bg-card p-4">
+    <div className="flex flex-col sm:flex-row gap-4 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4">
       <div className="flex-1 min-w-0">
         <div
           className="rounded-lg overflow-hidden border border-border"

@@ -816,7 +816,7 @@ export function AgentFleetPanel({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-4 animate-pulse space-y-3">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 animate-pulse space-y-3">
         <div className="h-4 bg-muted/40 rounded w-48" />
         <div className="h-12 bg-muted/40 rounded" />
         <div className="h-12 bg-muted/40 rounded" />

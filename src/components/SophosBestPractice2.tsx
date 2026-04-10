@@ -729,7 +729,7 @@ export function SophosBestPractice({
                 <p className="text-2xl font-bold text-amber-400">{currentScore.warnings}</p>
                 <p className="text-[10px] text-muted-foreground">Verify</p>
               </div>
-              <div className="rounded-2xl border border-border bg-background/60 p-3 text-center">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-background/60 p-3 text-center">
                 <p className="text-2xl font-bold text-muted-foreground/70">
                   {currentScore.notApplicable}
                 </p>

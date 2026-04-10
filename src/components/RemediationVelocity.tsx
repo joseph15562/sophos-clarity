@@ -115,7 +115,7 @@ export function RemediationVelocity({ analysisResults: _analysisResults }: Props
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 animate-pulse">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-1/3 mb-3" />
         <div className="h-40 bg-muted/40 rounded" />
       </div>
@@ -125,7 +125,7 @@ export function RemediationVelocity({ analysisResults: _analysisResults }: Props
   const hasData = weeklyData.some((w) => w.count > 0);
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 shadow-card">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
           Remediation Velocity
         </h3>
@@ -143,7 +143,7 @@ export function RemediationVelocity({ analysisResults: _analysisResults }: Props
   const improving = last4Avg > first4Avg;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 shadow-card">
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
         Remediation Velocity
       </h3>

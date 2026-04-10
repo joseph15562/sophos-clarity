@@ -31,7 +31,7 @@ export function OrgSetup({ userEmail, onCreateOrg, onSignOut }: Props) {
   );
 
   return (
-    <div className="max-w-md mx-auto mt-16 rounded-xl border border-border/50 bg-card overflow-hidden">
+    <div className="max-w-md mx-auto mt-16 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden">
       <div className="p-6 space-y-5">
         <div className="text-center space-y-2">
           <div className="h-12 w-12 rounded-full bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center mx-auto">

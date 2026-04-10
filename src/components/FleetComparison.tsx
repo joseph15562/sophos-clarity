@@ -73,7 +73,7 @@ export function FleetComparison({ analysisResults, files: _files }: FleetCompari
 
   if (labels.length < 2) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 shadow-card">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
           Fleet Comparison
         </h3>

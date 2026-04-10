@@ -85,7 +85,7 @@ export function GuideTeamSecurityStep({ activeOverlay, setActiveOverlay }: Props
                 </p>
               </div>
             </div>
-            <div className="rounded-xl border border-border/50 bg-card p-3">
+            <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3">
               <p className="text-[10px] font-semibold text-foreground mb-2">Registered Passkeys</p>
               <div className="flex items-center gap-3 rounded bg-muted/20 p-2.5">
                 <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />

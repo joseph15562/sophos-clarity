@@ -71,7 +71,7 @@ export function NotificationCentre({
           align="end"
           side="bottom"
           sideOffset={8}
-          className="w-80 p-0 overflow-hidden rounded-xl border border-border/50 bg-card shadow-xl backdrop-blur-xl z-[100]"
+          className="w-80 p-0 overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card shadow-xl backdrop-blur-xl z-[100]"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">

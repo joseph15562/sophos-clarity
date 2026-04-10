@@ -99,43 +99,60 @@ export function AttackSurfaceMap({ files }: Props) {
 
   return (
     <section
-      className="rounded-xl border border-border/50 bg-card overflow-hidden"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card shadow-card"
       data-tour="attack-surface"
+      style={{
+        backgroundImage: "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.02))",
+      }}
     >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full blur-[32px] opacity-10 bg-[#EA0022]" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), rgba(242,148,0,0.14), transparent)",
+        }}
+      />
+
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
+        className="relative w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
       >
-        <div className="h-8 w-8 rounded-lg bg-[#EA0022]/10 flex items-center justify-center shrink-0">
+        <div
+          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
+          style={{ backgroundColor: "rgba(234,0,34,0.10)" }}
+        >
           <span className="text-lg">🎯</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          <h3 className="text-sm font-display font-bold tracking-tight text-foreground">
             Attack Surface Map
           </h3>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/80">
             {allServices.length} inbound service{allServices.length !== 1 ? "s" : ""} exposed via
             DNAT/port forwarding
           </p>
         </div>
         <div className="flex items-center gap-1.5 mr-2">
           {counts.critical > 0 && (
-            <span className="text-[10px] font-bold text-[#EA0022] bg-[#EA0022]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#EA0022] bg-[#EA0022]/10 border border-[#EA0022]/20 px-1.5 py-0.5 rounded-md">
               {counts.critical}C
             </span>
           )}
           {counts.high > 0 && (
-            <span className="text-[10px] font-bold text-[#c47800] dark:text-[#F29400] bg-[#F29400]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#c47800] dark:text-[#F29400] bg-[#F29400]/10 border border-[#F29400]/20 px-1.5 py-0.5 rounded-md">
               {counts.high}H
             </span>
           )}
           {counts.medium > 0 && (
-            <span className="text-[10px] font-bold text-[#78350f] dark:text-[#F8E300] bg-[#ca8a04]/12 dark:bg-[#F8E300]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#78350f] dark:text-[#F8E300] bg-[#ca8a04]/12 dark:bg-[#F8E300]/10 border border-[#ca8a04]/20 dark:border-[#F8E300]/20 px-1.5 py-0.5 rounded-md">
               {counts.medium}M
             </span>
           )}
           {counts.low > 0 && (
-            <span className="text-[10px] font-bold text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border border-[#008F69]/20 dark:border-[#00F2B3]/20 px-1.5 py-0.5 rounded-md">
               {counts.low}L
             </span>
           )}
@@ -144,9 +161,9 @@ export function AttackSurfaceMap({ files }: Props) {
       </button>
 
       {open && (
-        <div className="px-5 pb-5 border-t border-border">
+        <div className="relative px-5 pb-5 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
           {newExposureCount > 0 && (
-            <div className="mt-4 mb-2 px-3 py-2 rounded-lg bg-[#EA0022]/10 border border-[#EA0022]/30 text-[#EA0022] text-sm font-medium">
+            <div className="mt-4 mb-2 px-3 py-2 rounded-xl bg-[#EA0022]/10 border border-[#EA0022]/25 text-[#EA0022] text-sm font-bold">
               {newExposureCount} new exposure{newExposureCount !== 1 ? "s" : ""} detected since
               previous config
             </div>
@@ -156,7 +173,7 @@ export function AttackSurfaceMap({ files }: Props) {
             <div className="flex items-center gap-4 flex-wrap justify-center">
               {/* Internet */}
               <div className="flex flex-col items-center gap-1">
-                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center border-2 border-border">
+                <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center border border-slate-900/[0.10] dark:border-white/[0.08]">
                   <span className="text-xl">🌐</span>
                 </div>
                 <span className="text-[10px] text-muted-foreground font-medium">Internet</span>
@@ -170,7 +187,7 @@ export function AttackSurfaceMap({ files }: Props) {
 
               {/* Firewall */}
               <div className="flex flex-col items-center gap-1">
-                <div className="h-14 w-14 rounded-lg bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center border-2 border-brand-accent/30 dark:border-[#00EDFF]/30">
+                <div className="h-14 w-14 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center border border-brand-accent/25 dark:border-[#00EDFF]/20">
                   <span className="text-xl">🛡️</span>
                 </div>
                 <span className="text-[10px] text-brand-accent font-medium">Firewall</span>

@@ -33,7 +33,7 @@ export function CertificatePostureStrip({ analysisResults }: Props) {
   const go = rows.filter((r) => r.bucket === "other");
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/80 p-4 shadow-card space-y-3">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/80 p-4 shadow-card space-y-3">
       <h4 className="text-xs font-display font-semibold text-foreground">Certificate posture</h4>
       <p className="text-[10px] text-muted-foreground">
         Grouped by export wording (30-day vs 90-day vs other certificate issues). Thresholds come

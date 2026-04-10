@@ -40,24 +40,24 @@ export function WelcomeStep({ orgName }: { orgName?: string }) {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 p-2.5 text-center">
           <Building2 className="h-5 w-5 text-[#2006F7] dark:text-[#6B5BFF] mx-auto mb-1" />
           <p className="text-[11px] font-semibold text-foreground leading-tight">Branding</p>
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Company & Central</p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 p-2.5 text-center">
           <Shield className="h-5 w-5 text-[#00F2B3] mx-auto mb-1" />
           <p className="text-[11px] font-semibold text-foreground leading-tight">Analysis</p>
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Posture & reports</p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 p-2.5 text-center">
           <ListChecks className="h-5 w-5 text-[#DB2777] dark:text-[#F472B6] mx-auto mb-1" />
           <p className="text-[11px] font-semibold text-foreground leading-tight">Remediation</p>
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">
             Priorities & roadmap
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 p-2.5 text-center">
           <Globe className="h-5 w-5 text-[#005BC8] dark:text-[#00EDFF] mx-auto mb-1" />
           <p className="text-[11px] font-semibold text-foreground leading-tight">Delivery</p>
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Portal & alerts</p>

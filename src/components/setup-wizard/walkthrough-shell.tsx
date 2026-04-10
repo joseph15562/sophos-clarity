@@ -45,7 +45,7 @@ export function WalkthroughShell({
 
   const card = (
     <div
-      className={`w-full max-w-4xl bg-background rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col ${
+      className={`w-full max-w-4xl bg-background rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-2xl overflow-hidden flex flex-col ${
         variant === "page" ? "max-h-[min(88vh,calc(100vh-10rem))]" : "max-h-[88vh]"
       }`}
     >

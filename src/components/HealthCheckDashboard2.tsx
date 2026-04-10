@@ -277,7 +277,7 @@ export function HealthCheckDashboard({
 
   if (!activeResult || !activeBp) {
     return (
-      <Card className="rounded-xl border border-border/50 bg-card">
+      <Card className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-5 w-5 text-brand-accent" />
@@ -312,7 +312,7 @@ export function HealthCheckDashboard({
 
       <div className={`grid gap-4 ${hideSophosBpCard ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
         {!hideSophosBpCard && (
-          <Card className="rounded-xl border border-border/50 bg-card">
+          <Card className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Shield className="h-5 w-5 text-brand-accent" />
@@ -347,7 +347,7 @@ export function HealthCheckDashboard({
         )}
       </div>
 
-      <Card className="rounded-xl border border-border/50 bg-card">
+      <Card className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-base">Findings</CardTitle>

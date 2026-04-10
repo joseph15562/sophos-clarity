@@ -375,21 +375,38 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
   return (
     <section
-      className="rounded-xl border border-border/50 bg-card overflow-hidden"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card shadow-card"
       data-tour="score-simulator"
+      style={{
+        backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.05), rgba(0,237,255,0.02))",
+      }}
     >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-15 bg-[#5A00FF]" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, transparent, rgba(90,0,255,0.22), rgba(0,237,255,0.18), transparent)",
+        }}
+      />
+
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
+        className="relative w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
       >
-        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-[#5A00FF]/20 to-[#00EDFF]/20 flex items-center justify-center shrink-0">
+        <div
+          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
+          style={{ backgroundColor: "rgba(90,0,255,0.12)" }}
+        >
           <TrendingUp className="h-4.5 w-4.5 text-[#5A00FF] dark:text-[#00EDFF]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          <h3 className="text-sm font-display font-bold tracking-tight text-foreground">
             Remediation Impact Simulator
           </h3>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/80">
             Select recommended actions to see projected score, grade, and coverage improvements
           </p>
         </div>
@@ -406,7 +423,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-5 border-t border-border">
+        <div className="relative px-5 pb-5 space-y-5 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
           {/* Action toggles */}
           <div className="pt-4">
             <div className="flex items-center justify-between mb-3">
@@ -416,33 +433,47 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
               <div className="flex items-center gap-2">
                 <button
                   onClick={selectAll}
-                  className="text-[10px] text-brand-accent hover:underline font-medium"
+                  className="text-[10px] text-brand-accent hover:underline font-bold"
                 >
                   Apply all
                 </button>
-                <span className="text-muted-foreground text-[10px]">|</span>
+                <span className="text-muted-foreground/40 text-[10px]">|</span>
                 <button
                   onClick={clearAll}
-                  className="text-[10px] text-muted-foreground hover:underline font-medium"
+                  className="text-[10px] text-muted-foreground hover:underline font-bold"
                 >
                   Reset
                 </button>
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               {relevantToggles.map((t) => {
                 const count = findingsPerToggle.get(t.id) ?? 0;
                 const isActive = active.has(t.id);
                 return (
                   <label
                     key={t.id}
-                    className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-all ${
+                    className={`relative overflow-hidden flex items-start gap-3 rounded-xl border px-3.5 py-3 cursor-pointer transition-all duration-200 ${
                       isActive
-                        ? "border-[#00F2B3]/40 bg-[#00F2B3]/[0.04] dark:border-[#008F69]/35 dark:border-[#00F2B3]/30"
-                        : "border-border hover:bg-muted/30 hover:border-muted-foreground/20"
+                        ? "border-[#00F2B3]/40 dark:border-[#00F2B3]/30 shadow-[0_0_20px_rgba(0,242,179,0.08)]"
+                        : "border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                     }`}
+                    style={{
+                      backgroundImage: isActive
+                        ? "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(0,242,179,0.015))"
+                        : "linear-gradient(145deg, rgba(255,255,255,0.02), transparent)",
+                    }}
                   >
+                    {isActive && (
+                      <div
+                        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                        style={{
+                          backgroundImage:
+                            "linear-gradient(90deg, transparent, rgba(0,242,179,0.3), transparent)",
+                        }}
+                      />
+                    )}
                     <input
                       type="checkbox"
                       checked={isActive}
@@ -451,12 +482,12 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-foreground">{t.label}</span>
-                        <span className="shrink-0 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                        <span className="text-xs font-bold text-foreground">{t.label}</span>
+                        <span className="shrink-0 inline-flex items-center rounded-full border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/[0.02] px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
                           {count} finding{count !== 1 ? "s" : ""}
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                      <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5">
                         {t.description}
                       </p>
                     </div>
@@ -471,7 +502,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
           {/* Results panel */}
           {hasSimulation && (
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
+            <div className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden shadow-card">
               {/* Score + Grade header */}
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 p-5">
                 <div className="text-center">
@@ -531,7 +562,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
               {/* Findings severity breakdown */}
               {resolvedFindings > 0 && (
-                <div className="border-t border-border px-5 py-3">
+                <div className="border-t border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Shield className="h-3.5 w-3.5 text-[#00F2B3]" />
                     <span className="text-xs font-semibold text-foreground">
@@ -554,7 +585,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
               {/* Coverage improvements */}
               {coverageImprovements.length > 0 && (
-                <div className="border-t border-border px-5 py-3">
+                <div className="border-t border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-3">
                   <div className="flex items-center gap-2 mb-2.5">
                     <Zap className="h-3.5 w-3.5 text-[#00EDFF]" />
                     <span className="text-xs font-semibold text-foreground">
@@ -587,7 +618,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
               )}
 
               {/* Per-category score bars */}
-              <div className="border-t border-border px-5 py-3">
+              <div className="border-t border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-3">
                 <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-2">
                   Category breakdown
                 </p>
@@ -632,9 +663,9 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
           {/* Empty state prompt */}
           {!hasSimulation && (
-            <div className="flex items-center gap-3 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/20 px-4 py-3">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-900/[0.10] dark:border-white/[0.06] bg-white/[0.02] px-4 py-3.5">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+              <p className="text-xs text-muted-foreground/70">
                 Select one or more actions above to see the projected impact on your risk score,
                 grade, and security coverage.
               </p>

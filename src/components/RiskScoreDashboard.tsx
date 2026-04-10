@@ -290,7 +290,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
           </div>
           <button
             onClick={() => setShowHelp(true)}
-            className="p-2.5 rounded-xl border border-border/50 bg-card shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            className="p-2.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             aria-label="How scoring works"
             title="How scoring works"
           >

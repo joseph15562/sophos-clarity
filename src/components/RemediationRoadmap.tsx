@@ -82,7 +82,7 @@ export function RemediationRoadmap({ analysisResults }: Props) {
   if (items.length === 0) {
     return (
       <div
-        className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+        className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 shadow-card"
         data-tour="remediation-roadmap"
       >
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">

@@ -9,7 +9,7 @@ interface Props {
 
 export function SeHeartbeatScopeBar({ excludeHeartbeatCheck, onExcludeChange }: Props) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-4 py-3 space-y-3">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
         <HeartPulse className="h-4 w-4 text-brand-accent shrink-0" aria-hidden />
         <span>Synchronized Security scope</span>

@@ -2,7 +2,7 @@ import { Shield, Cpu, FileCheck2, Lock, Clock, Gauge } from "lucide-react";
 
 export function TrustStrip() {
   return (
-    <div className="rounded-2xl border border-border/60 bg-gradient-to-r from-muted/30 via-transparent to-muted/30 px-5 py-4 space-y-3">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-gradient-to-r from-muted/30 via-transparent to-muted/30 px-5 py-4 space-y-3">
       <div className="grid gap-2 sm:grid-cols-3">
         <div className="rounded-xl border border-brand-accent/15 bg-[#2006F7]/[0.04] px-3 py-2 text-left">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -18,7 +18,7 @@ export function TrustStrip() {
             Under 2 minutes
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 px-3 py-2 text-left">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 px-3 py-2 text-left">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Effort saved
           </p>

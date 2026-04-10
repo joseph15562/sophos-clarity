@@ -47,7 +47,7 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
         type="button"
         data-tour="widget-customiser"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-xl border border-border/50 bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors"
+        className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors"
       >
         <LayoutGrid className="h-3 w-3" />
         Widgets
@@ -61,7 +61,7 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-40 w-80 rounded-2xl border border-border/60 bg-card shadow-panel backdrop-blur-sm overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-40 w-80 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card shadow-panel backdrop-blur-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-muted/20 dark:bg-muted/10">
               <div className="flex items-center gap-2.5">
                 <div className="flex items-center justify-center h-6 w-6 rounded-md bg-brand-accent/10 dark:bg-[#00EDFF]/10">

@@ -234,7 +234,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Save
             </p>
@@ -242,7 +242,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
               Assessments and generated reports
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Manage
             </p>
@@ -250,7 +250,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
               Teams, connectors, and Sophos Central
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/70 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Deliver
             </p>

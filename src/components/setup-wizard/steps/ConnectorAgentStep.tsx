@@ -46,7 +46,7 @@ export function ConnectorAgentStep() {
         />
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-3 space-y-2">
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-3 space-y-2">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
           What you&apos;ll see in the dashboard
         </p>

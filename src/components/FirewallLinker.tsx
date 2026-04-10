@@ -390,7 +390,7 @@ export function FirewallLinker({
           </div>
 
           {central.firewalls.length === 0 && !syncing && (
-            <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-4 text-center">
+            <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/60 px-4 py-4 text-center">
               <p className="text-xs text-muted-foreground">
                 No firewalls found for this tenant. Click{" "}
                 <span className="font-medium text-foreground">Sync Central</span> to pull the latest

@@ -485,7 +485,7 @@ export function UploadSection({
                 </div>
               </div>
 
-              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/50 bg-card/60 px-4 py-3 leading-relaxed">
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">
                   Why this matters:
                 </span>{" "}
@@ -599,7 +599,7 @@ export function UploadSection({
                 </div>
               </div>
 
-              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/50 bg-card/60 px-4 py-3 leading-relaxed">
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">
                   Why this matters:
                 </span>{" "}

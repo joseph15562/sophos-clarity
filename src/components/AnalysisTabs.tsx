@@ -1418,7 +1418,7 @@ export function AnalysisTabs({
                     Before (baseline)
                   </label>
                   <select
-                    className="w-full rounded-xl border border-border/50 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                     value={diffSelection?.beforeIdx ?? 0}
                     data-tour="compare-before"
                     onChange={(e) =>
@@ -1440,7 +1440,7 @@ export function AnalysisTabs({
                     After (current)
                   </label>
                   <select
-                    className="w-full rounded-xl border border-border/50 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                     value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
                     data-tour="compare-after"
                     onChange={(e) =>

@@ -22,7 +22,7 @@ export const PLATFORM_UPDATE_CARD = {
   highlights: [
     {
       tag: "improved" as const,
-      text: "Production hardening: CSP + HSTS + security headers on Vercel; Redis-backed API rate limiting; /healthz ops endpoint; ESLint burn-down (227 → 31 warnings, no-unused-vars escalated to error); Sentry, coverage, semver versioning from v1.0.0.",
+      text: "Theme consistency sweep: all card and panel containers across 75+ components now use the unified dark-theme treatment — softer translucent borders, larger corner radius, and consistent shadow hierarchy.",
     },
     {
       tag: "new" as const,

@@ -228,7 +228,7 @@ function FirmwareEolWarningsInner({ firewalls, licenseItems }: Props) {
   );
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-4 space-y-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <Shield className="h-3.5 w-3.5 text-primary" />
         Firmware, Licensing &amp; Lifecycle

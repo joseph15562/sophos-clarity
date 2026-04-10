@@ -204,7 +204,7 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
 
   return (
     <div
-      className="rounded-xl border border-border/50 bg-card p-5 space-y-4"
+      className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 space-y-4"
       data-tour="findings-bulk"
     >
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">

@@ -303,7 +303,7 @@ export function SEHealthCheckHistory({
       </button>
 
       {open && (
-        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden">
           <div className="flex items-center justify-between p-2 border-b border-border gap-2">
             <div className="flex items-center gap-2">
               {selectedIds.size > 0 && moveTargets.length > 0 && (

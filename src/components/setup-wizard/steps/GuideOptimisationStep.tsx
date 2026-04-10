@@ -100,7 +100,7 @@ export function GuideOptimisationStep({ activeOverlay, setActiveOverlay }: Props
             ].map((r) => (
               <div
                 key={r.rule}
-                className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-2.5 text-[9px]"
+                className="flex items-center gap-2 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-2.5 text-[9px]"
               >
                 <span
                   className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`}

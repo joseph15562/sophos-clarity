@@ -540,7 +540,7 @@ export function SeHealthCheckManagementDrawer({
                       return (
                         <div
                           key={team.id}
-                          className="rounded-xl border border-border/50 bg-card overflow-hidden"
+                          className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden"
                         >
                           <button
                             type="button"

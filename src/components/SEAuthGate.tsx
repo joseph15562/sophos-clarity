@@ -90,7 +90,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
   if (signupSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-xl border border-border/50 bg-card p-8 text-center space-y-4">
+        <div className="max-w-md w-full rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-8 text-center space-y-4">
           <div className="h-12 w-12 rounded-full bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
             <UserPlus className="h-6 w-6 text-[#007A5A] dark:text-[#00F2B3]" />
           </div>
@@ -148,7 +148,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+          <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden">
             <div className="flex border-b border-border">
               <button
                 onClick={() => {

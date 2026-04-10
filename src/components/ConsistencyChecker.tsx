@@ -24,7 +24,7 @@ export function ConsistencyChecker({ analysisResults }: Props) {
   if (Object.keys(analysisResults).length < 2 || gaps.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-border/50 bg-card overflow-hidden">
+    <section className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"

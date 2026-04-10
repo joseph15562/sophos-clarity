@@ -446,6 +446,13 @@ function ChangelogPageInner() {
             <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
+                <strong className="text-foreground">Theme consistency sweep</strong>: All card and
+                panel containers across every page now use the unified dark-theme treatment — softer
+                translucent borders, larger corner radius (rounded-2xl), and consistent shadow
+                hierarchy. Updated 75+ component files including the base Card primitive,
+                Remediation Impact Simulator, Attack Surface Map, and all dashboard widgets.
+              </li>
+              <li>
                 <strong className="text-foreground">Production hardening</strong>: Security headers
                 added to Vercel (HSTS, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy);
                 Redis-backed API rate limiting on api, api-agent, and api-public Edge Functions

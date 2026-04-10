@@ -16,7 +16,7 @@ export function VpnTopologyDiagram({ extractedData, firewallLabel = "Firewall" }
   const extra = ipsecConnectionNames.length - shown.length;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/80 p-4 shadow-card">
+    <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card/80 p-4 shadow-card">
       <h4 className="text-xs font-display font-semibold text-foreground mb-3">
         VPN topology (summary)
       </h4>
