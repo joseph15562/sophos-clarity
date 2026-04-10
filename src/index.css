@@ -6,7 +6,14 @@
   *,
   *::before,
   *::after {
-    background-clip: padding-box;
+    -webkit-background-clip: padding-box !important;
+    background-clip: padding-box !important;
+  }
+
+  /* Preserve gradient-text clipping (higher specificity than * beats it within the same layer) */
+  .bg-clip-text {
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
   }
 
   :root {
@@ -528,15 +535,15 @@
   .eyebrow {
     @apply text-[10px] font-semibold uppercase tracking-[0.2em];
     background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--brand-violet)));
-    -webkit-background-clip: text;
-    background-clip: text;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
     color: transparent;
   }
 
   .dark .eyebrow {
     background: linear-gradient(90deg, hsl(var(--brand-accent)), hsl(var(--primary)));
-    -webkit-background-clip: text;
-    background-clip: text;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
   }
 
   .chip {
