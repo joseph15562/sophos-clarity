@@ -21,6 +21,10 @@ export const PLATFORM_UPDATE_CARD = {
   /** 1–4 short lines; mirror the themes of the latest month’s shipped work. */
   highlights: [
     {
+      tag: "fixed" as const,
+      text: "PDF report firewall rules table trimmed from 23 to 16 columns — no more off-page overflow; AI prompt whitelists exact columns; compliance heading arrow glyph fixed for PDF fonts.",
+    },
+    {
       tag: "new" as const,
       text: "Global Tours/Shortcuts + route-aware AI on every page; Mission Control plus Central Alerts/MDR prefetch; Central Groups + MDR merged on Edge; Central tenant sync fixes for inventory.",
     },

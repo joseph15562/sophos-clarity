@@ -446,6 +446,17 @@ function ChangelogPageInner() {
             <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
+                <strong className="text-foreground">PDF report — firewall rules table fix</strong>:
+                the firewall rules table in AI-generated reports no longer overflows the page edge.
+                Duplicate columns (Source Zone / Source Zones, IPS / IPS Policy / Intrusion
+                Prevention, Log / Log Traffic) and low-value columns (Description, Heartbeat
+                thresholds) have been removed from the extracted data, reducing the table from 23 to
+                16 columns. The AI prompt now whitelists the exact column set instead of
+                &quot;include everything except…&quot;. The appendix table (appended when the AI
+                stops early) matches the same layout. Also fixed a missing-glyph issue in compliance
+                PDF headings where the arrow character was rendering as a box.
+              </li>
+              <li>
                 <strong className="text-foreground">
                   Updates page — real intel + platform card
                 </strong>
