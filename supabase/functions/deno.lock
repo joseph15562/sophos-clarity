@@ -181,6 +181,7 @@
     }
   },
   "redirects": {
+    "https://esm.sh/@opentelemetry/api@^1.9.0?target=denonext": "https://esm.sh/@opentelemetry/api@1.9.1?target=denonext",
     "https://esm.sh/@supabase/node-fetch@^2.6.14?target=denonext": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext",
     "https://esm.sh/@types/crypto-js@~4.2.2/enc-hex.d.ts": "https://esm.sh/@types/crypto-js@4.2.2/enc-hex.d.ts",
     "https://esm.sh/@types/crypto-js@~4.2.2/sha1.d.ts": "https://esm.sh/@types/crypto-js@4.2.2/sha1.d.ts",
@@ -211,6 +212,11 @@
     "https://deno.land/std@0.168.0/testing/_diff.ts": "a23e7fc2b4d8daa3e158fa06856bedf5334ce2a2831e8bf9e509717f455adb2c",
     "https://deno.land/std@0.168.0/testing/_format.ts": "cd11136e1797791045e639e9f0f4640d5b4166148796cad37e6ef75f7d7f3832",
     "https://deno.land/std@0.168.0/testing/asserts.ts": "51353e79437361d4b02d8e32f3fc83b22231bc8f8d4c841d86fd32b0b0afe940",
+    "https://esm.sh/@opentelemetry/api@1.9.1/denonext/api.mjs": "2f40ff6443aabbc37476c11a7aaa50834150549674e598e1351a9e9381c008f6",
+    "https://esm.sh/@opentelemetry/api@1.9.1?target=denonext": "02c15407e71b9ff599472a3d66119c8d8a840bf71dab16574d510fae95f78977",
+    "https://esm.sh/@sentry/core@10.46.0/denonext/core.mjs": "ddc82b086118e1dc504a30f39345ffd280015780939369175121bf940952a0f9",
+    "https://esm.sh/@sentry/deno@10.46.0": "3aa73fd27262bbdd9b16c31e2c108cee129062b7426141d0553a5f41d40786d5",
+    "https://esm.sh/@sentry/deno@10.46.0/denonext/deno.mjs": "8f5864201913aa84ad5c5864bb0f1fb3de1b74cc426f06c7863a8cf4826cabdb",
     "https://esm.sh/@supabase/auth-js@2.68.0/denonext/auth-js.mjs": "c3c7ee55b70b7bfac11c1085db2ee95b6ebccf10590336d071b219cf226bb212",
     "https://esm.sh/@supabase/functions-js@2.4.4/denonext/functions-js.mjs": "7adeb257410ef3c4a8a1eb9b4ff416c0075d1c32860ca04913c8a9dace1de6a6",
     "https://esm.sh/@supabase/node-fetch@2.6.15/denonext/node-fetch.mjs": "0bae9052231f4f6dbccc7234d05ea96923dbf967be12f402764580b6bf9f713d",
