@@ -215,12 +215,12 @@ export function FileUpload({
               Drop your Sophos firewall export here
             </p>
             <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Upload HTML, HTM, or XML exports to generate deterministic findings, posture scoring,
-              compliance mapping, and client-ready reports.
+              Upload XML exports to generate deterministic findings, posture scoring, compliance
+              mapping, and client-ready reports.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] text-muted-foreground">
               <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">
-                HTML / HTM / XML
+                XML
               </span>
               <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">
                 Multiple files supported

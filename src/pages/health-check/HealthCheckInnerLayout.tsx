@@ -60,6 +60,7 @@ export function HealthCheckInnerLayout() {
     seManagementOpen,
     setSeManagementOpen,
     firewallOptions,
+    guestFirewallLicenseItems,
     centralApiHelpOpen,
     setCentralApiHelpOpen,
     hasParsedConfigs,
@@ -127,7 +128,12 @@ export function HealthCheckInnerLayout() {
 
         {activeStep === "results" && hasParsedConfigs && <HealthCheckResultsSection />}
 
-        {firewallOptions.length > 0 && <FirmwareEolWarnings firewalls={firewallOptions} />}
+        {firewallOptions.length > 0 && (
+          <FirmwareEolWarnings
+            firewalls={firewallOptions}
+            licenseItems={guestFirewallLicenseItems}
+          />
+        )}
 
         {seAuth.seProfile && files.length > 0 && files.some((f) => f.serialNumber) && (
           <div data-tour="hc-score-trend">

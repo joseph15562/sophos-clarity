@@ -1,7 +1,8 @@
 import { memo, useMemo } from "react";
-import { AlertTriangle, CheckCircle2, Info, Shield } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Shield, KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { GuestFirewallRow } from "@/lib/guest-central-ha-groups";
+import type { GuestFirewallLicenseApiRow } from "@/pages/health-check/types";
 import lifecycleData from "@/data/sophos-firewall-lifecycle.json";
 
 type LifecycleEntry = {
@@ -57,6 +58,12 @@ function getLifecycleStatus(entry: LifecycleEntry | null): {
   return { status: "current" };
 }
 
+interface LicenceSummary {
+  bundleName: string;
+  endDate: string;
+  type: string;
+}
+
 interface FirmwareInfo {
   hostname: string;
   serialNumber: string;
@@ -67,19 +74,41 @@ interface FirmwareInfo {
   eolDate?: string;
   eosDate?: string;
   successor?: string;
+  licences: LicenceSummary[];
 }
 
 interface Props {
   firewalls: GuestFirewallRow[];
+  licenseItems?: GuestFirewallLicenseApiRow[];
 }
 
-function FirmwareEolWarningsInner({ firewalls }: Props) {
+function FirmwareEolWarningsInner({ firewalls, licenseItems }: Props) {
+  const licenceBySerial = useMemo(() => {
+    const map = new Map<string, LicenceSummary[]>();
+    if (!licenseItems?.length) return map;
+    for (const row of licenseItems) {
+      const sn = (row.serialNumber ?? "").trim().toLowerCase();
+      if (!sn) continue;
+      const items: LicenceSummary[] = [];
+      for (const lic of row.licenses ?? []) {
+        items.push({
+          bundleName: lic.product?.name ?? lic.product?.code ?? lic.licenseIdentifier ?? "Unknown",
+          endDate: typeof lic.endDate === "string" ? lic.endDate : "",
+          type: typeof lic.type === "string" ? lic.type : "",
+        });
+      }
+      if (items.length) map.set(sn, items);
+    }
+    return map;
+  }, [licenseItems]);
+
   const infos = useMemo<FirmwareInfo[]>(() => {
     return firewalls
       .filter((fw) => fw.firmwareVersion || fw.model)
       .map((fw) => {
         const entry = lookupModel(fw.model ?? "");
         const lcStatus = getLifecycleStatus(entry);
+        const sn = (fw.serialNumber ?? "").trim().toLowerCase();
         return {
           hostname: fw.hostname || fw.name || "Unknown",
           serialNumber: fw.serialNumber || "—",
@@ -90,9 +119,10 @@ function FirmwareEolWarningsInner({ firewalls }: Props) {
           eolDate: lcStatus.eolDate,
           eosDate: lcStatus.eosDate,
           successor: lcStatus.successor,
+          licences: licenceBySerial.get(sn) ?? [],
         };
       });
-  }, [firewalls]);
+  }, [firewalls, licenceBySerial]);
 
   if (infos.length === 0) return null;
 
@@ -107,7 +137,7 @@ function FirmwareEolWarningsInner({ firewalls }: Props) {
     <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <Shield className="h-3.5 w-3.5 text-primary" />
-        Firmware &amp; Lifecycle
+        Firmware, Licensing &amp; Lifecycle
       </p>
 
       {hasWarning && (
@@ -143,6 +173,23 @@ function FirmwareEolWarningsInner({ firewalls }: Props) {
                 Firmware: <span className="text-foreground font-mono">{info.firmwareVersion}</span>
               </span>
             </div>
+
+            {info.licences.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-0.5">
+                {info.licences.map((lic, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] text-primary"
+                  >
+                    <KeyRound className="h-3 w-3 shrink-0" />
+                    {lic.bundleName}
+                    {lic.endDate && (
+                      <span className="text-muted-foreground">— {formatDate(lic.endDate)}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {info.lifecycleStatus === "eol" && (
               <div className="flex items-start gap-1.5 text-xs text-red-500">
