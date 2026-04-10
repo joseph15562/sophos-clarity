@@ -378,18 +378,6 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
-  /*
-   * Opaque fallback for rounded card containers.
-   * Cards with only a semi-transparent backgroundImage gradient (no bg-*)
-   * are transparent — the parent's colored glow divs shine through the
-   * semi-transparent border, creating visible colored edges.
-   * This sets an opaque base; any explicit Tailwind bg-* utility overrides it.
-   */
-  .overflow-hidden[class*="rounded-"],
-  [class*="rounded-"].overflow-hidden {
-    background-color: hsl(var(--card));
-  }
-
   .section-stack {
     @apply space-y-8 md:space-y-10;
   }
