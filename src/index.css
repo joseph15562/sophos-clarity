@@ -379,15 +379,18 @@
   }
 
   /*
-   * Paint containment for rounded clipping regions.
-   * CSS filter:blur() on child elements can leak 1-2px past overflow:hidden at
-   * border-radius curves during GPU compositing. contain:paint creates a hard
-   * paint boundary that the browser cannot composite past.
+   * Paint containment + opaque base for rounded clipping regions.
+   * 1. contain:paint stops CSS filter:blur() children from leaking past
+   *    the border-radius during GPU compositing.
+   * 2. background-color prevents parent glow/gradient from showing through
+   *    a card's semi-transparent border when the card has no explicit bg-*.
+   *    Any Tailwind bg-* utility (in @layer utilities) overrides this.
    */
   .overflow-hidden[class*="rounded-"],
   [class*="rounded-"].overflow-hidden {
     contain: paint;
     isolation: isolate;
+    background-color: hsl(var(--card));
   }
 
   .section-stack {

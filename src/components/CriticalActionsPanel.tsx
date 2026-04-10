@@ -99,7 +99,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card p-5 space-y-4 shadow-card"
       style={{
         backgroundImage: "linear-gradient(145deg, rgba(234,0,34,0.06), rgba(234,0,34,0.015))",
       }}
@@ -138,7 +138,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
           return (
             <div
               key={`${f.id}-${i}`}
-              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-card transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
                 backgroundImage: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}0C, ${hex}03)`,
               }}
