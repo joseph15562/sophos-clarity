@@ -18,6 +18,13 @@ const TWELVE_MONTHS_MS = 365.25 * 24 * 60 * 60 * 1000;
 
 type LifecycleStatus = "eol" | "eol-approaching" | "eos" | "current" | "unknown";
 
+function normalizeModelName(raw: string): string {
+  const token = raw.split("_")[0].trim();
+  const m = token.match(/^(XGS?|SG|SF|SFVUNL)(\d+\w?)$/i);
+  if (m) return `${m[1].toUpperCase()} ${m[2]}`;
+  return raw;
+}
+
 function lookupModel(model: string): LifecycleEntry | null {
   if (!model) return null;
   const normalized = model.trim();
@@ -25,6 +32,14 @@ function lookupModel(model: string): LifecycleEntry | null {
   const upper = normalized.toUpperCase();
   for (const [key, val] of Object.entries(MODELS)) {
     if (key.toUpperCase() === upper) return val;
+  }
+  const extracted = normalizeModelName(normalized);
+  if (extracted !== normalized) {
+    if (MODELS[extracted]) return MODELS[extracted];
+    const extractedUpper = extracted.toUpperCase();
+    for (const [key, val] of Object.entries(MODELS)) {
+      if (key.toUpperCase() === extractedUpper) return val;
+    }
   }
   return null;
 }
@@ -179,7 +194,7 @@ function FirmwareEolWarningsInner({ firewalls, licenseItems }: Props) {
                 {info.licences.map((lic, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] text-primary"
+                    className="inline-flex items-center gap-1 rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/10 px-2 py-0.5 text-[10px] text-[#007A5A] dark:text-[#00F2B3]"
                   >
                     <KeyRound className="h-3 w-3 shrink-0" />
                     {lic.bundleName}
