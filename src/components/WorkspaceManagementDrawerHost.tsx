@@ -34,6 +34,9 @@ function WorkspaceManagementDrawerHostInner() {
     customerName: "",
     preparedBy: "",
     footerText: "",
+    environment: "",
+    country: "",
+    selectedFrameworks: [],
   });
   const [initialTab, setInitialTab] = useState<
     "dashboard" | "reports" | "history" | "settings" | undefined

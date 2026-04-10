@@ -17,7 +17,13 @@ import {
   safeError,
 } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import {
+  captureEdgeException,
+  initEdgeSentry,
+} from "../_shared/sentry-edge.ts";
 import { persistedAssessmentCustomerName } from "../_shared/agent-assessment-customer.ts";
+
+initEdgeSentry({ functionName: "api-agent" });
 import {
   sophosFetchFirewalls,
   sophosFetchTenants,
@@ -457,6 +463,7 @@ export async function handleApiAgentRequest(
     logJson("error", "api_agent_unhandled", {
       detail: err instanceof Error ? err.message : String(err),
     });
+    captureEdgeException(err, { function: "api-agent" });
     return json({ error: safeError(err) }, 500, corsHeaders);
   }
 }

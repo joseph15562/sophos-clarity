@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from "vite";
+import { execSync } from "child_process";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -61,10 +62,23 @@ function assertE2ePdfDownloadNotOnVercelProduction(): void {
   }
 }
 
+function gitVersion(): string {
+  if (process.env.VITE_APP_VERSION) return process.env.VITE_APP_VERSION;
+  try {
+    return execSync("git describe --tags --always --dirty", { encoding: "utf8" }).trim();
+  } catch {
+    return "dev";
+  }
+}
+
 export default defineConfig(() => {
   assertE2eBypassNotOnVercelProduction();
   assertE2ePdfDownloadNotOnVercelProduction();
+  const appVersion = gitVersion();
   return {
+    define: {
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(appVersion),
+    },
     server: {
       host: "::",
       port: DEV_PORT,

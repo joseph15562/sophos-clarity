@@ -1250,6 +1250,11 @@ export function ManagementDrawer({
               >
                 <DataGovernanceSection orgId={orgName} />
               </SettingsSection>
+              {typeof import.meta.env.VITE_APP_VERSION === "string" && (
+                <p className="pt-3 text-center text-[11px] text-muted-foreground/50 select-all">
+                  v{import.meta.env.VITE_APP_VERSION}
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -1,18 +1,38 @@
+import * as Sentry from "https://esm.sh/@sentry/deno@10.46.0";
+
+let _initialised = false;
+
 /**
- * Optional Edge Sentry wiring. Set SENTRY_EDGE_DSN in function secrets when policy allows.
- * Install @sentry/deno (or platform-recommended SDK) before calling initEdgeSentry().
- * See docs/observability.md — Edge Sentry implementation checklist.
+ * Initialise Sentry for a Supabase Edge Function.
+ * Set the `SENTRY_EDGE_DSN` secret via `supabase secrets set`; when absent the SDK
+ * stays dormant (zero overhead for local/dev).
  */
-export function initEdgeSentry(_opts: { functionName: string }): void {
+export function initEdgeSentry(opts: { functionName: string }): void {
   const dsn = Deno.env.get("SENTRY_EDGE_DSN") ?? "";
-  if (!dsn) return;
-  // Integrate @sentry/deno init here after dependency is added to the function import map.
+  if (!dsn || _initialised) return;
+  Sentry.init({
+    dsn,
+    environment: Deno.env.get("SENTRY_ENVIRONMENT") ?? "production",
+    release: Deno.env.get("SENTRY_RELEASE") ?? undefined,
+    tracesSampleRate: 0.2,
+    initialScope: { tags: { edge_function: opts.functionName } },
+  });
+  _initialised = true;
 }
 
+/**
+ * Capture an exception to Sentry with optional structured context.
+ * No-ops when the DSN is unset.
+ */
 export function captureEdgeException(
-  _err: unknown,
-  _context?: Record<string, string>,
+  err: unknown,
+  context?: Record<string, string>,
 ): void {
-  if (!Deno.env.get("SENTRY_EDGE_DSN")) return;
-  // Forward to Sentry after SDK is wired.
+  if (!_initialised) return;
+  Sentry.withScope((scope) => {
+    if (context) {
+      for (const [k, v] of Object.entries(context)) scope.setExtra(k, v);
+    }
+    Sentry.captureException(err);
+  });
 }

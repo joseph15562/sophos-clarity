@@ -1,8 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { logJson } from "../_shared/logger.ts";
+import {
+  captureEdgeException,
+  initEdgeSentry,
+} from "../_shared/sentry-edge.ts";
 import { redisGet, redisSet } from "../_shared/upstash-redis.ts";
 import { portalDataGetQuerySchema } from "./portal_data_query.ts";
+
+initEdgeSentry({ functionName: "portal-data" });
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -978,6 +984,7 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
     logJson("error", "portal_data_unexpected", {
       error: err instanceof Error ? err.message : String(err),
     });
+    captureEdgeException(err, { function: "portal-data" });
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },

@@ -446,6 +446,18 @@ function ChangelogPageInner() {
             <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
+                <strong className="text-foreground">
+                  SaaS readiness — coverage, Sentry, lint, versioning
+                </strong>
+                : Vitest coverage thresholds raised to 60 % lines / 70 % functions &amp; branches;
+                Sentry wired into all Supabase Edge Functions (parse-config, api, api-agent,
+                api-public, portal-data) via <code className="text-xs">@sentry/deno</code> — set{" "}
+                <code className="text-xs">SENTRY_EDGE_DSN</code> to enable; ESLint auto-fix added to
+                pre-commit (lint-staged); app version now inferred from git tags at build time and
+                displayed in Settings; <code className="text-xs">package.json</code> bumped to
+                v1.0.0.
+              </li>
+              <li>
                 <strong className="text-foreground">Re-run First-Time Setup from any page</strong>:
                 the 14-step setup wizard can now be relaunched from Workspace Controls → Settings on
                 every page (Fleet, Customers, Central, etc.) — previously it was only available on

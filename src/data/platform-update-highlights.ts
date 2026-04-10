@@ -21,6 +21,10 @@ export const PLATFORM_UPDATE_CARD = {
   /** 1–4 short lines; mirror the themes of the latest month’s shipped work. */
   highlights: [
     {
+      tag: "improved" as const,
+      text: "SaaS readiness: higher test coverage thresholds, Sentry wired into all Edge Functions, ESLint in pre-commit, semver versioning from git tags with in-app display, v1.0.0.",
+    },
+    {
       tag: "new" as const,
       text: "Re-run First-Time Setup wizard from Workspace Controls → Settings on any page (Fleet, Customers, Central, etc.); previously only available on Assess.",
     },

@@ -3,7 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  captureEdgeException,
+  initEdgeSentry,
+} from "../_shared/sentry-edge.ts";
 import { parseConfigEarlyResponse } from "./auth_gate.ts";
+
+initEdgeSentry({ functionName: "parse-config" });
 
 let corsHeaders: Record<string, string> = {};
 
@@ -965,6 +971,7 @@ serve(async (req) => {
     logJson("error", "parse_config_unhandled", {
       message: e instanceof Error ? e.message : String(e),
     });
+    captureEdgeException(e, { function: "parse-config" });
     return new Response(
       JSON.stringify({ error: safeError(e) }),
       {

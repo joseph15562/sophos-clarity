@@ -30,6 +30,10 @@ import {
 import { centralDecrypt, centralEncrypt } from "../_shared/crypto.ts";
 import { logJson } from "../_shared/logger.ts";
 import {
+  captureEdgeException,
+  initEdgeSentry,
+} from "../_shared/sentry-edge.ts";
+import {
   signPasskeyChallengeToken,
   verifyPasskeyChallengeToken,
 } from "../_shared/passkey-challenge-token.ts";
@@ -42,6 +46,8 @@ import {
 } from "../_shared/passkey-webauthn-login.ts";
 import { verifyAuthenticationResponse } from "npm:@simplewebauthn/server@13.2.2";
 import { isoBase64URL } from "npm:@simplewebauthn/server@13.2.2/helpers";
+
+initEdgeSentry({ functionName: "api-public" });
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ??
@@ -854,6 +860,7 @@ export async function handleApiPublicRequest(req: Request): Promise<Response> {
     logJson("error", "api_public_unhandled", {
       detail: err instanceof Error ? err.message : String(err),
     });
+    captureEdgeException(err, { function: "api-public" });
     return json({ error: safeError(err) }, 500, corsHeaders);
   }
 }

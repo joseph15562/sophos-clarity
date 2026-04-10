@@ -3,6 +3,10 @@ import { pathSegmentsAfterApiPathname } from "../_shared/api-path.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { json as jsonResponse, safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import {
+  captureEdgeException,
+  initEdgeSentry,
+} from "../_shared/sentry-edge.ts";
 
 import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
@@ -19,6 +23,8 @@ import { handlePortalViewerRoutes } from "./routes/portal-viewers.ts";
 import { handleSendReportRoutes } from "./routes/send-report.ts";
 import { handleSendSavedLibraryReportRoutes } from "./routes/send-saved-library-report.ts";
 import { handleServiceKeyRoutes } from "./routes/service-key.ts";
+
+initEdgeSentry({ functionName: "api" });
 
 let corsHeaders: Record<string, string> = {};
 function json(body: unknown, status = 200) {
@@ -187,6 +193,7 @@ serve(async (req: Request) => {
     return json({ error: "Not found" }, 404);
   } catch (err) {
     logJson("error", "api_unhandled", { error: safeError(err) });
+    captureEdgeException(err, { function: "api" });
     return json({ error: safeError(err) }, 500);
   }
 });
