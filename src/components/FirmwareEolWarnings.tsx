@@ -79,6 +79,85 @@ interface LicenceSummary {
   type: string;
 }
 
+const XSTREAM_BUNDLED_MODULES = [
+  "network protection",
+  "web protection",
+  "zero-day protection",
+  "zero day protection",
+  "zeroday protection",
+  "dns protection",
+  "central orchestration",
+];
+
+const STANDARD_BUNDLED_MODULES = ["network protection", "web protection"];
+
+function collapseIntoBundles(licences: LicenceSummary[]): LicenceSummary[] {
+  if (licences.length === 0) return [];
+
+  const hasXstream = licences.some((l) => l.bundleName.toLowerCase().includes("xstream"));
+  if (hasXstream) {
+    const bundled: LicenceSummary[] = [];
+    const alaCarte: LicenceSummary[] = [];
+    let xstreamRow: LicenceSummary | undefined;
+    for (const l of licences) {
+      const lower = l.bundleName.toLowerCase();
+      if (lower.includes("xstream")) {
+        xstreamRow = l;
+      } else if (XSTREAM_BUNDLED_MODULES.some((m) => lower.includes(m))) {
+        bundled.push(l);
+      } else {
+        alaCarte.push(l);
+      }
+    }
+    if (xstreamRow) {
+      const allDates = [xstreamRow, ...bundled]
+        .map((l) => l.endDate)
+        .filter(Boolean)
+        .sort()
+        .reverse();
+      return [
+        { bundleName: "Xstream Protection", endDate: allDates[0] ?? "", type: xstreamRow.type },
+        ...alaCarte,
+      ];
+    }
+    return [xstreamRow!, ...alaCarte].filter(Boolean);
+  }
+
+  const lowerNames = licences.map((l) => l.bundleName.toLowerCase());
+  const hasStandard =
+    STANDARD_BUNDLED_MODULES.every((m) => lowerNames.some((l) => l.includes(m))) &&
+    !lowerNames.some(
+      (l) =>
+        l.includes("zero-day") ||
+        l.includes("zero day") ||
+        l.includes("central orchestration") ||
+        l.includes("dns protection"),
+    );
+  if (hasStandard) {
+    const bundled: LicenceSummary[] = [];
+    const alaCarte: LicenceSummary[] = [];
+    for (const l of licences) {
+      const lower = l.bundleName.toLowerCase();
+      if (STANDARD_BUNDLED_MODULES.some((m) => lower.includes(m))) {
+        bundled.push(l);
+      } else {
+        alaCarte.push(l);
+      }
+    }
+    const allDates = bundled
+      .map((l) => l.endDate)
+      .filter(Boolean)
+      .sort()
+      .reverse();
+    return [
+      { bundleName: "Standard Protection", endDate: allDates[0] ?? "", type: "" },
+      ...alaCarte,
+    ];
+  }
+
+  return licences;
+}
+
 interface FirmwareInfo {
   hostname: string;
   serialNumber: string;
@@ -112,7 +191,7 @@ function FirmwareEolWarningsInner({ firewalls, licenseItems }: Props) {
           type: typeof lic.type === "string" ? lic.type : "",
         });
       }
-      if (items.length) map.set(sn, items);
+      if (items.length) map.set(sn, collapseIntoBundles(items));
     }
     return map;
   }, [licenseItems]);
