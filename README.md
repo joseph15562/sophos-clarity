@@ -500,6 +500,27 @@ The score moved from **~63** to **~84/100** over several weeks. More importantly
 
 The full living document is at [`docs/REVIEW.md`](docs/REVIEW.md) — scores, findings, fixes, and status for every item.
 
+### The Production Prompts — What Actually Talks to Gemini
+
+The war-room prompt audited the project. But the project itself runs on a separate set of carefully engineered prompts that power the AI features. All production prompts live in [`supabase/functions/parse-config/index.ts`](supabase/functions/parse-config/index.ts) and are assembled server-side — the client never sees or controls prompt text.
+
+**Four report system prompts**, each tuned for a different audience:
+
+| Prompt                   | Lines | Audience             | Key constraints                                                                                                                                                                      |
+| ------------------------ | ----- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Technical Handover**   | ~59   | Engineers, auditors  | Full firewall rule tables (every row, every column except excluded list), severity emojis, per-section Summary / Findings / Best Practice, cap at 150 rules with summary placeholder |
+| **Executive Summary**    | ~27   | IT managers, C-suite | Multi-firewall overview, Risk Matrix as numbered list (not table, max 10), DPI emphasis, mandatory Limitations paragraph                                                             |
+| **Compliance Readiness** | ~54   | Compliance officers  | Fixed section order, per-framework control mapping table (Met / Partial / Not Met / N/A), residual risk table, evidence must not be raw JSON                                         |
+| **Chat Assistant**       | ~16   | In-app users         | 200–400 word answers, no invented configuration, mirrors assessment rules for consistency                                                                                            |
+
+**Shared Assessment Rules** (~11 lines) are appended to every report prompt. These encode domain-specific logic that the AI must follow — for example, only flagging missing web filtering on WAN-bound HTTP/HTTPS/ANY rules, treating Central management as satisfying external logging requirements, and handling read-only API service accounts as accepted exceptions under ISO 27001, Cyber Essentials, and PCI DSS rather than MFA violations.
+
+**Dynamic context assembly** (~180 lines of code) builds the rest of the prompt at request time: customer name, environment, selected compliance frameworks, per-firewall jurisdiction scope, Central enrichment data (alerts, firmware, HA status) injected as fenced JSON blocks, and web filter compliance mode (strict vs informational).
+
+**Client-side token saving** — before the payload reaches the prompt, `stream-ai.ts` strips 80+ low-value section types (DHCP, QoS, schedules, services, FQDN hosts, admin profiles, etc.) from the extracted config, cutting 30–50% of input tokens. This list is maintained in sync with the server-side prompt's "Omitted sections" instruction.
+
+Beyond the core report pipeline, a smaller prompt in [`supabase/functions/regulatory-scanner/index.ts`](supabase/functions/regulatory-scanner/index.ts) classifies Sophos security advisory RSS items as relevant or irrelevant to firewall compliance, returning structured JSON for the in-app threat feed.
+
 ### E2E Testing a Client-Side SPA on CI Is Fragile by Nature
 
 The Playwright E2E suite runs 50+ tests against a Vite preview build on GitHub Actions free-tier runners. Several hard-won lessons:
