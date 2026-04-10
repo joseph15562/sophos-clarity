@@ -174,24 +174,16 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     "Policy Type",
     "Action",
     "Source Zone",
-    "Source Zones",
-    "Destination Zone",
-    "Destination Zones",
     "Source Networks",
+    "Destination Zone",
     "Destination Networks",
     "Service",
     "Web Filter",
     "IPS Policy",
-    "IPS",
-    "Intrusion Prevention",
     "Application Control",
     "Match Known Users",
     "Identity",
     "Log",
-    "Log Traffic",
-    "Description",
-    "Minimum Source HB Permitted",
-    "Minimum Destination HB Permitted",
   ];
   const rows = entities.map((e, i) => {
     const srcZone = policyField(e, "SourceZones.Zone");
@@ -205,11 +197,6 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     const dstNetworks = policyField(e, "DestinationNetworks.Network");
     const matchIdentity = asString(e.MatchIdentity ?? policyField(e, "MatchIdentity") ?? "");
     const identity = extractNested(e, "Identity.Member") || asString(e.Identity ?? "");
-    const srcHB =
-      policyField(e, "MinimumSourceHBPermitted") || asString(e.MinimumSourceHBPermitted ?? "");
-    const dstHB =
-      policyField(e, "MinimumDestinationHBPermitted") ||
-      asString(e.MinimumDestinationHBPermitted ?? "");
 
     return {
       "#": String(i + 1),
@@ -218,24 +205,16 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
       "Policy Type": asString(e.PolicyType ?? ""),
       Action: policyField(e, "Action"),
       "Source Zone": srcZone || "Any",
-      "Source Zones": srcZone || "Any",
-      "Destination Zone": dstZone || "Any",
-      "Destination Zones": dstZone || "Any",
       "Source Networks": srcNetworks || "Any",
+      "Destination Zone": dstZone || "Any",
       "Destination Networks": dstNetworks || "Any",
       Service: service || "Any",
       "Web Filter": webFilter || "None",
       "IPS Policy": ips || "None",
-      IPS: ips || "None",
-      "Intrusion Prevention": ips || "None",
       "Application Control": appCtrl || "None",
       "Match Known Users": matchIdentity || "Disabled",
       Identity: identity || "N/A",
       Log: logTraffic,
-      "Log Traffic": logTraffic,
-      Description: asString(e.Description ?? ""),
-      "Minimum Source HB Permitted": srcHB,
-      "Minimum Destination HB Permitted": dstHB,
     };
   });
   return { headers, rows };
