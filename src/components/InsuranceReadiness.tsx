@@ -63,14 +63,14 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
     <div
       className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 space-y-5 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
       style={{
-        background:
+        backgroundImage:
           "linear-gradient(145deg, rgba(0,242,179,0.04), rgba(242,148,0,0.03), rgba(234,0,34,0.02), transparent)",
       }}
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(0,242,179,0.15), rgba(242,148,0,0.1), rgba(234,0,34,0.08), transparent)",
         }}
       />
@@ -79,7 +79,8 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
           <div
             className="flex items-center justify-center h-9 w-9 rounded-xl"
             style={{
-              background: "linear-gradient(145deg, rgba(0,242,179,0.15), rgba(0,242,179,0.06))",
+              backgroundImage:
+                "linear-gradient(145deg, rgba(0,242,179,0.15), rgba(0,242,179,0.06))",
               border: "1px solid rgba(0,242,179,0.2)",
               boxShadow: "0 0 12px rgba(0,242,179,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
             }}
@@ -125,7 +126,8 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-bold rounded-xl transition-all duration-200 backdrop-blur-sm hover:brightness-110"
             style={{
               border: "1px solid rgba(255,255,255,0.1)",
-              background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+              backgroundImage:
+                "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
               color: "rgba(255,255,255,0.65)",
             }}
           >
@@ -145,7 +147,7 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
               key={q.question}
               className="flex items-start gap-3.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] pl-5 pr-4 py-4 transition-all duration-200 hover:shadow-elevated backdrop-blur-sm"
               style={{
-                background: `linear-gradient(to right, ${accentColor} 3px, transparent 3px), linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))`,
+                backgroundImage: `linear-gradient(to right, ${accentColor} 3px, transparent 3px), linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))`,
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
               }}
             >

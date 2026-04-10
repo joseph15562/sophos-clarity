@@ -211,7 +211,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   : "border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15]"
               }`}
               style={{
-                background: showGapsOnly
+                backgroundImage: showGapsOnly
                   ? "linear-gradient(135deg, rgba(242,148,0,0.12), rgba(242,148,0,0.04))"
                   : "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
               }}
@@ -222,7 +222,8 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               onClick={handleExportCsv}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
               style={{
-                background: "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
+                backgroundImage:
+                  "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
               }}
             >
               <Download className="h-3 w-3 text-brand-accent" /> Export CSV
@@ -280,7 +281,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       <div
         className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3"
         style={{
-          background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
+          backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
         }}
       >
         <div className="absolute inset-0 pointer-events-none">
@@ -289,7 +290,8 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.22), transparent)",
+            backgroundImage:
+              "linear-gradient(90deg, transparent, rgba(90,0,255,0.22), transparent)",
           }}
         />
         <div className="relative flex items-center justify-between gap-3 flex-wrap">
@@ -308,7 +310,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               <div
                 key={status}
                 className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-3 flex items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-                style={{ background: `linear-gradient(145deg, ${s.hex}10, ${s.hex}04)` }}
+                style={{ backgroundImage: `linear-gradient(145deg, ${s.hex}10, ${s.hex}04)` }}
               >
                 <div className="absolute inset-0 pointer-events-none">
                   <div
@@ -344,13 +346,14 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       <div
         className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card"
         style={{
-          background: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))",
+          backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))",
         }}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), transparent)",
+            backgroundImage:
+              "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), transparent)",
           }}
         />
         <div className="overflow-x-auto p-2">
@@ -486,13 +489,14 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
         <div
           className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2.5"
           style={{
-            background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+            backgroundImage: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
           }}
         >
           <div
             className="absolute inset-x-0 top-0 h-px pointer-events-none"
             style={{
-              background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+              backgroundImage:
+                "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
             }}
           />
           <div className="relative flex items-center justify-between">
@@ -524,7 +528,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               <div
                 key={f.id}
                 className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
-                style={{ background: `linear-gradient(135deg, ${fHex}08, ${fHex}02)` }}
+                style={{ backgroundImage: `linear-gradient(135deg, ${fHex}08, ${fHex}02)` }}
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -565,7 +569,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   : "border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
               }`}
               style={{
-                background: isActive
+                backgroundImage: isActive
                   ? "linear-gradient(145deg, rgba(32,6,247,0.10), rgba(32,6,247,0.04))"
                   : "linear-gradient(145deg, rgba(90,0,255,0.05), rgba(90,0,255,0.015))",
               }}
@@ -586,7 +590,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                       className="h-full"
                       style={{
                         width: `${(m.summary.pass / total) * 100}%`,
-                        background: "linear-gradient(90deg, #00F2B3, #00D4A0)",
+                        backgroundImage: "linear-gradient(90deg, #00F2B3, #00D4A0)",
                         boxShadow: "0 0 6px rgba(0,242,179,0.3)",
                       }}
                     />
@@ -596,7 +600,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                       className="h-full"
                       style={{
                         width: `${(m.summary.partial / total) * 100}%`,
-                        background: "linear-gradient(90deg, #F29400, #E08600)",
+                        backgroundImage: "linear-gradient(90deg, #F29400, #E08600)",
                         boxShadow: "0 0 6px rgba(242,148,0,0.3)",
                       }}
                     />
@@ -606,7 +610,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                       className="h-full"
                       style={{
                         width: `${(m.summary.fail / total) * 100}%`,
-                        background: "linear-gradient(90deg, #EA0022, #D0001E)",
+                        backgroundImage: "linear-gradient(90deg, #EA0022, #D0001E)",
                         boxShadow: "0 0 6px rgba(234,0,34,0.3)",
                       }}
                     />
@@ -652,7 +656,9 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     <div
                       key={c.controlId}
                       className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-150 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
-                      style={{ background: `linear-gradient(135deg, ${s.hex}06, transparent)` }}
+                      style={{
+                        backgroundImage: `linear-gradient(135deg, ${s.hex}06, transparent)`,
+                      }}
                     >
                       <span
                         className="inline-flex items-center justify-center h-6 w-6 rounded-lg text-[11px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"

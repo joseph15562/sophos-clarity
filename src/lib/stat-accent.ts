@@ -70,6 +70,6 @@ export function statCardShellClass(): string {
 
 export function statDarkGradientOverlayStyle(hex: string): CSSProperties {
   return {
-    background: `linear-gradient(145deg, ${hex}14, ${hex}06)`,
+    backgroundImage: `linear-gradient(145deg, ${hex}14, ${hex}06)`,
   };
 }

@@ -74,14 +74,14 @@ export function SeverityBreakdown({
     <div
       className="relative rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 space-y-4 shadow-card transition-all duration-200 hover:shadow-elevated"
       style={{
-        background:
+        backgroundImage:
           "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.02), transparent)",
       }}
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(234,0,34,0.15), rgba(242,148,0,0.08), transparent)",
         }}
       />
@@ -95,7 +95,7 @@ export function SeverityBreakdown({
             <div
               className="flex rounded-xl p-0.5 gap-0.5"
               style={{
-                background: "rgba(255,255,255,0.04)",
+                backgroundColor: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
@@ -109,7 +109,7 @@ export function SeverityBreakdown({
                 style={
                   viewMode === "all"
                     ? {
-                        background:
+                        backgroundImage:
                           "linear-gradient(145deg, rgba(56,136,255,0.14), rgba(0,191,255,0.06))",
                         color: "rgba(255,255,255,0.9)",
                         boxShadow:
@@ -130,7 +130,7 @@ export function SeverityBreakdown({
                 style={
                   viewMode === "per-firewall"
                     ? {
-                        background:
+                        backgroundImage:
                           "linear-gradient(145deg, rgba(56,136,255,0.14), rgba(0,191,255,0.06))",
                         color: "rgba(255,255,255,0.9)",
                         boxShadow:
@@ -236,7 +236,7 @@ export function SeverityBreakdown({
                   }`}
                   style={{
                     borderColor: isActive ? `${d.color}40` : "rgba(255,255,255,0.07)",
-                    background: isActive
+                    backgroundImage: isActive
                       ? `linear-gradient(145deg, ${d.color}22, ${d.color}0c)`
                       : `linear-gradient(145deg, ${d.color}12, ${d.color}06)`,
                     boxShadow: isActive
@@ -251,7 +251,7 @@ export function SeverityBreakdown({
                   <div
                     className="absolute inset-x-0 top-0 h-px pointer-events-none"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${d.color}30, transparent)`,
+                      backgroundImage: `linear-gradient(90deg, transparent, ${d.color}30, transparent)`,
                     }}
                   />
                   <span
@@ -280,7 +280,7 @@ export function SeverityBreakdown({
                 key={firewall}
                 className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-4 space-y-2.5 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.1] hover:shadow-elevated"
                 style={{
-                  background:
+                  backgroundImage:
                     "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
                   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.15)",
                 }}
@@ -332,7 +332,7 @@ export function SeverityBreakdown({
                 <div
                   key={uid}
                   className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
-                  style={{ background: "rgba(255,255,255,0.02)" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.02)" }}
                 >
                   <button
                     onClick={() => setExpandedFinding(isOpen ? null : uid)}
@@ -352,7 +352,7 @@ export function SeverityBreakdown({
                       <span
                         className="text-[8px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
                         style={{
-                          background: "rgba(255,255,255,0.05)",
+                          backgroundColor: "rgba(255,255,255,0.05)",
                           color: "rgba(255,255,255,0.45)",
                           border: "1px solid rgba(255,255,255,0.06)",
                         }}
@@ -363,7 +363,7 @@ export function SeverityBreakdown({
                     <span
                       className="text-[9px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
                       style={{
-                        background: "rgba(255,255,255,0.05)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
                         color: "rgba(255,255,255,0.45)",
                         border: "1px solid rgba(255,255,255,0.06)",
                       }}

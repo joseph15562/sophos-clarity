@@ -95,12 +95,12 @@ export function RuleHealthOverview({
   return (
     <div
       className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card transition-all duration-200 hover:shadow-elevated"
-      style={{ background: "linear-gradient(145deg, rgba(0,191,255,0.04), transparent)" }}
+      style={{ backgroundImage: "linear-gradient(145deg, rgba(0,191,255,0.04), transparent)" }}
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(0,191,255,0.12), transparent)",
+          backgroundImage: "linear-gradient(90deg, transparent, rgba(0,191,255,0.12), transparent)",
         }}
       />
       <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-5">
@@ -123,7 +123,7 @@ export function RuleHealthOverview({
                 } ${isMulti ? "cursor-pointer" : "cursor-default"}`}
                 style={{
                   borderColor: isActive ? `${c.color}40` : "rgba(255,255,255,0.07)",
-                  background: isActive
+                  backgroundImage: isActive
                     ? `linear-gradient(145deg, ${c.color}22, ${c.color}0c)`
                     : `linear-gradient(145deg, ${c.color}12, ${c.color}06)`,
                   boxShadow: isActive
@@ -140,14 +140,14 @@ export function RuleHealthOverview({
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, ${c.color}30, transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, ${c.color}30, transparent)`,
                   }}
                 />
                 {/* Bottom edge highlight */}
                 <div
                   className="absolute inset-x-0 bottom-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)`,
                   }}
                 />
                 <span
@@ -174,11 +174,11 @@ export function RuleHealthOverview({
       {activeCard && isMulti && (
         <div
           className="mt-4 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.02)" }}
+          style={{ backgroundColor: "rgba(255,255,255,0.02)" }}
         >
           <div
             className="grid grid-cols-[1fr_auto] items-center gap-2 px-4 py-2.5 border-b border-slate-900/[0.10] dark:border-white/[0.06]"
-            style={{ background: "rgba(255,255,255,0.03)" }}
+            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
           >
             <span className="text-[10px] font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.12em]">
               Firewall
@@ -203,7 +203,7 @@ export function RuleHealthOverview({
                   </span>
                   <div
                     className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
                   >
                     <div
                       className="h-full rounded-full transition-all duration-500"

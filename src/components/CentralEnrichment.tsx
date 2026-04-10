@@ -201,20 +201,20 @@ export function CentralEnrichment({
     <div
       className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(0,237,255,0.10)]"
       style={{
-        background: "linear-gradient(145deg, rgba(0,237,255,0.06), rgba(0,91,200,0.025))",
+        backgroundImage: "linear-gradient(145deg, rgba(0,237,255,0.06), rgba(0,91,200,0.025))",
         boxShadow: "0 12px 40px rgba(0,237,255,0.04), inset 0 1px 0 rgba(255,255,255,0.04)",
       }}
     >
       {/* Corner glow */}
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] opacity-20 transition-opacity duration-300 group-hover:opacity-35 pointer-events-none"
-        style={{ background: `radial-gradient(circle, ${CYAN} 0%, transparent 70%)` }}
+        style={{ backgroundImage: `radial-gradient(circle, ${CYAN} 0%, transparent 70%)` }}
       />
       {/* Top shimmer */}
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: `linear-gradient(90deg, transparent, ${CYAN}40, rgba(0,91,200,0.25), transparent)`,
+          backgroundImage: `linear-gradient(90deg, transparent, ${CYAN}40, rgba(0,91,200,0.25), transparent)`,
         }}
       />
 
@@ -225,7 +225,7 @@ export function CentralEnrichment({
       >
         <div
           className="h-8 w-8 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08] shrink-0"
-          style={{ background: `linear-gradient(135deg, ${CYAN}20, rgba(0,91,200,0.12))` }}
+          style={{ backgroundImage: `linear-gradient(135deg, ${CYAN}20, rgba(0,91,200,0.12))` }}
         >
           <Wifi
             className="h-3.5 w-3.5"
@@ -275,7 +275,9 @@ export function CentralEnrichment({
               loadEnrichment();
             }}
             className="group/ref p-1.5 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] transition-all"
-            style={{ background: "linear-gradient(145deg, rgba(0,237,255,0.04), transparent)" }}
+            style={{
+              backgroundImage: "linear-gradient(145deg, rgba(0,237,255,0.04), transparent)",
+            }}
             title="Refresh"
           >
             <RefreshCw
@@ -298,7 +300,7 @@ export function CentralEnrichment({
               <div
                 key={data.configLabel}
                 className="group/card relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-                style={{ background: `linear-gradient(145deg, ${cardHex}08, ${cardHex}02)` }}
+                style={{ backgroundImage: `linear-gradient(145deg, ${cardHex}08, ${cardHex}02)` }}
               >
                 {/* Card glow */}
                 <div
@@ -308,7 +310,7 @@ export function CentralEnrichment({
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, ${cardHex}25, transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, ${cardHex}25, transparent)`,
                   }}
                 />
 
@@ -316,7 +318,9 @@ export function CentralEnrichment({
                 <div className="relative flex items-center gap-2.5">
                   <div
                     className="h-7 w-7 rounded-lg flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
-                    style={{ background: `linear-gradient(135deg, ${cardHex}18, ${cardHex}08)` }}
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, ${cardHex}18, ${cardHex}08)`,
+                    }}
                   >
                     <Server className="h-3.5 w-3.5" style={{ color: cardHex }} />
                   </div>
@@ -371,12 +375,12 @@ export function CentralEnrichment({
                       <div
                         key={label}
                         className="relative overflow-hidden rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2.5 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-                        style={{ background: `linear-gradient(145deg, ${CYAN}06, ${CYAN}02)` }}
+                        style={{ backgroundImage: `linear-gradient(145deg, ${CYAN}06, ${CYAN}02)` }}
                       >
                         <div
                           className="absolute inset-x-0 top-0 h-px pointer-events-none"
                           style={{
-                            background: `linear-gradient(90deg, transparent, ${CYAN}15, transparent)`,
+                            backgroundImage: `linear-gradient(90deg, transparent, ${CYAN}15, transparent)`,
                           }}
                         />
                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-bold block">
@@ -394,7 +398,8 @@ export function CentralEnrichment({
                   <div
                     className="relative overflow-hidden rounded-xl border border-dashed border-slate-900/[0.12] dark:border-white/[0.08] px-4 py-3 flex items-center gap-3"
                     style={{
-                      background: "linear-gradient(145deg, rgba(255,255,255,0.02), transparent)",
+                      backgroundImage:
+                        "linear-gradient(145deg, rgba(255,255,255,0.02), transparent)",
                     }}
                   >
                     <WifiOff className="h-4 w-4 text-muted-foreground/30 shrink-0" />
@@ -435,13 +440,13 @@ export function CentralEnrichment({
                             key={`${lic.product}-${i}`}
                             className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
                             style={{
-                              background: `linear-gradient(145deg, ${licHex}06, ${licHex}02)`,
+                              backgroundImage: `linear-gradient(145deg, ${licHex}06, ${licHex}02)`,
                             }}
                           >
                             <div
                               className="absolute inset-x-0 top-0 h-px pointer-events-none"
                               style={{
-                                background: `linear-gradient(90deg, transparent, ${licHex}18, transparent)`,
+                                backgroundImage: `linear-gradient(90deg, transparent, ${licHex}18, transparent)`,
                               }}
                             />
                             <div className="relative flex-1 min-w-0">
@@ -502,7 +507,7 @@ export function CentralEnrichment({
                             key={a.id}
                             className="text-[10px] pl-4 pr-3 py-1.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-200 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
                             style={{
-                              background: `linear-gradient(to right, ${alertHex} 3px, transparent 3px), linear-gradient(135deg, ${alertHex}08, ${alertHex}02)`,
+                              backgroundImage: `linear-gradient(to right, ${alertHex} 3px, transparent 3px), linear-gradient(135deg, ${alertHex}08, ${alertHex}02)`,
                             }}
                           >
                             <span className="text-foreground font-bold">{a.description}</span>
@@ -527,7 +532,9 @@ export function CentralEnrichment({
           {/* Footer */}
           <div
             className="relative overflow-hidden rounded-lg border border-slate-900/[0.08] dark:border-white/[0.04] px-3 py-2 flex items-center justify-between"
-            style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.015), transparent)" }}
+            style={{
+              backgroundImage: "linear-gradient(145deg, rgba(255,255,255,0.015), transparent)",
+            }}
           >
             <span className="flex items-center gap-1.5 text-[9px] text-muted-foreground/50 font-medium">
               <Clock className="h-2.5 w-2.5" style={{ color: CYAN, opacity: 0.5 }} />

@@ -234,7 +234,10 @@ export function ReportCards({
                       : "hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer group"
                   }`}
                   style={{
-                    background: `linear-gradient(90deg, ${card.hex}, ${card.hexEnd}) 0 0 / 100% 2px no-repeat, linear-gradient(145deg, ${card.hex}12, ${card.hex}04) 0 0 / 100% 100% no-repeat`,
+                    backgroundImage: `linear-gradient(90deg, ${card.hex}, ${card.hexEnd}), linear-gradient(145deg, ${card.hex}12, ${card.hex}04)`,
+                    backgroundPosition: "0 0, 0 0",
+                    backgroundSize: "100% 2px, 100% 100%",
+                    backgroundRepeat: "no-repeat, no-repeat",
                   }}
                   onClick={card.onClick}
                 >
@@ -264,7 +267,7 @@ export function ReportCards({
                       data-testid={(card as { testId?: string }).testId}
                       className="w-full gap-2 font-bold border-0 text-white transition-all duration-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] hover:brightness-110 mt-3"
                       style={{
-                        background: `linear-gradient(135deg, ${card.hex}, ${card.hexEnd})`,
+                        backgroundImage: `linear-gradient(135deg, ${card.hex}, ${card.hexEnd})`,
                       }}
                       disabled={card.disabled}
                     >
@@ -281,7 +284,8 @@ export function ReportCards({
             <div
               className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-3 sm:p-4"
               style={{
-                background: "linear-gradient(135deg, rgba(32,6,247,0.10), rgba(90,0,255,0.06))",
+                backgroundImage:
+                  "linear-gradient(135deg, rgba(32,6,247,0.10), rgba(90,0,255,0.06))",
               }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -290,7 +294,7 @@ export function ReportCards({
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background:
+                  backgroundImage:
                     "linear-gradient(90deg, transparent, rgba(32,6,247,0.25), transparent)",
                 }}
               />

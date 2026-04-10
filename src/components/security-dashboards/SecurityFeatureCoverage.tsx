@@ -91,13 +91,13 @@ export function SecurityFeatureCoverage({
   return (
     <div
       className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card transition-all duration-200 hover:shadow-elevated"
-      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.04), transparent)" }}
+      style={{ backgroundImage: "linear-gradient(145deg, rgba(32,6,247,0.04), transparent)" }}
       data-tour="inspection-posture"
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.12), transparent)",
+          backgroundImage: "linear-gradient(90deg, transparent, rgba(32,6,247,0.12), transparent)",
         }}
       />
       <div className="flex items-center justify-between mb-5">
@@ -112,7 +112,7 @@ export function SecurityFeatureCoverage({
               <span
                 className="text-[11px] font-bold px-2.5 py-1 rounded-lg border"
                 style={{
-                  background: `${badgeColor}12`,
+                  backgroundColor: `${badgeColor}12`,
                   color: badgeColor,
                   borderColor: `${badgeColor}25`,
                 }}
@@ -147,7 +147,7 @@ export function SecurityFeatureCoverage({
                 } ${isMulti ? "cursor-pointer" : "cursor-default"}`}
                 style={{
                   borderColor: isActive ? `${cardColor}40` : "rgba(255,255,255,0.07)",
-                  background: isActive
+                  backgroundImage: isActive
                     ? `linear-gradient(145deg, ${cardColor}22, ${cardColor}0c)`
                     : `linear-gradient(145deg, ${cardColor}12, ${cardColor}06)`,
                   boxShadow: isActive
@@ -164,14 +164,14 @@ export function SecurityFeatureCoverage({
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, ${cardColor}30, transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, ${cardColor}30, transparent)`,
                   }}
                 />
                 {/* Bottom edge */}
                 <div
                   className="absolute inset-x-0 bottom-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)`,
                   }}
                 />
                 <p className="relative text-[11px] font-display font-semibold text-foreground/60 mb-1.5">
@@ -186,7 +186,7 @@ export function SecurityFeatureCoverage({
                 <div className="relative flex items-center gap-2.5 mt-2.5">
                   <div
                     className="flex-1 h-2 rounded-full overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
                   >
                     {isZero ? (
                       <div
@@ -196,7 +196,7 @@ export function SecurityFeatureCoverage({
                     ) : denom === 0 ? (
                       <div
                         className="h-full rounded-full"
-                        style={{ width: "100%", background: "rgba(255,255,255,0.04)" }}
+                        style={{ width: "100%", backgroundColor: "rgba(255,255,255,0.04)" }}
                       />
                     ) : (
                       <div
@@ -224,11 +224,11 @@ export function SecurityFeatureCoverage({
       {activeFeature && isMulti && (
         <div
           className="mt-4 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.02)" }}
+          style={{ backgroundColor: "rgba(255,255,255,0.02)" }}
         >
           <div
             className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-slate-900/[0.10] dark:border-white/[0.06]"
-            style={{ background: "rgba(255,255,255,0.03)" }}
+            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
           >
             <span className="text-[10px] font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.12em]">
               Firewall
@@ -258,7 +258,7 @@ export function SecurityFeatureCoverage({
                 <div className="flex items-center gap-2 w-28">
                   <div
                     className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
                   >
                     <div
                       className="h-full rounded-full transition-all duration-500"

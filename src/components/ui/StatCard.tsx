@@ -54,7 +54,9 @@ export function StatCard({
       </div>
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
-        style={{ background: `linear-gradient(90deg, transparent, ${accentHex}30, transparent)` }}
+        style={{
+          backgroundImage: `linear-gradient(90deg, transparent, ${accentHex}30, transparent)`,
+        }}
       />
       <div
         className={cn(

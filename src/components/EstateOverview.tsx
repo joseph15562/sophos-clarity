@@ -202,7 +202,7 @@ function ParserDiagnostics({
     <div
       className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
       style={{
-        background: "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.02))",
+        backgroundImage: "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.02))",
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
       }}
     >
@@ -210,7 +210,7 @@ function ParserDiagnostics({
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(0,237,255,0.2), rgba(90,0,255,0.12), transparent)",
         }}
       />
@@ -222,7 +222,7 @@ function ParserDiagnostics({
         <div
           className="h-7 w-7 rounded-lg flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08] shrink-0"
           style={{
-            background: "linear-gradient(135deg, rgba(0,237,255,0.12), rgba(90,0,255,0.08))",
+            backgroundImage: "linear-gradient(135deg, rgba(0,237,255,0.12), rgba(90,0,255,0.08))",
           }}
         >
           <Settings
@@ -248,13 +248,14 @@ function ParserDiagnostics({
                 key={label}
                 className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
                 style={{
-                  background: "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.015))",
+                  backgroundImage:
+                    "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.015))",
                 }}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
                   style={{
-                    background:
+                    backgroundImage:
                       "linear-gradient(90deg, transparent, rgba(0,237,255,0.15), transparent)",
                   }}
                 />
@@ -326,7 +327,7 @@ function ExtractionCoverage({
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 flex items-center gap-4 shadow-card transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-      style={{ background: `linear-gradient(135deg, ${barHex}0A, ${barHex}03)` }}
+      style={{ backgroundImage: `linear-gradient(135deg, ${barHex}0A, ${barHex}03)` }}
     >
       <div className="absolute inset-0 pointer-events-none">
         <div
@@ -336,7 +337,7 @@ function ExtractionCoverage({
       </div>
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
-        style={{ background: `linear-gradient(90deg, transparent, ${barHex}28, transparent)` }}
+        style={{ backgroundImage: `linear-gradient(90deg, transparent, ${barHex}28, transparent)` }}
       />
       <div className="relative flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
@@ -350,7 +351,7 @@ function ExtractionCoverage({
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${extractionPct}%`,
-              background: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
+              backgroundImage: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
               boxShadow: `0 0 10px ${barHex}40`,
             }}
           />
@@ -392,7 +393,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
       <div
         key={label}
         className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-        style={{ background: `linear-gradient(135deg, ${hex}0C, ${hex}03)` }}
+        style={{ backgroundImage: `linear-gradient(135deg, ${hex}0C, ${hex}03)` }}
       >
         <div className="absolute inset-0 pointer-events-none">
           <div
@@ -402,7 +403,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         </div>
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
-          style={{ background: `linear-gradient(90deg, transparent, ${hex}25, transparent)` }}
+          style={{ backgroundImage: `linear-gradient(90deg, transparent, ${hex}25, transparent)` }}
         />
         <div className="relative flex items-center justify-between">
           <span className="text-[11px] font-display font-bold tracking-tight text-foreground">
@@ -425,7 +426,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${Math.max(2, p)}%`,
-              background: `linear-gradient(90deg, ${hex}90, ${hex})`,
+              backgroundImage: `linear-gradient(90deg, ${hex}90, ${hex})`,
               boxShadow: `0 0 10px ${hex}40`,
             }}
           />
@@ -437,7 +438,9 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
-      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.015))" }}
+      style={{
+        backgroundImage: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.015))",
+      }}
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-15 bg-brand-accent" />
@@ -445,7 +448,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
+          backgroundImage: "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
         }}
       />
 
@@ -476,7 +479,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         <div
           className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 flex items-start gap-3"
           style={{
-            background: "linear-gradient(135deg, rgba(234,0,34,0.10), rgba(234,0,34,0.03))",
+            backgroundImage: "linear-gradient(135deg, rgba(234,0,34,0.10), rgba(234,0,34,0.03))",
           }}
         >
           <div className="absolute inset-0 pointer-events-none">
@@ -484,7 +487,9 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
           </div>
           <div
             className="absolute inset-x-0 top-0 h-px pointer-events-none"
-            style={{ background: "linear-gradient(90deg, rgba(234,0,34,0.3), transparent 60%)" }}
+            style={{
+              backgroundImage: "linear-gradient(90deg, rgba(234,0,34,0.3), transparent 60%)",
+            }}
           />
           <span className="relative mt-0.5 h-2.5 w-2.5 rounded-full bg-[#EA0022] shrink-0 animate-pulse" />
           <div className="relative space-y-0.5">
@@ -504,12 +509,14 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         <div
           className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
           style={{
-            background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
+            backgroundImage: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
           }}
         >
           <div
             className="absolute inset-x-0 top-0 h-px pointer-events-none"
-            style={{ background: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)" }}
+            style={{
+              backgroundImage: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)",
+            }}
           />
           <span className="relative h-2 w-2 rounded-full bg-[#F29400] shrink-0" />
           <p className="relative text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
@@ -524,7 +531,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         <div
           className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 space-y-1"
           style={{
-            background: "linear-gradient(135deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
+            backgroundImage: "linear-gradient(135deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
           }}
         >
           <p
@@ -605,7 +612,7 @@ function FindingCard({
     <div
       className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{
-        background: `linear-gradient(to right, ${sevHex} 3px, transparent 3px), linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
+        backgroundImage: `linear-gradient(to right, ${sevHex} 3px, transparent 3px), linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
       }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -694,13 +701,14 @@ function FindingCard({
           <div
             className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 space-y-1.5"
             style={{
-              background: "linear-gradient(145deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
+              backgroundImage: "linear-gradient(145deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
             }}
           >
             <div
               className="absolute inset-x-0 top-0 h-px pointer-events-none"
               style={{
-                background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.18), transparent)",
+                backgroundImage:
+                  "linear-gradient(90deg, transparent, rgba(32,6,247,0.18), transparent)",
               }}
             />
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-brand-accent">
@@ -740,13 +748,14 @@ function FindingCard({
             <div
               className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3"
               style={{
-                background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+                backgroundImage:
+                  "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
               }}
             >
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background:
+                  backgroundImage:
                     "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
                 }}
               />
@@ -877,8 +886,11 @@ function FindingsPanel({
     <section
       className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
       style={{
-        background:
-          "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent) 0 0 / 100% 1px no-repeat, linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012)) 0 0 / 100% 100% no-repeat",
+        backgroundImage:
+          "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent), linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012))",
+        backgroundPosition: "0 0, 0 0",
+        backgroundSize: "100% 1px, 100% 100%",
+        backgroundRepeat: "no-repeat, no-repeat",
       }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -935,7 +947,7 @@ function FindingsPanel({
               key={g.section}
               className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
-                background: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}08, ${hex}02)`,
+                backgroundImage: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}08, ${hex}02)`,
               }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -946,7 +958,7 @@ function FindingsPanel({
               </div>
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
-                style={{ background: `linear-gradient(90deg, ${hex}25, transparent 50%)` }}
+                style={{ backgroundImage: `linear-gradient(90deg, ${hex}25, transparent 50%)` }}
               />
               <button
                 onClick={() => toggleSection(g.section)}
@@ -1040,20 +1052,20 @@ function EstateRiskComparison({
     <div
       className="group relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
       style={{
-        background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
+        backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
         boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
       }}
     >
       {/* Corner glow */}
       <div
         className="absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] opacity-20 transition-opacity duration-300 group-hover:opacity-35 pointer-events-none"
-        style={{ background: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
+        style={{ backgroundImage: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
       />
       {/* Top shimmer */}
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(90,0,255,0.35), rgba(0,237,255,0.2), transparent)",
         }}
       />
@@ -1063,7 +1075,7 @@ function EstateRiskComparison({
         <div
           className="h-9 w-9 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
           style={{
-            background: "linear-gradient(135deg, rgba(90,0,255,0.18), rgba(0,237,255,0.10))",
+            backgroundImage: "linear-gradient(135deg, rgba(90,0,255,0.18), rgba(0,237,255,0.10))",
           }}
         >
           <GitBranch
@@ -1099,7 +1111,7 @@ function EstateRiskComparison({
               <div
                 key={label}
                 className="group/row relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated hover:scale-[1.01]"
-                style={{ background: `linear-gradient(145deg, ${barHex}0C, ${barHex}03)` }}
+                style={{ backgroundImage: `linear-gradient(145deg, ${barHex}0C, ${barHex}03)` }}
               >
                 {/* Row glow */}
                 <div
@@ -1109,7 +1121,7 @@ function EstateRiskComparison({
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
                   style={{
-                    background: `linear-gradient(90deg, transparent, ${barHex}25, transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, ${barHex}25, transparent)`,
                   }}
                 />
 
@@ -1181,7 +1193,7 @@ function EstateRiskComparison({
                         className="h-full rounded-full transition-all duration-700"
                         style={{
                           width: `${pct}%`,
-                          background: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
+                          backgroundImage: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
                           boxShadow: `0 0 12px ${barHex}40`,
                         }}
                       />
@@ -1197,13 +1209,15 @@ function EstateRiskComparison({
       <div
         className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 space-y-1"
         style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))",
+          backgroundImage:
+            "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))",
         }}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.15), transparent)",
+            backgroundImage:
+              "linear-gradient(90deg, transparent, rgba(90,0,255,0.15), transparent)",
           }}
         />
         <p className="relative text-[10px] text-muted-foreground">

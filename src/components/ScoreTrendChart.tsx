@@ -38,11 +38,12 @@ function ScoreTrendChartInner({
     () =>
       isDark
         ? {
-            background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
+            backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
             boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
           }
         : {
-            background: "linear-gradient(145deg, rgba(255,255,255,0.99), rgba(247,249,255,0.96))",
+            backgroundImage:
+              "linear-gradient(145deg, rgba(255,255,255,0.99), rgba(247,249,255,0.96))",
             boxShadow: "0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.98)",
           },
     [isDark],
@@ -216,13 +217,13 @@ function ScoreTrendChartInner({
             ? "opacity-20 group-hover:opacity-[0.35]"
             : "opacity-[0.08] group-hover:opacity-[0.14]"
         }`}
-        style={{ background: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
+        style={{ backgroundImage: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
       />
       {/* Top shimmer */}
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: isDark
+          backgroundImage: isDark
             ? "linear-gradient(90deg, transparent, rgba(90,0,255,0.35), rgba(0,237,255,0.2), transparent)"
             : "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), rgba(0,237,255,0.1), transparent)",
         }}
@@ -234,7 +235,7 @@ function ScoreTrendChartInner({
           <span
             className="h-7 w-7 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
             style={{
-              background: "linear-gradient(135deg, rgba(90,0,255,0.18), rgba(0,237,255,0.10))",
+              backgroundImage: "linear-gradient(135deg, rgba(90,0,255,0.18), rgba(0,237,255,0.10))",
             }}
           >
             <TrendingUp
@@ -253,7 +254,7 @@ function ScoreTrendChartInner({
             }}
             className="rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] px-2.5 py-1.5 text-[10px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all"
             style={{
-              background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
+              backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
             }}
           >
             <option value={CATEGORY_OVERALL}>Overall</option>
@@ -269,7 +270,7 @@ function ScoreTrendChartInner({
             disabled={exporting}
             className="group/btn relative overflow-hidden flex items-center gap-1 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] px-2.5 py-1.5 text-[10px] font-bold text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] transition-all disabled:opacity-50"
             style={{
-              background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
+              backgroundImage: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
             }}
           >
             <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full blur-[8px] opacity-0 transition-opacity duration-200 group-hover/btn:opacity-30 pointer-events-none bg-[#00EDFF]" />
@@ -298,7 +299,7 @@ function ScoreTrendChartInner({
             className="text-[10px] font-black px-2 py-0.5 rounded-full border"
             style={{
               color: diff > 0 ? "#00F2B3" : "#EA0022",
-              background: diff > 0 ? "rgba(0,242,179,0.08)" : "rgba(234,0,34,0.08)",
+              backgroundColor: diff > 0 ? "rgba(0,242,179,0.08)" : "rgba(234,0,34,0.08)",
               borderColor: diff > 0 ? "rgba(0,242,179,0.15)" : "rgba(234,0,34,0.15)",
             }}
           >
@@ -314,7 +315,7 @@ function ScoreTrendChartInner({
           className="relative overflow-hidden rounded-xl border px-4 py-3 flex items-center gap-4 transition-all duration-200"
           style={{
             borderColor: `${selHex}25`,
-            background: `linear-gradient(145deg, ${selHex}12, ${selHex}04)`,
+            backgroundImage: `linear-gradient(145deg, ${selHex}12, ${selHex}04)`,
           }}
         >
           <div
@@ -323,7 +324,9 @@ function ScoreTrendChartInner({
           />
           <div
             className="absolute inset-x-0 top-0 h-px pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${selHex}50, transparent)` }}
+            style={{
+              backgroundImage: `linear-gradient(90deg, transparent, ${selHex}50, transparent)`,
+            }}
           />
           <div className="text-center">
             <p className="text-2xl font-black" style={{ color: selHex }}>

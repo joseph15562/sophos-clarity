@@ -908,7 +908,9 @@ export function TenantDashboard() {
                         <div className="flex items-center gap-2.5">
                           <div
                             className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ background: `linear-gradient(135deg, ${dHex}, ${dHex}cc)` }}
+                            style={{
+                              backgroundImage: `linear-gradient(135deg, ${dHex}, ${dHex}cc)`,
+                            }}
                           >
                             <span className="text-xs font-display font-black text-white">
                               {dGrade}

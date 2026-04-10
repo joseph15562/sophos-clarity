@@ -100,7 +100,9 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 space-y-4 shadow-card"
-      style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.06), rgba(234,0,34,0.015))" }}
+      style={{
+        backgroundImage: "linear-gradient(145deg, rgba(234,0,34,0.06), rgba(234,0,34,0.015))",
+      }}
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-15 bg-[#EA0022]" />
@@ -108,7 +110,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(234,0,34,0.22), transparent)",
+          backgroundImage: "linear-gradient(90deg, transparent, rgba(234,0,34,0.22), transparent)",
         }}
       />
       <div className="relative flex items-center gap-2.5">
@@ -138,7 +140,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               key={`${f.id}-${i}`}
               className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
-                background: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}0C, ${hex}03)`,
+                backgroundImage: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}0C, ${hex}03)`,
               }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -149,7 +151,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               </div>
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
-                style={{ background: `linear-gradient(90deg, ${hex}30, transparent 60%)` }}
+                style={{ backgroundImage: `linear-gradient(90deg, ${hex}30, transparent 60%)` }}
               />
               <button
                 onClick={() => setExpandedIdx(expanded ? null : i)}

@@ -152,7 +152,9 @@ export function PriorityMatrix({ analysisResults }: Props) {
     return (
       <div
         className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 text-center text-sm text-foreground/40 shadow-card"
-        style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.03), transparent)" }}
+        style={{
+          backgroundImage: "linear-gradient(145deg, rgba(255,255,255,0.03), transparent)",
+        }}
       >
         No actionable findings to prioritise.
       </div>
@@ -197,14 +199,14 @@ export function PriorityMatrix({ analysisResults }: Props) {
     <div
       className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 space-y-5 shadow-card transition-all duration-200 hover:shadow-elevated"
       style={{
-        background:
+        backgroundImage:
           "linear-gradient(145deg, rgba(0,242,179,0.03), rgba(242,148,0,0.02), transparent)",
       }}
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(0,242,179,0.15), rgba(242,148,0,0.08), transparent)",
         }}
       />
@@ -213,7 +215,8 @@ export function PriorityMatrix({ analysisResults }: Props) {
           <div
             className="flex items-center justify-center h-9 w-9 rounded-xl"
             style={{
-              background: "linear-gradient(145deg, rgba(0,242,179,0.15), rgba(0,242,179,0.06))",
+              backgroundImage:
+                "linear-gradient(145deg, rgba(0,242,179,0.15), rgba(0,242,179,0.06))",
               border: "1px solid rgba(0,242,179,0.2)",
               boxShadow: "0 0 12px rgba(0,242,179,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
             }}
@@ -254,7 +257,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 isFaded ? "opacity-30" : ""
               }`}
               style={{
-                background: isActive
+                backgroundImage: isActive
                   ? `linear-gradient(145deg, ${c}22, ${c}0c)`
                   : `linear-gradient(145deg, ${c}14, ${c}06)`,
                 border: isActive ? `1px solid ${c}40` : `1px solid ${c}18`,
@@ -276,7 +279,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             }}
             className="text-[11px] font-semibold px-3 py-2 rounded-2xl transition-all duration-200 cursor-pointer"
             style={{
-              background: "rgba(255,255,255,0.04)",
+              backgroundColor: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.08)",
               color: "rgba(255,255,255,0.5)",
             }}
@@ -290,7 +293,8 @@ export function PriorityMatrix({ analysisResults }: Props) {
       <div
         className="relative w-full max-w-lg mx-auto rounded-2xl p-1"
         style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
+          backgroundImage:
+            "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
           border: "1px solid rgba(255,255,255,0.06)",
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.15)",
         }}
@@ -568,7 +572,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             <div
               className="relative rounded-2xl p-5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 overflow-hidden"
               style={{
-                background: `linear-gradient(145deg, ${selColor}0c, ${selColor}04, transparent)`,
+                backgroundImage: `linear-gradient(145deg, ${selColor}0c, ${selColor}04, transparent)`,
                 border: `1px solid ${selColor}20`,
                 boxShadow: `0 0 20px ${selColor}10, inset 0 1px 0 rgba(255,255,255,0.06)`,
               }}
@@ -576,14 +580,14 @@ export function PriorityMatrix({ analysisResults }: Props) {
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${selColor}30, transparent)`,
+                  backgroundImage: `linear-gradient(90deg, transparent, ${selColor}30, transparent)`,
                 }}
               />
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span
                   className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg"
                   style={{
-                    background: `${selColor}18`,
+                    backgroundColor: `${selColor}18`,
                     color: selColor,
                     border: `1px solid ${selColor}25`,
                     boxShadow: `0 0 8px ${selColor}15`,
@@ -594,7 +598,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 <span
                   className="text-[10px] font-bold px-2 py-1 rounded-lg"
                   style={{
-                    background: `${selColor}10`,
+                    backgroundColor: `${selColor}10`,
                     color: selColor,
                     border: `1px solid ${selColor}15`,
                   }}
@@ -615,7 +619,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 <div
                   className="rounded-xl px-4 py-3"
                   style={{
-                    background:
+                    backgroundImage:
                       "linear-gradient(145deg, rgba(0,242,179,0.08), rgba(0,242,179,0.03))",
                     border: "1px solid rgba(0,242,179,0.15)",
                     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -658,7 +662,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
               }`}
               style={{
                 border: isActive ? `1px solid ${cc}35` : "1px solid rgba(255,255,255,0.06)",
-                background: isActive
+                backgroundImage: isActive
                   ? `linear-gradient(145deg, ${cc}14, ${cc}06)`
                   : `linear-gradient(145deg, ${cc}0a, ${cc}04)`,
                 boxShadow: isActive
@@ -668,7 +672,9 @@ export function PriorityMatrix({ analysisResults }: Props) {
             >
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
-                style={{ background: `linear-gradient(90deg, transparent, ${cc}25, transparent)` }}
+                style={{
+                  backgroundImage: `linear-gradient(90deg, transparent, ${cc}25, transparent)`,
+                }}
               />
               <div
                 className="absolute -top-3 -right-3 h-10 w-10 rounded-full blur-[14px] pointer-events-none opacity-25 group-hover:opacity-50 transition-opacity"

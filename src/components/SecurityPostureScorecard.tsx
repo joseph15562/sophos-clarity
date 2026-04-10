@@ -171,7 +171,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
           <div
             className="relative overflow-hidden flex items-center gap-4 rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] px-5 py-4 shadow-elevated transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
             style={{
-              background: `linear-gradient(135deg, ${overallStyle.hex}14, ${overallStyle.hex}06)`,
+              backgroundImage: `linear-gradient(135deg, ${overallStyle.hex}14, ${overallStyle.hex}06)`,
             }}
           >
             <div className="absolute inset-0 pointer-events-none">
@@ -183,7 +183,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
             <div
               className="absolute inset-x-0 top-0 h-px pointer-events-none"
               style={{
-                background: `linear-gradient(90deg, transparent, ${overallStyle.hex}28, transparent)`,
+                backgroundImage: `linear-gradient(90deg, transparent, ${overallStyle.hex}28, transparent)`,
               }}
             />
             <div
@@ -266,7 +266,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
             <div
               key={cat.label}
               className="relative overflow-hidden flex items-center gap-3.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 shadow-card transition-all duration-200 hover:scale-[1.01] hover:shadow-elevated hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-              style={{ background: `linear-gradient(135deg, ${hex}10, ${hex}05)` }}
+              style={{ backgroundImage: `linear-gradient(135deg, ${hex}10, ${hex}05)` }}
             >
               {/* Corner glow */}
               <div className="absolute inset-0 pointer-events-none">
@@ -278,7 +278,9 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
               {/* Top accent line */}
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
-                style={{ background: `linear-gradient(90deg, transparent, ${hex}30, transparent)` }}
+                style={{
+                  backgroundImage: `linear-gradient(90deg, transparent, ${hex}30, transparent)`,
+                }}
               />
               {/* Left severity edge */}
               <div
@@ -288,7 +290,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
 
               <div
                 className="relative h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
-                style={{ background: `${hex}18` }}
+                style={{ backgroundColor: `${hex}18` }}
               >
                 <Icon className="h-4 w-4" style={{ color: hex }} />
               </div>
@@ -319,7 +321,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${cat.score}%`,
-                      background: `linear-gradient(90deg, ${hex}90, ${hex})`,
+                      backgroundImage: `linear-gradient(90deg, ${hex}90, ${hex})`,
                       boxShadow: `0 0 8px ${hex}40`,
                     }}
                   />

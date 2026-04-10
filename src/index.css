@@ -3,19 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  *,
-  *::before,
-  *::after {
-    -webkit-background-clip: padding-box !important;
-    background-clip: padding-box !important;
-  }
-
-  /* Preserve gradient-text clipping (higher specificity than * beats it within the same layer) */
-  .bg-clip-text {
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-  }
-
   :root {
     color-scheme: light;
     /* Sophos Brand — Light Mode */
@@ -679,4 +666,22 @@
   height: auto !important;
   object-fit: contain !important;
   box-sizing: border-box;
+}
+
+/*
+ * Prevent background-color / background-image from bleeding past rounded borders.
+ * Placed outside all @layer so it overrides Tailwind utilities and inline
+ * `background:` shorthand (which implicitly resets background-clip to border-box).
+ */
+*,
+*::before,
+*::after {
+  -webkit-background-clip: padding-box !important;
+  background-clip: padding-box !important;
+}
+.bg-clip-text,
+.eyebrow,
+.dark .eyebrow {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
 }

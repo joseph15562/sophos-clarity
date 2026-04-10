@@ -344,7 +344,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
             <div
               className="relative overflow-hidden rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] px-6 py-5 text-right shadow-elevated"
               style={{
-                background: `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`,
+                backgroundImage: `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`,
               }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -356,7 +356,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
               <div
                 className="absolute inset-x-0 top-0 h-px"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${activeColor}40, transparent)`,
+                  backgroundImage: `linear-gradient(90deg, transparent, ${activeColor}40, transparent)`,
                 }}
               />
               <p className="relative text-[9px] font-display font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
@@ -382,7 +382,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                 className="relative overflow-hidden rounded-2xl border px-5 py-5 text-right shadow-elevated cursor-pointer transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   borderColor: !activeFw ? `${scoreToColor(aggScore)}30` : "rgba(255,255,255,0.06)",
-                  background: `linear-gradient(135deg, ${scoreToColor(aggScore)}12, ${scoreToColor(aggScore)}06)`,
+                  backgroundImage: `linear-gradient(135deg, ${scoreToColor(aggScore)}12, ${scoreToColor(aggScore)}06)`,
                   boxShadow: !activeFw ? `0 0 20px ${scoreToColor(aggScore)}15` : "none",
                 }}
                 onClick={() => setSelectedFw(null)}
@@ -397,7 +397,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                 <div
                   className="absolute inset-x-0 top-0 h-px"
                   style={{
-                    background: `linear-gradient(90deg, transparent, ${scoreToColor(aggScore)}35, transparent)`,
+                    backgroundImage: `linear-gradient(90deg, transparent, ${scoreToColor(aggScore)}35, transparent)`,
                   }}
                 />
                 <p className="relative text-[9px] font-display font-semibold uppercase tracking-[0.22em] text-muted-foreground/70 flex items-center justify-end gap-1">
@@ -457,7 +457,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                       className="relative overflow-hidden rounded-xl border px-4 py-2.5 flex items-center gap-3 transition-all duration-300"
                       style={{
                         borderColor: `${displayColor}25`,
-                        background: `linear-gradient(145deg, ${displayColor}12, ${displayColor}04)`,
+                        backgroundImage: `linear-gradient(145deg, ${displayColor}12, ${displayColor}04)`,
                       }}
                     >
                       <div
@@ -467,7 +467,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                       <div
                         className="absolute inset-x-0 top-0 h-px pointer-events-none"
                         style={{
-                          background: `linear-gradient(90deg, transparent, ${displayColor}50, transparent)`,
+                          backgroundImage: `linear-gradient(90deg, transparent, ${displayColor}50, transparent)`,
                         }}
                       />
                       <p className="relative text-[10px] text-muted-foreground">
@@ -484,7 +484,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                             className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full border"
                             style={{
                               color: activeScore >= trendSnapshot.score ? "#00F2B3" : "#EA0022",
-                              background:
+                              backgroundColor:
                                 activeScore >= trendSnapshot.score
                                   ? "rgba(0,242,179,0.08)"
                                   : "rgba(234,0,34,0.08)",
@@ -524,7 +524,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                     <div
                       className="h-[2px] w-20 rounded-full transition-colors duration-500"
                       style={{
-                        background: `linear-gradient(90deg, transparent, ${activeColor}, transparent)`,
+                        backgroundImage: `linear-gradient(90deg, transparent, ${activeColor}, transparent)`,
                       }}
                     />
                     {activeFw && (
@@ -532,7 +532,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                         onClick={() => setSelectedFw(null)}
                         className="group/back relative overflow-hidden mt-1 px-4 py-2 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-xs font-bold text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] transition-all duration-200 hover:shadow-[0_4px_16px_rgba(32,6,247,0.12)]"
                         style={{
-                          background:
+                          backgroundImage:
                             "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
                         }}
                       >
@@ -560,7 +560,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                   className="group/fw relative flex flex-col items-center gap-1.5 rounded-2xl border px-4 py-3 transition-all duration-200 hover:scale-[1.04] cursor-pointer"
                   style={{
                     borderColor: isSelected ? `${fwColor}40` : "rgba(255,255,255,0.06)",
-                    background: isSelected
+                    backgroundImage: isSelected
                       ? `linear-gradient(145deg, ${fwColor}15, ${fwColor}06)`
                       : "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))",
                     boxShadow: isSelected
@@ -580,7 +580,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                   <div
                     className="absolute inset-x-0 top-0 h-px pointer-events-none transition-opacity duration-300"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${fwColor}40, transparent)`,
+                      backgroundImage: `linear-gradient(90deg, transparent, ${fwColor}40, transparent)`,
                       opacity: isSelected ? 1 : 0,
                     }}
                   />
@@ -728,7 +728,9 @@ function StatStrip({ analysisResults }: { analysisResults: Record<string, Analys
             </div>
             <div
               className="absolute inset-x-0 top-0 h-px hidden dark:block"
-              style={{ background: `linear-gradient(90deg, transparent, ${hex}30, transparent)` }}
+              style={{
+                backgroundImage: `linear-gradient(90deg, transparent, ${hex}30, transparent)`,
+              }}
             />
             <Icon className={cn("relative mb-1.5 h-4 w-4", statIconTextClass(kind))} />
             <p className="relative text-[9px] font-semibold text-slate-600 dark:text-muted-foreground uppercase tracking-[0.14em]">

@@ -51,7 +51,7 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
           type="button"
           onClick={() => onNavigate?.(id)}
           className="group relative overflow-hidden flex flex-col items-start gap-2.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 text-left shadow-card transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer"
-          style={{ background: `linear-gradient(145deg, ${color}12, ${color}05)` }}
+          style={{ backgroundImage: `linear-gradient(145deg, ${color}12, ${color}05)` }}
         >
           <div className="absolute inset-0 pointer-events-none">
             <div
@@ -61,7 +61,9 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
           </div>
           <div
             className="absolute inset-x-0 top-0 h-px pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${color}28, transparent)` }}
+            style={{
+              backgroundImage: `linear-gradient(90deg, transparent, ${color}28, transparent)`,
+            }}
           />
           <span
             className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] transition-transform duration-200 group-hover:scale-110"

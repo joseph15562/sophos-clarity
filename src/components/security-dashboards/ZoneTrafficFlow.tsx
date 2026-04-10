@@ -92,7 +92,7 @@ function ProtectionDot({
         color,
         border: `1.5px solid ${color}`,
         boxShadow: `0 0 6px ${color}30`,
-        background: `${color}10`,
+        backgroundColor: `${color}10`,
       }}
     >
       {label[0]}

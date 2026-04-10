@@ -399,7 +399,7 @@ export function AnalysisTabs({
           analysisTabBarDark ? "border border-white/[0.06]" : "border border-slate-200/90",
         )}
         style={{
-          background: analysisTabBarDark
+          backgroundImage: analysisTabBarDark
             ? "linear-gradient(135deg, rgba(10,14,28,0.88), rgba(14,18,36,0.92))"
             : "linear-gradient(135deg, rgba(255,255,255,0.97), rgba(248,250,252,0.99))",
           boxShadow: analysisTabBarDark
@@ -410,7 +410,7 @@ export function AnalysisTabs({
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background: analysisTabBarDark
+            backgroundImage: analysisTabBarDark
               ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)"
               : "linear-gradient(90deg, transparent, rgba(32,6,247,0.14), rgba(0,156,251,0.1), transparent)",
           }}
@@ -615,7 +615,7 @@ export function AnalysisTabs({
                 <div
                   className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 flex flex-wrap items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
                   style={{
-                    background:
+                    backgroundImage:
                       "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(0,237,255,0.02))",
                     boxShadow:
                       "0 8px 30px rgba(32,6,247,0.05), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -626,7 +626,7 @@ export function AnalysisTabs({
                   <div
                     className="absolute inset-x-0 top-0 h-px pointer-events-none"
                     style={{
-                      background:
+                      backgroundImage:
                         "linear-gradient(90deg, transparent, rgba(32,6,247,0.25), rgba(0,237,255,0.15), transparent)",
                     }}
                   />
@@ -669,7 +669,7 @@ export function AnalysisTabs({
                       onClick={btn.onClick}
                       className="group/btn relative overflow-hidden flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-xs font-bold text-foreground hover:border-slate-900/[0.20] dark:hover:border-white/[0.16] transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_4px_20px_rgba(32,6,247,0.15)]"
                       style={{
-                        background: `linear-gradient(145deg, ${btn.hex}12, ${btn.hex}04)`,
+                        backgroundImage: `linear-gradient(145deg, ${btn.hex}12, ${btn.hex}04)`,
                       }}
                       data-tour={btn.tour}
                     >
@@ -680,7 +680,7 @@ export function AnalysisTabs({
                       <div
                         className="absolute inset-x-0 top-0 h-px pointer-events-none"
                         style={{
-                          background: `linear-gradient(90deg, transparent, ${btn.hex}30, transparent)`,
+                          backgroundImage: `linear-gradient(90deg, transparent, ${btn.hex}30, transparent)`,
                         }}
                       />
                       <Download
@@ -875,7 +875,7 @@ export function AnalysisTabs({
                             <div
                               className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
                               style={{
-                                background: `linear-gradient(90deg, transparent, ${card.hex}20, transparent)`,
+                                backgroundImage: `linear-gradient(90deg, transparent, ${card.hex}20, transparent)`,
                               }}
                             />
                             <div

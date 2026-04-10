@@ -28,14 +28,14 @@ export function TopFindings({
     <div
       className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card transition-all duration-200 hover:shadow-elevated flex flex-col h-full"
       style={{
-        background:
+        backgroundImage:
           "linear-gradient(145deg, rgba(242,148,0,0.04), rgba(234,0,34,0.02), transparent)",
       }}
     >
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(90deg, transparent, rgba(242,148,0,0.15), rgba(234,0,34,0.08), transparent)",
         }}
       />
@@ -56,7 +56,7 @@ export function TopFindings({
               className="group relative rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.01]"
               style={{
                 border: isExpanded ? `1px solid ${sevColor}30` : "1px solid rgba(255,255,255,0.06)",
-                background: isExpanded
+                backgroundImage: isExpanded
                   ? `linear-gradient(145deg, ${sevColor}12, ${sevColor}06)`
                   : "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
                 boxShadow: isExpanded
@@ -67,7 +67,7 @@ export function TopFindings({
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${sevColor}20, transparent)`,
+                  backgroundImage: `linear-gradient(90deg, transparent, ${sevColor}20, transparent)`,
                 }}
               />
               <button
@@ -90,7 +90,7 @@ export function TopFindings({
                 <span
                   className="text-[9px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
                     color: "rgba(255,255,255,0.5)",
                     border: "1px solid rgba(255,255,255,0.06)",
                   }}
@@ -114,7 +114,7 @@ export function TopFindings({
                       <span
                         className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold"
                         style={{
-                          background: "rgba(56,136,255,0.12)",
+                          backgroundColor: "rgba(56,136,255,0.12)",
                           color: "rgba(56,136,255,0.8)",
                         }}
                       >

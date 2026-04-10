@@ -86,7 +86,8 @@ function GaugeRing({
       <div
         className="absolute inset-0 rounded-full transition-all duration-300 group-hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
         style={{
-          background: "linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))",
+          backgroundImage:
+            "linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))",
           border: "1px solid rgba(255,255,255,0.07)",
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 24px rgba(0,0,0,0.18)",
           backdropFilter: "blur(16px)",
@@ -317,12 +318,12 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
             <div
               key={card.label}
               className="group relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm px-5 py-4 transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-              style={{ background: `linear-gradient(145deg, ${card.color}08, transparent)` }}
+              style={{ backgroundImage: `linear-gradient(145deg, ${card.color}08, transparent)` }}
             >
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${card.color}18, transparent)`,
+                  backgroundImage: `linear-gradient(90deg, transparent, ${card.color}18, transparent)`,
                 }}
               />
               <div
@@ -345,20 +346,20 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
       <div
         className="relative grid gap-8 md:grid-cols-2 items-center rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-6 sm:p-8 transition-all duration-200 hover:shadow-elevated"
         style={{
-          background:
+          backgroundImage:
             "linear-gradient(145deg, rgba(32,6,247,0.05), rgba(0,191,255,0.02), transparent)",
         }}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background:
+            backgroundImage:
               "linear-gradient(90deg, transparent, rgba(32,6,247,0.15), rgba(0,191,255,0.08), transparent)",
           }}
         />
         <div
           className="absolute -top-10 -left-10 h-28 w-28 rounded-full blur-[50px] opacity-10 pointer-events-none"
-          style={{ background: "#2006F7" }}
+          style={{ backgroundColor: "#2006F7" }}
         />
 
         {/* Gauge */}
@@ -412,7 +413,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
                 contentStyle={
                   isDark
                     ? {
-                        background: "rgba(10,14,28,0.92)",
+                        backgroundColor: "rgba(10,14,28,0.92)",
                         border: "1px solid rgba(255,255,255,0.08)",
                         borderRadius: 12,
                         fontSize: 11,
@@ -421,7 +422,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
                         color: "#fff",
                       }
                     : {
-                        background: "rgba(255,255,255,0.96)",
+                        backgroundColor: "rgba(255,255,255,0.96)",
                         border: "1px solid rgba(15,23,42,0.12)",
                         borderRadius: 12,
                         fontSize: 11,
@@ -450,13 +451,13 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
             <div
               key={c.label}
               className="group/cat relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2.5 text-center transition-all duration-200 hover:scale-[1.04] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-default"
-              style={{ background: `linear-gradient(145deg, ${catColor}08, transparent)` }}
+              style={{ backgroundImage: `linear-gradient(145deg, ${catColor}08, transparent)` }}
               title={c.details}
             >
               <div
                 className="absolute inset-x-0 top-0 h-px pointer-events-none"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${catColor}18, transparent)`,
+                  backgroundImage: `linear-gradient(90deg, transparent, ${catColor}18, transparent)`,
                 }}
               />
               <span

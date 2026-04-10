@@ -264,13 +264,13 @@ export function HeroOutcomePanel({
                   <div
                     className="pointer-events-none absolute inset-0 hidden dark:block opacity-50"
                     style={{
-                      background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}35, transparent 58%), linear-gradient(145deg, ${sevHex}12, transparent)`,
+                      backgroundImage: `radial-gradient(120% 95% at 100% 0%, ${sevHex}35, transparent 58%), linear-gradient(145deg, ${sevHex}12, transparent)`,
                     }}
                   />
                   <div
                     className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${sevHex}35, transparent)`,
+                      backgroundImage: `linear-gradient(90deg, transparent, ${sevHex}35, transparent)`,
                     }}
                   />
 
@@ -357,7 +357,7 @@ function ValueCard({
       <div
         className="pointer-events-none absolute inset-0 hidden dark:block"
         style={{
-          background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+          backgroundImage: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
         }}
       />
       <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -405,12 +405,12 @@ function StatPill({
       <div
         className="pointer-events-none absolute inset-0 hidden dark:block"
         style={{
-          background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+          backgroundImage: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
         }}
       />
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
-        style={{ background: `linear-gradient(90deg, transparent, ${hex}28, transparent)` }}
+        style={{ backgroundImage: `linear-gradient(90deg, transparent, ${hex}28, transparent)` }}
       />
       <div className="relative flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 dark:text-muted-foreground/80">
         <span className={cn("inline-flex shrink-0", statIconTextClass(kind))}>{icon}</span>
