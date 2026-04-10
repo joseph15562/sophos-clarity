@@ -252,7 +252,7 @@ export function HeroOutcomePanel({
                 <div
                   key={`${action.title}-${i}`}
                   className={cn(
-                    "relative isolate overflow-hidden rounded-2xl border bg-clip-padding pl-5 pr-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
+                    "relative isolate overflow-hidden rounded-2xl border pl-5 pr-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
                     "border-slate-200/90 bg-card",
                     "dark:border-white/[0.10] dark:bg-white/[0.05]",
                     "hover:border-slate-300/90 dark:hover:border-white/[0.14]",

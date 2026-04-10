@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    background-clip: padding-box;
+  }
+
   :root {
     color-scheme: light;
     /* Sophos Brand — Light Mode */

@@ -346,7 +346,7 @@ export default function ThemePreview() {
           ].map((a, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-white/[0.06] bg-[#001d4d] bg-clip-padding"
+              className="rounded-2xl border border-white/[0.06] bg-[#001d4d]"
               style={{
                 backgroundImage: `linear-gradient(to right, ${a.sev === "critical" ? "#EA0022" : "#F29400"} 3px, transparent 3px)`,
               }}
