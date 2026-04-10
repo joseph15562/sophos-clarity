@@ -1,8 +1,38 @@
 # Sophos FireComply
 
+[![CI + Deploy](https://github.com/joseph15562/sophos-firecomply/actions/workflows/deploy.yml/badge.svg)](https://github.com/joseph15562/sophos-firecomply/actions/workflows/deploy.yml)
+
 **Multi-tenant MSP platform for Sophos firewall security posture management, compliance reporting, and automated assessment.**
 
+> **159,200** lines of TypeScript | **626** automated tests | **39** compliance frameworks | **14** edge functions | **58** database migrations | **661** commits | **Solo developer**
+
 FireComply gives MSPs a single pane of glass across their entire Sophos firewall estate — deterministic best-practice scoring, AI-generated reports, branded client portals, drift detection, and fleet-wide analytics. For Sophos SEs, a dedicated Health Check workflow turns manual 3-hour firewall reviews into 15-minute professional engagements.
+
+**Live app:** [sophos-firecomply.vercel.app](https://sophos-firecomply.vercel.app) — click **"Try Demo Mode"** on the login page to explore with sample data, no account required.
+
+---
+
+## Table of Contents
+
+- [What It Does](#what-it-does)
+- [Key Capabilities](#key-capabilities)
+- [Architecture](#architecture)
+- [Documentation](#documentation)
+- [Local Development](#local-development)
+- [Deployment](#deployment)
+- [Privacy & Security](#privacy--security)
+- [Demo Mode](#demo-mode)
+- [Project by the Numbers](#project-by-the-numbers)
+- [What Problem This Actually Solves](#what-problem-this-actually-solves)
+- [Target Users](#target-users)
+- [Engineering Decisions That Shaped the Project](#engineering-decisions-that-shaped-the-project)
+- [Testing Strategy](#testing-strategy)
+- [Lessons Learned](#lessons-learned)
+- [The Development Journey — Building with AI as a Co-Developer](#the-development-journey--building-with-ai-as-a-co-developer)
+- [Security Model](#security-model)
+- [Accessibility](#accessibility)
+- [What I Would Do Differently](#what-i-would-do-differently)
+- [Licence](#licence)
 
 ---
 
@@ -333,12 +363,118 @@ The entire flow from demo config to exported report takes under 2 minutes.
 
 ---
 
+## Project by the Numbers
+
+| Metric                        | Count                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| Lines of TypeScript/TSX       | **159,200**                                                                   |
+| Git commits                   | **661**                                                                       |
+| React components              | **296**                                                                       |
+| Custom hooks                  | **52**                                                                        |
+| Pages / routes                | **50**                                                                        |
+| Supabase Edge Functions       | **14**                                                                        |
+| Database migrations           | **58**                                                                        |
+| Vitest unit tests             | **461**                                                                       |
+| Playwright E2E tests          | **51**                                                                        |
+| Deno edge function tests      | **114**                                                                       |
+| **Total automated tests**     | **626**                                                                       |
+| Test files                    | **120**                                                                       |
+| Documentation files           | **153**                                                                       |
+| Architecture Decision Records | **4**                                                                         |
+| Compliance frameworks         | **39**                                                                        |
+| Best-practice analysis checks | **37** across 12 categories                                                   |
+| Export formats                | **8** (PDF, Word, PPTX, HTML, CSV, JSON, ZIP, email)                          |
+| Production dependencies       | **65**                                                                        |
+| CI pipeline steps             | **9** (lint, typecheck, unit, Deno, build, bundle budget, audit, E2E, deploy) |
+
+The entire codebase — frontend, backend, edge functions, tests, infrastructure, documentation — was built by a single developer over approximately 16 months, starting January 2025.
+
+---
+
+## What Problem This Actually Solves
+
+A Sophos firewall security assessment done manually takes an experienced engineer **3+ hours**: export the config, read through hundreds of rules, check each category against best practices, map findings to whichever compliance framework the customer cares about, write the report, format it, and deliver it.
+
+FireComply reduces this to **under 15 minutes**:
+
+1. **Upload** the config export (30 seconds)
+2. **Review** the deterministic analysis — every finding is already scored, categorised, and mapped to compliance controls (2 minutes)
+3. **Generate** an AI report — the prompt includes all findings, evidence, and framework mappings so the output is specific to this firewall, not generic advice (3–5 minutes for streaming)
+4. **Export** as PDF, Word, or branded portal link and deliver to the customer (1 minute)
+
+For MSPs managing 20, 50, or 200+ firewalls across multiple customers, the multiplier effect is significant. Quarterly Business Reviews that required a week of preparation can be built from live Fleet Command data in an afternoon. Compliance evidence that was previously assembled manually from screenshots and spreadsheets is generated deterministically with full audit trails.
+
+The SE Health Check workflow has an additional impact: it turns what was an informal, inconsistent process (every SE had their own approach) into a standardised, professional engagement with branded deliverables.
+
+---
+
 ## Target Users
 
 - **MSP security teams** — portfolio-wide posture management, compliance reporting, client portals
 - **Sophos Sales Engineers** — pre-sales and post-sales health checks
 - **Sophos channel partners** — customer assessments and compliance evidence
 - **vCISO and GRC consultants** — framework-mapped compliance documentation
+
+---
+
+## Engineering Decisions That Shaped the Project
+
+These are deliberate architectural choices — not defaults or accidents — each made to solve a specific problem.
+
+**Client-side parsing, not server-side.** Firewall configs contain the most sensitive data in a network — every rule, every IP, every VPN peer, every admin account. The decision to parse configs entirely in the browser means raw configuration files never leave the user's machine. This is a harder engineering problem (browser-based XML/HTML parsing of multi-megabyte files, client-side section extraction, in-browser anonymisation) but it eliminates an entire class of data handling risk and makes the privacy story simple: your config never touches our servers.
+
+**Deterministic scoring, AI narrative.** The analysis engine scores every firewall identically — same config, same score, every time. The AI writes the report prose but never decides whether a finding passes or fails. This separation means compliance evidence is auditable and reproducible, while reports still read like they were written by a consultant rather than generated by a template.
+
+**Streaming de-anonymisation.** The anonymisation pipeline replaces real values with stable tokens before the data reaches the AI. The de-anonymisation layer runs on the SSE stream as chunks arrive, restoring real hostnames and IPs in real time. The user sees their actual infrastructure appearing in the report as it streams — not tokens, not a post-processing step. This required building a stateful stream transformer that handles token boundaries split across SSE chunks.
+
+**Multi-model with a single interface.** The AI backend uses an OpenAI-compatible streaming endpoint, meaning the same prompt pipeline works with Gemini, Claude, or ChatGPT by changing a URL and API key. This was a deliberate hedge against model quality regressions and pricing changes — when Gemini 2.0 regressed on table formatting, switching to test against Claude took minutes, not a rewrite.
+
+**Row-Level Security as the tenancy boundary.** Every database query is scoped by organisation via Supabase RLS policies. There is no application-level tenant filtering that could be bypassed — the database itself enforces isolation. This means a bug in application code cannot leak data across organisations.
+
+**Feature removal as a feature.** The war-room review identified half-built features (attestation workflow, custom framework builder, encryption overview, peer benchmarks, compliance calendar) that were adding cognitive load without delivering value. Removing them — deleting working code — was one of the highest-impact improvements. The remaining features are more polished and the codebase is more maintainable.
+
+---
+
+## Testing Strategy
+
+The project has **626 automated tests** across three test runners and four test layers, all enforced in CI. No code reaches production without passing every layer.
+
+### Unit Tests — Vitest (461 tests)
+
+Business logic, data transformations, and utility functions tested in isolation with `vitest` and `happy-dom`. Key coverage areas:
+
+- **Analysis engine** — deterministic scoring and grading across all 37 checks. Tests verify that the same config always produces the same score, grade, and findings.
+- **PDF generation** — the `pdfmake` document definition builder is tested against known inputs to ensure table structures, page breaks, and content ordering are correct. Tests run with mocked fonts to avoid loading the 4 MB vfs_fonts bundle.
+- **HTML report rendering** — sanitisation, markdown-to-HTML conversion, data-URI image handling, and compliance table generation are all tested independently of the browser.
+- **Anonymisation pipeline** — token replacement and restoration tested with round-trip assertions (anonymise → de-anonymise must produce the original input).
+- **Config extraction** — DOM parsing of Sophos XML configs tested against fixture files covering edge cases (empty sections, malformed XML, massive rule tables).
+
+### Edge Function Tests — Deno (114 tests)
+
+Every Supabase Edge Function has co-located `*_test.ts` files run with `deno test`. These cover:
+
+- **API route handlers** — request validation, authentication gates, response schemas, and error codes for every REST endpoint.
+- **Auth and crypto** — JWT verification, passkey challenge generation, service key validation, HMAC signing.
+- **Email rendering** — scheduled report email templates tested against expected HTML output.
+- **Schema validation** — Zod schemas for inbound API payloads tested with valid and invalid inputs.
+
+### End-to-End Tests — Playwright (51 tests)
+
+Full browser tests against a built application (`vite preview`), run on Chromium in CI:
+
+- **Smoke tests** — every page loads, renders its heading, and returns no console errors.
+- **Viewport tests** — responsive layout assertions at mobile (375px), tablet (768px), and desktop (1280px) breakpoints for all pages.
+- **Accessibility tests** — axe-core scans on every page with zero-tolerance for WCAG 2.1 AA violations. These have caught real bugs: colour contrast failures, missing button labels, links indistinguishable from body text.
+- **User journey tests** — multi-step flows (config upload → analysis → report generation → PDF download) tested end-to-end with realistic interactions.
+- **API hub tests** — API Explorer tab rendering, endpoint documentation, and interactive elements.
+
+### CI Pipeline Enforcement
+
+Tests are not advisory — they gate deployment:
+
+1. **Lint** (ESLint) → 2. **Type check** (tsc --noEmit) → 3. **Unit tests** (Vitest) → 4. **Deno tests** → 5. **Build** (Vite) → 6. **Bundle budget** (fail if JS > 5 MB) → 7. **npm audit** (fail on high/critical) → 8. **E2E tests** (Playwright) → 9. **Deploy**
+
+Any failure at any step stops the pipeline. The bundle budget check prevents performance regressions from accumulating. The npm audit step ensures known vulnerabilities are addressed before deployment, not after.
 
 ---
 
@@ -528,6 +664,68 @@ The Playwright E2E suite runs 50+ tests against a Vite preview build on GitHub A
 - **Environment parity matters** — the API hub test failed for weeks on CI because `VITE_SUPABASE_URL` wasn't set in the E2E build, causing a `.replace()` call on `undefined` deep inside a tab component. Locally it worked fine because the developer always has the env var set. Defensive fallbacks (`|| ""`) on every `import.meta.env` access in rendering paths are now mandatory.
 - **Timeouts must account for CI runner speed** — PDF generation via pdfmake that takes 5 seconds locally can take 120+ seconds on a constrained CI runner. Assertions need generous timeouts, and test-level timeouts need to be even more generous than assertion timeouts.
 - **Accessibility testing catches real bugs early** — axe-core assertions in E2E tests caught colour contrast failures, missing button labels, and links that weren't visually distinguishable from surrounding text — all genuine WCAG violations that would have shipped without automated checks.
+
+---
+
+## The Development Journey — Building with AI as a Co-Developer
+
+This project was built from the first commit with AI pair programming (Cursor + Claude, later Gemini). This is not a "generated" project — every feature was designed, reviewed, and iterated by a human developer — but AI fundamentally changed the velocity and ambition of what a single developer could ship.
+
+**What AI made possible:**
+
+- Standing up 296 components, 52 hooks, and 14 edge functions in 16 months as a solo developer would not have been achievable with traditional development alone. AI accelerated boilerplate (forms, tables, CRUD routes), suggested patterns (streaming SSE, RLS policies), and caught bugs during development (type errors, missing edge cases).
+- The compliance mapping logic across 39 frameworks required understanding regulations I had no prior expertise in. AI helped research control requirements, but every mapping was then manually verified against the published framework documents — AI was the starting point, not the answer.
+- Test coverage at 626 automated tests was possible because AI generated test scaffolding quickly, freeing time to focus on the hard tests (E2E flows, edge function integration tests, accessibility assertions).
+
+**What AI got wrong (and what I learned from it):**
+
+- AI confidently generates plausible-but-incorrect compliance mappings. Early in the project, I trusted AI-generated framework mappings without verification and discovered errors weeks later during manual review. This taught me that AI is unreliable for compliance accuracy — the deterministic scoring engine exists specifically because of this lesson.
+- AI-generated components often looked correct but had subtle UX issues: missing loading states, no error boundaries, no empty-state handling, inconsistent keyboard navigation. The war-room review quantified this: 26 of 28 findings were in AI-assisted code. The fix was developing a mental checklist for every component that goes beyond "does it compile."
+- Prompt engineering was iterative over months, not a one-shot effort. The first version of the technical report prompt produced generic security advice. It took 15+ iterations to get domain-specific output — specific Sophos feature references, correct severity classifications, compliance-aware language, proper table formatting. Each iteration required generating reports from real configs and comparing them section by section.
+
+**The meta-lesson:** AI is transformative for developer productivity but dangerous for domain accuracy. The architecture of this project — deterministic analysis engine for correctness, AI layer for narrative — directly reflects learning where AI helps and where it hurts.
+
+---
+
+## Security Model
+
+| Layer              | Implementation                                                                                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Authentication** | Supabase Auth with email/password, magic links, and passkey (WebAuthn) support                                                                           |
+| **Authorisation**  | Row-Level Security on every table; organisation-scoped policies enforce tenant isolation at the database level                                           |
+| **Config privacy** | Client-side parsing — raw firewall configs are never uploaded to the server                                                                              |
+| **Anonymisation**  | Deterministic token replacement of IPs, hostnames, and identifiers before data reaches the AI; stable tokens allow de-anonymisation on the return stream |
+| **API security**   | Service key authentication for edge functions; CORS restricted to known origins; rate limiting on AI endpoints                                           |
+| **Portal access**  | Time-limited, token-authenticated portal links for read-only customer views — no account required for the end customer                                   |
+| **Secrets**        | All credentials in environment variables / Supabase Vault; no secrets in source code (enforced by CI audit step)                                         |
+
+---
+
+## Accessibility
+
+The application targets WCAG 2.1 AA conformance:
+
+- **Automated enforcement:** Every page is tested with axe-core via Playwright E2E tests. Accessibility violations fail the CI pipeline — they are treated as bugs, not warnings.
+- **Keyboard navigation:** All interactive elements are reachable and operable via keyboard. Tab ordering follows visual layout.
+- **Colour contrast:** Minimum 4.5:1 contrast ratio enforced. The changelog page had a contrast violation caught by automated tests and fixed before shipping.
+- **Semantic HTML:** Heading hierarchy (`h1` → `h2` → `h3`), landmark regions, form labels, and ARIA attributes are used throughout. Missing `h1` elements on three pages were caught by E2E viewport tests.
+- **Screen reader support:** Interactive elements have accessible names. A `button-name` violation on the customer sort dropdown was caught and fixed with `aria-label`.
+
+---
+
+## What I Would Do Differently
+
+Building this project over 16 months as a solo developer taught me as much about what not to do as what to do. If I started again:
+
+**Start with fewer features, ship them better.** The initial version tried to build everything at once — 50 pages, PSA integrations, drift detection, portfolio analytics, and compliance mapping for 39 frameworks. The war-room review revealed that breadth had come at the cost of polish: missing loading states, inconsistent error handling, half-built features that confused users. A tighter MVP with 5 polished surfaces would have been more impressive and more usable than 15 surfaces at 70%.
+
+**Write E2E tests from week one.** The E2E suite was added late in the project and immediately found real bugs — accessibility violations, broken pages when environment variables were missing, layout issues on mobile. Every bug found by E2E tests was a bug that could have been caught months earlier. The cost of adding E2E tests late was debugging issues that had been silently present for weeks.
+
+**Design the prompt pipeline before writing prompts.** The current prompt assembly code (~180 lines) grew organically as requirements were added. If I had designed the pipeline architecture first — context assembly, token budgets, section selection, anonymisation, formatting rules — the code would be cleaner and the prompts would be more consistent. Instead, each new report type required retrofitting the pipeline.
+
+**Invest in observability earlier.** The application has error boundaries and console logging, but lacks structured production telemetry (Sentry, LogRocket, or similar). When users reported issues, debugging required reproducing the problem locally. Structured error tracking would have cut diagnostic time significantly.
+
+**Document API contracts formally.** The REST API documentation exists in-app but the edge functions don't have formal OpenAPI specs. For a project of this size, maintaining OpenAPI definitions would have made the API more discoverable and testable, and would have caught breaking changes automatically.
 
 ---
 
