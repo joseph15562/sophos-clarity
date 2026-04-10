@@ -700,6 +700,57 @@ export function AnalysisTabs({
                   />
                 </SecurityWidgetShell>
               )}
+
+              {/* Optional overview widgets — rendered at top level so they're
+                  visible as soon as the user enables them via the customiser. */}
+              {totalFindings > 0 &&
+                (w("findings-by-age") ||
+                  w("sla-compliance-gauge") ||
+                  w("remediation-velocity") ||
+                  w("alert-feed")) && (
+                  <div className="grid gap-4 lg:grid-cols-2 items-start">
+                    {w("findings-by-age") && (
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <FindingsByAge analysisResults={analysisResult} />
+                      </Suspense>
+                    )}
+                    {w("sla-compliance-gauge") && (
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <SlaComplianceGauge analysisResults={analysisResult} />
+                      </Suspense>
+                    )}
+                    {w("remediation-velocity") && (
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <RemediationVelocity analysisResults={analysisResult} />
+                      </Suspense>
+                    )}
+                    {w("alert-feed") && (
+                      <Suspense fallback={<CardSkeleton />}>
+                        <AlertFeedWidget analysisResults={analysisResult} />
+                      </Suspense>
+                    )}
+                  </div>
+                )}
+
+              {(w("mdr-status") || w("firmware-tracker")) && (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {w("mdr-status") && (
+                    <SecurityWidgetShell>
+                      <Suspense fallback={<CardSkeleton />}>
+                        <MdrStatus analysisResults={analysisResult} files={files} />
+                      </Suspense>
+                    </SecurityWidgetShell>
+                  )}
+                  {w("firmware-tracker") && (
+                    <SecurityWidgetShell>
+                      <Suspense fallback={<CardSkeleton />}>
+                        <FirmwareTracker files={files} />
+                      </Suspense>
+                    </SecurityWidgetShell>
+                  )}
+                </div>
+              )}
+
               <Collapsible defaultOpen={false} className="space-y-4">
                 <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/40 transition-colors [&[data-state=open]_svg]:rotate-180">
                   <span>Extended overview, estate &amp; enrichment</span>
@@ -709,35 +760,6 @@ export function AnalysisTabs({
                   <SecurityWidgetShell>
                     <FindingsChanges analysisResults={analysisResult} />
                   </SecurityWidgetShell>
-
-                  {totalFindings > 0 &&
-                    (w("findings-by-age") ||
-                      w("sla-compliance-gauge") ||
-                      w("remediation-velocity") ||
-                      w("alert-feed")) && (
-                      <div className="grid gap-4 lg:grid-cols-2 items-start">
-                        {w("findings-by-age") && (
-                          <Suspense fallback={<ChartSkeleton />}>
-                            <FindingsByAge analysisResults={analysisResult} />
-                          </Suspense>
-                        )}
-                        {w("sla-compliance-gauge") && (
-                          <Suspense fallback={<ChartSkeleton />}>
-                            <SlaComplianceGauge analysisResults={analysisResult} />
-                          </Suspense>
-                        )}
-                        {w("remediation-velocity") && (
-                          <Suspense fallback={<ChartSkeleton />}>
-                            <RemediationVelocity analysisResults={analysisResult} />
-                          </Suspense>
-                        )}
-                        {w("alert-feed") && (
-                          <Suspense fallback={<CardSkeleton />}>
-                            <AlertFeedWidget analysisResults={analysisResult} />
-                          </Suspense>
-                        )}
-                      </div>
-                    )}
 
                   <SecurityWidgetShell>
                     <EstateOverview
@@ -760,25 +782,6 @@ export function AnalysisTabs({
                         customerName={branding.customerName}
                       />
                     </Suspense>
-                  )}
-
-                  {(w("mdr-status") || w("firmware-tracker")) && (
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      {w("mdr-status") && (
-                        <SecurityWidgetShell>
-                          <Suspense fallback={<CardSkeleton />}>
-                            <MdrStatus analysisResults={analysisResult} files={files} />
-                          </Suspense>
-                        </SecurityWidgetShell>
-                      )}
-                      {w("firmware-tracker") && (
-                        <SecurityWidgetShell>
-                          <Suspense fallback={<CardSkeleton />}>
-                            <FirmwareTracker files={files} />
-                          </Suspense>
-                        </SecurityWidgetShell>
-                      )}
-                    </div>
                   )}
                 </CollapsibleContent>
               </Collapsible>
