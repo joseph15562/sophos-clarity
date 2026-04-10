@@ -388,6 +388,100 @@ The streaming layer evolved from a simple `fetch` + `ReadableStream` into a defe
 - **Retry only on transient errors** (502/503/504), never on 429 — retrying a rate limit immediately burns more quota and confuses users.
 - **Client-side abort signal merging** — the user can cancel generation, and the abort propagates through to the fetch, the timeout controller, and the stream reader simultaneously.
 
+### The War-Room Prompt — Using AI to Audit Itself
+
+One of the most impactful decisions in the project was running the entire codebase through a deliberately adversarial AI review — a single, structured prompt that roleplays a panel of world-class experts (a Google principal engineer, an Apple designer, a CrowdStrike security architect, a Netflix performance engineer, and a YC partner) conducting a joint audit with no encouragement and no softening. The prompt scores ten dimensions on a 1–10 scale with written justification, demands every finding include severity, exact location, and exact fix, and ends with a "brutal truth" verdict.
+
+<details>
+<summary>The full war-room prompt</summary>
+
+```
+You are a panel of world-class experts simultaneously — a principal engineer from Google,
+a senior product designer from Apple, a cybersecurity architect from CrowdStrike, a
+performance engineer from Netflix, and a brutal YC partner who has seen 10,000 startups
+fail. You are doing a JOINT audit of my project. You do not encourage. You do not
+compliment unless something is genuinely exceptional. You find problems. You find
+weaknesses. You find the exact reasons this project would fail in production, fail with
+real users, or fail to scale. Then you tell me precisely how to fix every single one.
+
+This is not a friendly code review. This is a war room intervention.
+
+════════════════════════════════════════════
+GROUND RULES FOR YOUR ANALYSIS
+════════════════════════════════════════════
+
+- Never say "looks good" unless you can defend it with data or industry benchmarks
+- Every finding must include: WHAT it is, WHY it matters, SEVERITY (Critical / High /
+  Medium / Low), and EXACT fix with implementation detail
+- If you reference a best practice, name the source (Google SRE Book, OWASP Top 10,
+  Nielsen Heuristics, etc.)
+- Do not group problems to make them look smaller — list every single one individually
+- Score every dimension on a 1–10 scale with a written justification for the score
+- At the end, give me a cold, honest verdict: is this project production-ready or not,
+  and what stands between it and being truly exceptional
+
+════════════════════════════════════════════
+DIMENSIONS
+════════════════════════════════════════════
+
+1. CODE ARCHITECTURE & QUALITY — folder structure, SOLID, DRY, abstractions, naming,
+   dead code, god objects, state management, onboardability
+2. PERFORMANCE & EFFICIENCY — N+1 queries, memoisation, bundle size, memory leaks,
+   pagination, debouncing, blocking operations, breaking points
+3. SECURITY & VULNERABILITY — hardcoded secrets, input validation, auth/authz at every
+   layer, OWASP Top 10, CVEs, error leakage, rate limiting, blast radius
+4. UI/UX & PRODUCT DESIGN — visual language, Fitts's Law, Nielsen Heuristics, information
+   hierarchy, state handling, responsiveness, WCAG 2.1 AA, onboarding
+5. FUNCTIONALITY & BUSINESS LOGIC — edge cases, race conditions, error boundaries, form
+   validation parity, half-built features, silent failures
+6. TESTING & RELIABILITY — meaningful coverage, E2E critical paths, integration tests,
+   unhappy paths, flaky tests, rollback strategy, MTTD/MTTR
+7. DOCUMENTATION & KNOWLEDGE — README quality, inline comments, API docs, env var docs,
+   architecture diagrams, decision records, changelog
+8. DEVELOPER EXPERIENCE & TOOLING — local setup friction, linter, formatter, pre-commit
+   hooks, CI/CD, dependency pinning, task scripts
+9. SCALABILITY & SYSTEM DESIGN — bottlenecks, indexing, caching, architectural ceilings,
+   statelessness, background jobs, observability, SPOFs
+10. PRODUCT VISION & STRATEGIC QUALITY — value proposition clarity, feature bloat, polish
+    distribution, trust signals, differentiation, fundability
+
+FINAL VERDICT: Scorecard, critical failures, prioritised roadmap (Tier 1/2/3), brutal
+truth paragraph, and 5 transformational moves to reach exceptional.
+```
+
+</details>
+
+#### What It Found
+
+The first run scored the project at roughly **63/100** and surfaced **8 critical/high severity findings** — real vulnerabilities and architectural problems that would have shipped to production:
+
+| #   | Finding                                                              | Severity |
+| --- | -------------------------------------------------------------------- | -------- |
+| 1   | HMAC timing attack vulnerability in webhook signature verification   | Critical |
+| 2   | Weak AES key derivation for Sophos Central credential encryption     | Critical |
+| 3   | HTML injection in email templates via unsanitised user input         | High     |
+| 4   | Internal error messages and stack traces leaked to API clients       | High     |
+| 5   | Wrong auth token used in scheduled report settings                   | High     |
+| 6   | Zero test coverage on edge functions (the security perimeter)        | High     |
+| 7   | Portal data IDOR via predictable slug enumeration                    | High     |
+| 8   | npm audit: 5 critical + 2 high known vulnerabilities in dependencies | High     |
+
+Beyond security, it identified N+1 query patterns in fleet panels, missing empty states across 20+ surfaces, half-built features that should be removed entirely (attestation workflow, custom framework builder, encryption overview, peer benchmarks), no TypeScript strict mode, no structured logging, and no abort signal handling on fetches.
+
+#### What Changed Because of It
+
+The review became the project's engineering backlog. Every finding was tracked in [`docs/REVIEW.md`](docs/REVIEW.md) with severity, exact location, exact fix, and status. The work was organised into three tiers:
+
+**Tier 1 (critical — fixed immediately):** All 8 security findings resolved — constant-time HMAC comparison, HKDF key derivation with auto-migration, HTML escaping on all email templates, generic error messages to clients, auth token fix, Deno test scaffold, portal slug entropy, and dependency audit cleanup.
+
+**Tier 2 (significant — fixed over weeks):** TypeScript strict mode enabled across `src/`, N+1 queries batched, TanStack Query adopted for data fetching with abort signal support, empty states added to every surface, half-built features removed, Playwright E2E expanded with accessibility assertions, structured `logJson` on all edge functions, OpenAPI documentation, Zod validation on every API route, and 4 Architecture Decision Records.
+
+**Tier 3 (polish — ongoing):** React.memo on expensive components, debounced search inputs, optional Redis caching pilot, job queue system, k6 load testing scripts, Sentry integration, and server-side PDF generation pathway documented.
+
+The score moved from **~63** to **~84/100** over several weeks. More importantly, the review changed how the project was built — every new feature now has a mental checklist: is the input validated, is the error generic, is the fetch cancellable, is the empty state handled, is there a test?
+
+The full living document is at [`docs/REVIEW.md`](docs/REVIEW.md) — scores, findings, fixes, and status for every item.
+
 ### E2E Testing a Client-Side SPA on CI Is Fragile by Nature
 
 The Playwright E2E suite runs 50+ tests against a Vite preview build on GitHub Actions free-tier runners. Several hard-won lessons:
