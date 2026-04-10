@@ -578,6 +578,7 @@ serve(async (req) => {
       mode === "guest_health_firewall_licenses"
     ) {
       const publishable = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
+      const publishableAlt = (Deno.env.get("SB_PUBLISHABLE_KEY") ?? "").trim();
       const jwtSecret =
         (Deno.env.get("SUPABASE_JWT_SECRET") ?? Deno.env.get("JWT_SECRET") ??
           "").trim();
@@ -593,6 +594,9 @@ serve(async (req) => {
       }
 
       let guestAuthOk = publishable.length > 0 && incoming === publishable;
+      if (!guestAuthOk && publishableAlt.length > 0) {
+        guestAuthOk = incoming === publishableAlt;
+      }
       if (!guestAuthOk && jwtSecret.length > 0 && supabaseUrl.length > 0) {
         guestAuthOk = await verifyGuestAnonJwt(
           incoming,
@@ -607,17 +611,36 @@ serve(async (req) => {
         );
       }
 
+      // Also accept a valid signed-in user session JWT (the client sends
+      // the session token in the Authorization header when the user is
+      // authenticated, even for guest_health_* modes).
+      if (!guestAuthOk && incoming.includes(".")) {
+        try {
+          const sb = adminClient();
+          const { data } = await sb.auth.getUser(incoming);
+          if (data?.user?.id) guestAuthOk = true;
+        } catch {
+          // Not a valid session token
+        }
+      }
+
       if (!guestAuthOk) {
-        logJson("warn", "sophos_central_guest_auth_failed", {
+        const diag = {
           publishableLen: publishable.length,
+          publishableAltLen: publishableAlt.length,
           incomingLen: incoming.length,
+          incomingPrefix: incoming.slice(0, 20),
+          publishablePrefix: publishable.slice(0, 20),
+          publishableAltPrefix: publishableAlt.slice(0, 20),
           hadJwtSecret: jwtSecret.length > 0,
           hadSupabaseUrl: supabaseUrl.length > 0,
           hadBearer: bearer.length > 0,
           hadApikeyHeader: apikeyHeader.length > 0,
           stringMatch: publishable.length > 0 && incoming === publishable,
-        });
-        return json({ error: "Unauthorized" }, 401);
+          altMatch: publishableAlt.length > 0 && incoming === publishableAlt,
+        };
+        logJson("warn", "sophos_central_guest_auth_failed", diag);
+        return json({ error: "Unauthorized", _debug: diag }, 401);
       }
 
       const { clientId, clientSecret, tenantId } = body as {

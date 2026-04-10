@@ -2,6 +2,7 @@ import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { GuestHaGroup } from "@/lib/guest-central-ha-groups";
 import { guestHaGroupSelectValue } from "@/lib/guest-central-ha-groups";
 import { getSupabasePublicEdgeAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { readJwtPayloadClaim } from "@/lib/jwt-payload";
 import type { GuestFirewallLicenseApiRow } from "./types";
 
@@ -47,8 +48,22 @@ export async function callGuestCentral<T extends Record<string, unknown>>(
 ): Promise<T> {
   const resolved = getSupabasePublicEdgeAuth();
   const url = `${resolved.url.replace(/\/$/, "")}/functions/v1/sophos-central`;
-  const key = resolved.anonKey.trim();
-  const jwtRole = readJwtPayloadClaim(key, "role");
+  const anonKey = resolved.anonKey.trim();
+
+  // Prefer the user's session JWT when signed in — the edge function always
+  // trusts a valid session token. Fall back to the anon/publishable key for
+  // true guest (unauthenticated) callers.
+  let bearer = anonKey;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      bearer = data.session.access_token;
+    }
+  } catch {
+    // No session available — use anon key
+  }
+
+  const jwtRole = readJwtPayloadClaim(anonKey, "role");
   if (jwtRole === "service_role") {
     throw new Error(
       "Wrong Supabase key: use the anon (publishable) key in VITE_SUPABASE_PUBLISHABLE_KEY, not the service_role secret.",
@@ -58,8 +73,8 @@ export async function callGuestCentral<T extends Record<string, unknown>>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-      apikey: key,
+      Authorization: `Bearer ${bearer}`,
+      apikey: anonKey,
     },
     body: JSON.stringify(body),
     signal: options?.signal,
