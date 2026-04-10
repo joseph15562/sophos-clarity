@@ -455,7 +455,7 @@
   }
 
   .widget-card {
-    @apply relative isolate rounded-xl border border-border/60 bg-white/78 dark:bg-card p-5 backdrop-blur-lg shadow-card transition-[box-shadow,border-color,background-color,transform] duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0 hover:shadow-elevated hover:border-primary/20 dark:hover:border-[#00EDFF]/30 hover:bg-white/90 dark:hover:bg-card;
+    @apply relative isolate overflow-hidden rounded-xl border border-border/60 bg-white/78 dark:bg-card p-5 backdrop-blur-lg shadow-card transition-[box-shadow,border-color,background-color,transform] duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0 hover:shadow-elevated hover:border-primary/20 dark:hover:border-[#00EDFF]/30 hover:bg-white/90 dark:hover:bg-card;
   }
 
   .widget-card::before {
@@ -666,22 +666,4 @@
   height: auto !important;
   object-fit: contain !important;
   box-sizing: border-box;
-}
-
-/*
- * Prevent background-color / background-image from bleeding past rounded borders.
- * Placed outside all @layer so it overrides Tailwind utilities and inline
- * `background:` shorthand (which implicitly resets background-clip to border-box).
- */
-*,
-*::before,
-*::after {
-  -webkit-background-clip: padding-box !important;
-  background-clip: padding-box !important;
-}
-.bg-clip-text,
-.eyebrow,
-.dark .eyebrow {
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
 }
