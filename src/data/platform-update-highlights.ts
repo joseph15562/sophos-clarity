@@ -21,6 +21,10 @@ export const PLATFORM_UPDATE_CARD = {
   /** 1–4 short lines; mirror the themes of the latest month’s shipped work. */
   highlights: [
     {
+      tag: "new" as const,
+      text: "Re-run First-Time Setup wizard from Workspace Controls → Settings on any page (Fleet, Customers, Central, etc.); previously only available on Assess.",
+    },
+    {
       tag: "fixed" as const,
       text: "PDF report firewall rules table trimmed from 23 to 16 columns — no more off-page overflow; AI prompt whitelists exact columns; compliance heading arrow glyph fixed for PDF fonts.",
     },

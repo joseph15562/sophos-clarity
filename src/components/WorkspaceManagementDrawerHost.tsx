@@ -11,6 +11,8 @@ import {
 } from "@/lib/workspace-deeplink";
 import { trackProductEvent } from "@/lib/product-telemetry";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { SetupWizard, resetSetupFlag } from "@/components/SetupWizard";
+import type { BrandingData } from "@/components/BrandingSetup";
 
 const EMPTY_ANALYSIS = {} as Record<string, AnalysisResult>;
 
@@ -25,6 +27,14 @@ function WorkspaceManagementDrawerHostInner() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { org, isGuest, isViewerOnly, canManageTeam } = useAuth();
   const [open, setOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardBranding, setWizardBranding] = useState<BrandingData>({
+    companyName: "",
+    logoUrl: null,
+    customerName: "",
+    preparedBy: "",
+    footerText: "",
+  });
   const [initialTab, setInitialTab] = useState<
     "dashboard" | "reports" | "history" | "settings" | undefined
   >(undefined);
@@ -107,9 +117,22 @@ function WorkspaceManagementDrawerHostInner() {
         hasFiles={false}
         initialTab={initialTab}
         initialSettingsSection={initialSettingsSection}
+        onRerunSetup={() => {
+          resetSetupFlag();
+          setOpen(false);
+          setWizardOpen(true);
+        }}
         localMode={false}
         onLocalModeChange={() => {}}
         linkedCloudAssessmentId={null}
+      />
+      <SetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        branding={wizardBranding}
+        onBrandingChange={setWizardBranding}
+        orgName={org?.name}
+        isGuest={false}
       />
     </ErrorBoundary>
   );

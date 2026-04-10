@@ -173,7 +173,7 @@ The [`docs/start-here/`](docs/start-here/) folder contains everything you need t
 
 ### Product Brief (21 pages)
 
-- **[PDF](docs/Sophos%20FireComply%20—%20Product%20Brief.pdf)** — printable 21-page product brief covering AI reports, SE Health Check flow, prompt engineering, Sophos Central integration, client portals, connector agent, and integrations
+- **[PDF](docs/Sophos%20FireComply%20—%20Product%20Brief.pdf)** — printable product brief covering AI reports, assessment workbench, compliance & insurance readiness, SE Health Check flow, prompt engineering, Sophos Central integration with serial number auto-linking, client portals, connector agent with SNMP discovery, and integrations
 - **[HTML](docs/Sophos%20FireComply%20—%20Product%20Brief.html)** — interactive version with screenshots
 - **[Markdown](docs/Sophos%20FireComply%20—%20Product%20Brief.md)** — full product brief in markdown
 

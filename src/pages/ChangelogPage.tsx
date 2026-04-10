@@ -446,6 +446,12 @@ function ChangelogPageInner() {
             <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
+                <strong className="text-foreground">Re-run First-Time Setup from any page</strong>:
+                the 14-step setup wizard can now be relaunched from Workspace Controls → Settings on
+                every page (Fleet, Customers, Central, etc.) — previously it was only available on
+                the Assess page.
+              </li>
+              <li>
                 <strong className="text-foreground">PDF report — firewall rules table fix</strong>:
                 the firewall rules table in AI-generated reports no longer overflows the page edge.
                 Duplicate columns (Source Zone / Source Zones, IPS / IPS Policy / Intrusion
