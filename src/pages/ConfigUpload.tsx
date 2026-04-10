@@ -241,7 +241,6 @@ const ConfigUpload = () => {
         setPageState("ready");
         setUploadProgress(0);
       }
-       
     },
     [token],
   );

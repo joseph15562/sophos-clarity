@@ -1,12 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import {
-  BarChart3,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  RefreshCw,
-  Users,
-} from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Clock, RefreshCw, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useHealthChecksQuery, queryKeys } from "@/hooks/queries";
 import { EmptyState } from "@/components/EmptyState";

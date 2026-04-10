@@ -36,11 +36,13 @@ function emptyInspectionPosture(overrides: Partial<InspectionPosture> = {}): Ins
 }
 
 /** Minimal `AnalysisResult` aligned with `ConfigStats` / `InspectionPosture` in `src/lib/analysis/types.ts`. */
-function minimalAnalysisResult(overrides: {
-  stats?: Partial<AnalysisResult["stats"]>;
-  findings?: Finding[];
-  inspectionPosture?: Partial<InspectionPosture>;
-} = {}): AnalysisResult {
+function minimalAnalysisResult(
+  overrides: {
+    stats?: Partial<AnalysisResult["stats"]>;
+    findings?: Finding[];
+    inspectionPosture?: Partial<InspectionPosture>;
+  } = {},
+): AnalysisResult {
   const { stats: s, findings = [], inspectionPosture: ip } = overrides;
   return {
     stats: {

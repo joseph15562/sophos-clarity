@@ -11,11 +11,12 @@ import {
   SE_HEALTH_CHECK_WORDMARK_SRC,
 } from "@/lib/se-health-check-report-html";
 
-const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
+const SOPHOS_BP_TEMPLATE =
+  BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
 
 describe("se-health-check-report-html", () => {
   it("escapeHtml neutralizes markup and ampersands", () => {
-    expect(escapeHtml('<script>alert(1)</script>')).not.toContain("<script>");
+    expect(escapeHtml("<script>alert(1)</script>")).not.toContain("<script>");
     expect(escapeHtml("a & b")).toBe("a &amp; b");
     expect(escapeHtml('"quotes"')).toBe("&quot;quotes&quot;");
   });
@@ -42,7 +43,7 @@ describe("se-health-check-report-html", () => {
       baselineResults: { [label]: bl },
       bpByLabel: { [label]: bp },
       licence,
-      customerName: 'Evil<img src=x onerror=alert(1)>',
+      customerName: "Evil<img src=x onerror=alert(1)>",
       preparedBy: "SE User",
       dpiExemptZones: [],
       dpiExemptNetworks: [],

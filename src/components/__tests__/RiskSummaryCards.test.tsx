@@ -30,16 +30,14 @@ function emptyInspectionPosture(overrides: Partial<InspectionPosture> = {}): Ins
   };
 }
 
-function minimalAnalysisResult(overrides: {
-  stats?: Partial<AnalysisResult["stats"]>;
-  findings?: Finding[];
-  inspectionPosture?: Partial<InspectionPosture>;
-} = {}): AnalysisResult {
-  const {
-    stats: statsOverrides,
-    findings = [],
-    inspectionPosture: postureOverrides,
-  } = overrides;
+function minimalAnalysisResult(
+  overrides: {
+    stats?: Partial<AnalysisResult["stats"]>;
+    findings?: Finding[];
+    inspectionPosture?: Partial<InspectionPosture>;
+  } = {},
+): AnalysisResult {
+  const { stats: statsOverrides, findings = [], inspectionPosture: postureOverrides } = overrides;
 
   return {
     stats: {
@@ -86,9 +84,7 @@ function cardRoot(label: string): HTMLElement {
 describe("RiskSummaryCards", () => {
   it("renders without crashing with minimal data", () => {
     const { container } = render(
-      <RiskSummaryCards
-        analysisResults={{ fw1: minimalAnalysisResult() }}
-      />,
+      <RiskSummaryCards analysisResults={{ fw1: minimalAnalysisResult() }} />,
     );
 
     expect(container.firstChild).toBeInTheDocument();
@@ -96,11 +92,7 @@ describe("RiskSummaryCards", () => {
   });
 
   it("shows overall score", () => {
-    render(
-      <RiskSummaryCards
-        analysisResults={{ fw1: analysisResultOverallAbout70() }}
-      />,
-    );
+    render(<RiskSummaryCards analysisResults={{ fw1: analysisResultOverallAbout70() }} />);
 
     expect(within(cardRoot("Overall Score")).getByText("70")).toBeInTheDocument();
   });

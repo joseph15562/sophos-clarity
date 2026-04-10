@@ -135,7 +135,11 @@ function findConsolidationOpportunities(rules: RuleRow[]): ConsolidationSet[] {
 }
 
 export function RuleConsolidation({ files }: Props) {
-  const { opportunities, totalBefore: _totalBefore, totalAfter } = useMemo(() => {
+  const {
+    opportunities,
+    totalBefore: _totalBefore,
+    totalAfter,
+  } = useMemo(() => {
     const rules = getRules(files);
     const opportunities = findConsolidationOpportunities(rules);
     const rulesInSets = new Set(opportunities.flatMap((s) => s.rules.map((r) => r.index)));

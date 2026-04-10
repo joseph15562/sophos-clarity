@@ -1414,7 +1414,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         setSaveError(e instanceof Error ? e.message : "Save failed");
       }
       setSavingReports(false);
-       
     },
     [
       analysisResults,

@@ -84,10 +84,10 @@ describe("ScoreSimulator", () => {
       <ScoreSimulator analysisResults={{ fw1: analysisWithWebFilterFinding() }} defaultOpen />,
     );
 
-    expect(screen.getByRole("heading", { name: /Remediation Impact Simulator/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/Enable Web Filtering on all WAN rules/i),
+      screen.getByRole("heading", { name: /Remediation Impact Simulator/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Enable Web Filtering on all WAN rules/i)).toBeInTheDocument();
   });
 
   it("renders collapsed by default", () => {
@@ -95,7 +95,9 @@ describe("ScoreSimulator", () => {
       <ScoreSimulator analysisResults={{ fw1: analysisWithWebFilterFinding() }} />,
     );
 
-    expect(screen.getByRole("heading", { name: /Remediation Impact Simulator/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Remediation Impact Simulator/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Enable Web Filtering on all WAN rules/i)).not.toBeInTheDocument();
   });
 
