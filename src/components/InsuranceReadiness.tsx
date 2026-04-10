@@ -143,17 +143,12 @@ export function InsuranceReadiness({ analysisResults, customerName, mspName }: P
           return (
             <div
               key={q.question}
-              className="relative flex items-start gap-3.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden pl-5 pr-4 py-4 transition-all duration-200 hover:shadow-elevated backdrop-blur-sm"
+              className="flex items-start gap-3.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] pl-5 pr-4 py-4 transition-all duration-200 hover:shadow-elevated backdrop-blur-sm"
               style={{
-                background:
-                  "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))",
+                background: `linear-gradient(to right, ${accentColor} 3px, transparent 3px), linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))`,
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
               }}
             >
-              <div
-                className="absolute inset-y-0 left-0 w-[3px]"
-                style={{ backgroundColor: accentColor }}
-              />
               <span
                 className={`inline-flex items-center justify-center h-7 w-7 rounded-lg shrink-0 text-sm font-bold ${style.bg} ${style.color}`}
                 title={q.answer}

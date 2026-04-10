@@ -257,11 +257,10 @@ export function HeroOutcomePanel({
                     "dark:border-white/[0.10] dark:bg-white/[0.05]",
                     "hover:border-slate-300/90 dark:hover:border-white/[0.14]",
                   )}
+                  style={{
+                    backgroundImage: `linear-gradient(to right, ${sevHex} 3px, transparent 3px)`,
+                  }}
                 >
-                  <div
-                    className="absolute inset-y-0 left-0 w-[3px]"
-                    style={{ backgroundColor: sevHex }}
-                  />
                   <div
                     className="pointer-events-none absolute inset-0 hidden dark:block opacity-50"
                     style={{

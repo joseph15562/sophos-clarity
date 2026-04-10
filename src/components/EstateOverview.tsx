@@ -605,11 +605,9 @@ function FindingCard({
     <div
       className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{
-        background: `linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
+        background: `linear-gradient(to right, ${sevHex} 3px, transparent 3px), linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
       }}
     >
-      {/* Left accent bar (separate from border so corners stay uniformly rounded) */}
-      <div className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: sevHex }} />
       <div className="absolute inset-0 pointer-events-none">
         <div
           className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-12"
@@ -937,11 +935,9 @@ function FindingsPanel({
               key={g.section}
               className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
-                background: `linear-gradient(135deg, ${hex}08, ${hex}02)`,
+                background: `linear-gradient(to right, ${hex} 3px, transparent 3px), linear-gradient(135deg, ${hex}08, ${hex}02)`,
               }}
             >
-              {/* Left accent bar */}
-              <div className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: hex }} />
               <div className="absolute inset-0 pointer-events-none">
                 <div
                   className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-15"

@@ -500,15 +500,11 @@ export function CentralEnrichment({
                         return (
                           <div
                             key={a.id}
-                            className="relative overflow-hidden text-[10px] pl-4 pr-3 py-1.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-200 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
+                            className="text-[10px] pl-4 pr-3 py-1.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-200 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
                             style={{
-                              background: `linear-gradient(135deg, ${alertHex}08, ${alertHex}02)`,
+                              background: `linear-gradient(to right, ${alertHex} 3px, transparent 3px), linear-gradient(135deg, ${alertHex}08, ${alertHex}02)`,
                             }}
                           >
-                            <div
-                              className="absolute inset-y-0 left-0 w-[3px]"
-                              style={{ backgroundColor: alertHex }}
-                            />
                             <span className="text-foreground font-bold">{a.description}</span>
                             <span className="text-muted-foreground/50 ml-1.5 font-medium">
                               {a.category}
