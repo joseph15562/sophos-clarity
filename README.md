@@ -324,6 +324,37 @@ The entire flow from demo config to exported report takes under 2 minutes.
 
 ---
 
+## Lessons Learned
+
+### AI Anonymisation Is Harder Than It Looks
+
+Sending firewall configuration data to a large language model creates a real tension: the AI needs enough context to produce useful, specific recommendations, but the data contains sensitive infrastructure details — internal IP ranges, hostnames, VPN peer addresses, DNS names, Active Directory domains, and network topology.
+
+The solution was a client-side anonymisation pipeline that replaces every identifiable value with a stable token (e.g. `HOST_1`, `NET_10.x.x.x/24` → `NET_TOKEN_3`) _before_ the data leaves the browser. The AI receives structurally accurate configuration with no real identifiers. A streaming de-anonymisation layer then restores the original values as the response arrives, so the final report references real hostnames, IPs, and zones — without those values ever reaching the model.
+
+Getting this right required several iterations. Early versions were too aggressive (stripping values the AI needed for context, producing vague reports) or too lenient (leaking identifiable data in edge cases like base64-encoded certificate subjects or embedded SNMP community strings). The final implementation uses a multi-pass tokeniser with format-aware matchers for IPv4/v6, CIDR blocks, FQDNs, email addresses, SNMP strings, and certificate fields — each with stable token assignment so cross-references survive anonymisation.
+
+### Compliance Framework Accuracy Demands Deterministic Logic, Not AI
+
+The initial assumption was that the AI model could map firewall findings to compliance controls. In practice, this produced inconsistent results: the same configuration scored differently across runs, controls were mapped to the wrong framework clauses, and "partial" vs "not met" judgements were unreliable.
+
+The shift was to make compliance mapping entirely deterministic. Each of the 39 frameworks has a hand-authored mapping table that connects specific analysis checks to specific control clauses — with explicit pass/partial/fail thresholds and evidence citations. The AI generates the _prose_ (executive narrative, remediation guidance, contextual explanations) but never decides the compliance _verdict_. The SE Health Check goes further: its Engineer Notes section is entirely template-generated with no AI involvement, ensuring numerical accuracy for scores, finding counts, and category breakdowns.
+
+This separation — deterministic engine for facts, AI for narrative — turned out to be the most important architectural decision in the project. It means compliance evidence is reproducible, auditable, and defensible, while the reports still read naturally.
+
+### Prompt Engineering for Domain-Specific Reports Is Ongoing Work
+
+Getting an LLM to produce a 15-page technical firewall assessment that a Sophos SE would actually present to a customer required extensive prompt iteration. Early outputs were generic ("consider enabling IPS"), missed critical findings, or hallucinated features that don't exist in SFOS. The prompts now include:
+
+- A structured JSON payload with every analysis finding, extracted evidence, and framework mapping
+- Explicit instructions on report structure, section ordering, and heading hierarchy
+- Negative constraints ("do not recommend features unavailable in SFOS v20/v21", "do not invent configuration values")
+- Token budget guidance to balance depth across sections rather than front-loading detail
+
+Even so, AI report quality is a moving target. Model upgrades (Gemini 1.5 → 2.0 → 2.5) each changed output characteristics — some improved depth but regressed on formatting; others improved structure but produced shorter findings. The streaming architecture and model-agnostic endpoint (Gemini, Claude, ChatGPT via OpenAI-compatible API) help absorb these shifts, but prompt tuning remains a regular activity.
+
+---
+
 ## Licence
 
 Released under the [MIT licence](LICENSE).
