@@ -446,6 +446,16 @@ function ChangelogPageInner() {
             <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               <li>
+                <strong className="text-foreground">Production hardening</strong>: Security headers
+                added to Vercel (HSTS, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy);
+                Redis-backed API rate limiting on api, api-agent, and api-public Edge Functions
+                (env-tunable, graceful no-op without Upstash); public-demo-session migrated from
+                in-memory to Redis rate limit; new <code className="text-xs">/healthz</code> ops
+                endpoint for synthetic monitoring; ESLint unused-vars warnings burned down from 227
+                to 31 (all <code className="text-xs">no-unused-vars</code> eliminated, rule
+                escalated to error).
+              </li>
+              <li>
                 <strong className="text-foreground">
                   SaaS readiness — coverage, Sentry, lint, versioning
                 </strong>

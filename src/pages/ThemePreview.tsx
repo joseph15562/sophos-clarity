@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Zap,
   Clock,
-  Clock3,
   Sparkles,
   Upload,
   Play,

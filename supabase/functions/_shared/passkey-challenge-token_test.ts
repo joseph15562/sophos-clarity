@@ -33,7 +33,7 @@ Deno.test("passkey challenge token rejects tampered payload", async () => {
       "550e8400-e29b-41d4-a716-446655440001",
       "YWJj",
     );
-    const [payloadB64, sigB64] = tok.split(".");
+    const [_payloadB64, sigB64] = tok.split(".");
     const tampered = btoa(
       JSON.stringify({ sub: "evil", chal: "YWJj", exp: 9999999999 }),
     );

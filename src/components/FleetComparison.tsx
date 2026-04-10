@@ -35,7 +35,7 @@ export interface FleetComparisonProps {
   files: Array<{ label: string; extractedData: unknown }>;
 }
 
-export function FleetComparison({ analysisResults, files }: FleetComparisonProps) {
+export function FleetComparison({ analysisResults, files: _files }: FleetComparisonProps) {
   const labels = useMemo(() => Object.keys(analysisResults), [analysisResults]);
   const [firewallA, setFirewallA] = useState("");
   const [firewallB, setFirewallB] = useState("");

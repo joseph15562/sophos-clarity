@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { mapToAllFrameworks, type ControlMapping, type ControlStatus } from "@/lib/compliance-map";
+import { mapToAllFrameworks, type ControlStatus } from "@/lib/compliance-map";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;

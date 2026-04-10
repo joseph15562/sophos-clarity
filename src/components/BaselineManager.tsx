@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Check, Trash2 } from "lucide-react";
-import { computeRiskScore } from "@/lib/risk-score";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { Button } from "@/components/ui/button";
 import { warnOptionalError } from "@/lib/client-error-feedback";
@@ -57,7 +56,7 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
   }, []);
 
   const baselineResult = baselineLabel ? analysisResults[baselineLabel] : null;
-  const otherLabels = useMemo(
+  const _otherLabels = useMemo(
     () => labels.filter((l) => l !== baselineLabel),
     [labels, baselineLabel],
   );

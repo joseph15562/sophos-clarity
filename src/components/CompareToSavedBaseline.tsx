@@ -12,7 +12,6 @@ import {
   type FindingSnapshot,
 } from "@/lib/finding-snapshots";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -21,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const SEV_BADGE: Record<string, string> = {
+const _SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
   medium: "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]",
@@ -46,7 +45,7 @@ function formatBaselineLabel(entry: ScoreHistoryEntry): string {
 
 export function CompareToSavedBaseline({
   analysisResults,
-  customerName,
+  customerName: _customerName,
 }: CompareToSavedBaselineProps) {
   const { org, isGuest } = useAuth();
   const [history, setHistory] = useState<ScoreHistoryEntry[]>([]);

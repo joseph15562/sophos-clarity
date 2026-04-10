@@ -3,6 +3,7 @@ import { pathSegmentsAfterApiPathname } from "../_shared/api-path.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { json as jsonResponse, safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import { checkRateLimit, rateLimitFromEnv } from "../_shared/rate-limit.ts";
 import {
   captureEdgeException,
   initEdgeSentry,
@@ -32,6 +33,23 @@ function json(body: unknown, status = 200) {
 }
 
 const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
+const API_RATE_MAX = rateLimitFromEnv("API_RATE_LIMIT_PER_MIN", 120);
+
+function clientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("cf-connecting-ip") ?? "unknown";
+}
+
+function jwtSub(req: Request): string | null {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Route Auth Matrix ──
 // Gateway JWT is ENABLED (config.toml). All routes require a valid JWT.
@@ -70,6 +88,23 @@ serve(async (req: Request) => {
   corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  const rlId = jwtSub(req) ?? clientIp(req);
+  const rl = await checkRateLimit(`rl:api:${rlId}`, API_RATE_MAX);
+  if (rl.limited) {
+    logJson("warn", "api_rate_limited", { id: rlId.slice(0, 8) });
+    return new Response(
+      JSON.stringify({ error: "Too many requests — try again shortly" }),
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Retry-After": String(rl.retryAfterSeconds),
+        },
+      },
+    );
   }
 
   const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);

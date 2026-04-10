@@ -30,7 +30,7 @@ import { warnOptionalError } from "@/lib/client-error-feedback";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
-import { BEST_PRACTICE_CHECKS, MODULES, type BestPracticeCheck } from "@/lib/sophos-licence";
+import { BEST_PRACTICE_CHECKS, MODULES } from "@/lib/sophos-licence";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
 
 const REMEDIATION_CUSTOMER_HASH = "__org_default__";

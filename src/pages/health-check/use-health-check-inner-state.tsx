@@ -1,30 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabaseWithAbort } from "@/lib/supabase-with-abort";
-import { Link, useSearchParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronDown,
-  Download,
-  ExternalLink,
-  FileText,
-  HelpCircle,
-  Loader2,
-  Lock,
-  PanelRight,
-  Upload,
-  Wifi,
-  Link2,
-  Copy,
-  XCircle,
-  UserCheck,
-  Send,
-  CalendarClock,
-  RotateCcw,
-  Search,
-  FileSpreadsheet,
-  Shield,
-} from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
 import type { ExtractedSections } from "@/lib/extract-sections";
@@ -38,31 +14,10 @@ import {
 import { evaluateBaseline, BASELINE_TEMPLATES } from "@/lib/policy-baselines";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
-import { FileUpload, type UploadedFile } from "@/components/FileUpload";
-import { HealthCheckDashboard } from "@/components/HealthCheckDashboard2";
-import { SEScoreTrendChart } from "@/components/SEScoreTrendChart";
-import { FirmwareEolWarnings } from "@/components/FirmwareEolWarnings";
-import { TeamDashboard } from "@/components/TeamDashboard";
-
-const SophosBestPractice = lazy(() =>
-  import("@/components/SophosBestPractice2").then((m) => ({ default: m.SophosBestPractice })),
-);
-import { DpiExclusionBar } from "@/components/DpiExclusionBar2";
-import { SeHeartbeatScopeBar } from "@/components/SeHeartbeatScopeBar2";
-import {
-  SeThreatResponseAckBar,
-  SeDnsProtectionAckBar,
-} from "@/components/SeThreatResponseAckBar2";
-import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar2";
+import type { UploadedFile } from "@/components/FileUpload";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
-import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory2";
-import { SeHealthCheckManagementDrawer } from "@/components/SeHealthCheckManagementDrawer2";
 import type { ParsedFile } from "@/hooks/use-report-generation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -71,29 +26,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { trackProductEvent } from "@/lib/product-telemetry";
-import { useSEAuthProvider, useSEAuth, SEAuthProvider } from "@/hooks/use-se-auth";
-import { SEAuthGate } from "@/components/SEAuthGate";
-import { getSupabasePublicEdgeAuth, supabase } from "@/integrations/supabase/client";
+import { useSEAuth } from "@/hooks/use-se-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { warnOptionalError } from "@/lib/client-error-feedback";
-import { readJwtPayloadClaim } from "@/lib/jwt-payload";
 import { getFirewallDisplayName } from "@/lib/sophos-central";
 import {
   buildGuestCentralHaGroups,
   findGuestHaGroupBySelectValue,
   guestHaGroupSelectValue,
   type GuestFirewallRow,
-  type GuestHaGroup,
 } from "@/lib/guest-central-ha-groups";
 import {
   buildSeCentralHaLabels,
@@ -109,21 +52,13 @@ import {
 } from "@/lib/se-health-check-preferences-v2";
 import {
   buildSeHealthCheckSnapshotV1,
-  parseSeHealthCheckSnapshotFromSummaryJson,
   snapshotFilesToParsedFiles,
   type SeHealthCheckSnapshotV1,
 } from "@/lib/se-health-check-snapshot-v2";
 import { ALL_FRAMEWORK_NAMES, controlIdsForFindingExport } from "@/lib/compliance-map";
 import { validateFindingExportMetadata } from "@/lib/report-export-validation";
-import { ActiveTeamProvider, useActiveTeam } from "@/hooks/use-active-team";
-import { TeamSwitcher } from "@/components/TeamSwitcher";
-import { startHealthCheckTour, startHealthCheckResultsTour } from "@/lib/guided-tours";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useActiveTeam } from "@/hooks/use-active-team";
+import { startHealthCheckTour } from "@/lib/guided-tours";
 
 import type {
   ActiveStep,

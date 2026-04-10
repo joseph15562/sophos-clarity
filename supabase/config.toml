@@ -55,3 +55,7 @@ verify_jwt = false
 [functions.public-demo-session]
 verify_jwt = false
 # Public demo login — credentials in server secrets only; optional per-IP rate limit.
+
+[functions.healthz]
+verify_jwt = false
+# Ops liveness probe — no auth, returns 200 with optional DB connectivity check.

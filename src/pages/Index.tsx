@@ -14,7 +14,6 @@ import { agentCustomerGroupingKey } from "@/lib/agent-customer-bucket";
 
 import { AuthFlow } from "@/components/AuthFlow";
 import {
-  extractSections,
   extractSectionsWithMeta,
   buildMetaFromSections,
   type ExtractedSections,
@@ -233,8 +232,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   } | null>(null);
   const [activeTenantName, setActiveTenantName] = useState<string | undefined>(undefined);
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
-  const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
-  const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
+  const [dpiExemptZones, _setDpiExemptZones] = useState<string[]>([]);
+  const [dpiExemptNetworks, _setDpiExemptNetworks] = useState<string[]>([]);
   const [reportAttributionHydrated, setReportAttributionHydrated] = useState(false);
   const [linkedCloudAssessmentId, setLinkedCloudAssessmentId] = useState<string | null>(null);
   const [exportReviewerSignoff, setExportReviewerSignoff] =
@@ -1415,7 +1414,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         setSaveError(e instanceof Error ? e.message : "Save failed");
       }
       setSavingReports(false);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+       
     },
     [
       analysisResults,

@@ -30,7 +30,7 @@ function gradeColor(grade: string): string {
   return `text-[${GRADE_COLORS.C}] dark:text-[${GRADE_COLORS.C}]`;
 }
 
-export function ConfigHistory({ hostname, refreshTrigger }: Props) {
+export function ConfigHistory({ hostname, refreshTrigger: _refreshTrigger }: Props) {
   const { org } = useAuth();
   const [compareSelection, setCompareSelection] = useState<
     [ConfigSnapshot | null, ConfigSnapshot | null]

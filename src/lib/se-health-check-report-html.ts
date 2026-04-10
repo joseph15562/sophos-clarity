@@ -28,9 +28,6 @@ export const SE_HEALTH_CHECK_COVER_MARK_SRC = "/se-health-check-sophos-mark.png"
 /** Top-left wordmark on PDF cover (wide white artwork for navy background). */
 export const SE_HEALTH_CHECK_WORDMARK_SRC = "/se-health-check-wordmark.png";
 
-/** Sophos lockup (blue shield + navy wordmark) — stamped on PDF pages after cover + overview via jsPDF. */
-export const SE_PDF_SOPHOS_LOCKUP_SRC = "/se-pdf-sophos-lockup.png";
-
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

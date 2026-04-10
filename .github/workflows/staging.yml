@@ -102,5 +102,6 @@ jobs:
           supabase functions deploy agent-daily-presence --no-verify-jwt --use-api
           supabase functions deploy regulatory-scanner --no-verify-jwt --use-api
           supabase functions deploy sophos-central --no-verify-jwt --use-api
+          supabase functions deploy healthz --no-verify-jwt --use-api
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

@@ -10,7 +10,6 @@ import {
   Clock,
   Search,
   Filter,
-  ArrowLeft,
   Activity,
   Wifi,
   WifiOff,

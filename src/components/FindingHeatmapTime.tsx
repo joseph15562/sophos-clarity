@@ -26,7 +26,7 @@ const DAY_LABELS = ["M", "", "W", "", "F", "", "S"];
 const CELL_SIZE = 14;
 const GAP = 3;
 
-export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps) {
+export function FindingHeatmapTime({ analysisResults: _analysisResults }: FindingHeatmapTimeProps) {
   const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {

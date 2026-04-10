@@ -339,7 +339,7 @@ function extractDataUriMarkdownImagesForDocx(markdown: string): {
 
   const text = webpStripped.replace(
     dataUriRe,
-    (full, alt: string, mimeExt: string, b64body: string) => {
+    (_full, alt: string, mimeExt: string, b64body: string) => {
       const b64 = b64body.replace(/\s/g, "");
       if (b64.length > MAX_DOCX_IMAGE_B64_CHARS) {
         return `\n\n[Image "${String(alt).replace(/"/g, "'")}" omitted — file too large for Word export.]\n\n`;

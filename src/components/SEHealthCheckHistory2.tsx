@@ -186,7 +186,7 @@ export function SEHealthCheckHistory({
     [preparedBy, fetchSnapshot],
   );
 
-  const handleMoveToTeam = useCallback(
+  const _handleMoveToTeam = useCallback(
     async (checkId: string, targetTeamId: string | null) => {
       try {
         const {

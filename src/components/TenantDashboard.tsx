@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Building2,
   Shield,
-  ChevronDown,
   Search,
   ArrowUpDown,
   Cloud,
@@ -262,7 +261,7 @@ export function TenantDashboard() {
         }
         const total = byHost.size;
         const top = [...byTitle.entries()]
-          .map(([title, { count, firewalls }]) => ({
+          .map(([title, { count: _count, firewalls }]) => ({
             title,
             severity: "medium",
             affectedCount: firewalls.size,

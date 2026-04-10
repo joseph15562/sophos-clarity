@@ -11,17 +11,25 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { logJson } from "../_shared/logger.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const DEMO_EMAIL = Deno.env.get("DEMO_AUTH_EMAIL") ?? "";
 const DEMO_PASSWORD = Deno.env.get("DEMO_AUTH_PASSWORD") ?? "";
 
+const DEMO_RATE_LIMIT = 10;
+
+/** In-memory fallback when Redis is unavailable. */
 const ipHits = new Map<string, { count: number; resetAt: number }>();
 const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT = 10;
 
-function isRateLimited(ip: string): boolean {
+async function isRateLimited(ip: string): Promise<boolean> {
+  const rl = await checkRateLimit(`rl:demo:${ip}`, DEMO_RATE_LIMIT);
+  if (rl.limited) return true;
+  // If Redis was available and allowed, trust it
+  if (rl.remaining < DEMO_RATE_LIMIT) return false;
+  // Redis not configured — fall back to in-memory
   const now = Date.now();
   const entry = ipHits.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -29,7 +37,7 @@ function isRateLimited(ip: string): boolean {
     return false;
   }
   entry.count++;
-  return entry.count > RATE_LIMIT;
+  return entry.count > DEMO_RATE_LIMIT;
 }
 
 function json(
@@ -66,7 +74,7 @@ serve(async (req) => {
   const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("cf-connecting-ip") ?? "unknown";
 
-  if (isRateLimited(clientIp)) {
+  if (await isRateLimited(clientIp)) {
     logJson("warn", "demo_session_rate_limited", { ip: clientIp });
     return json(
       { error: "Too many requests — try again shortly" },

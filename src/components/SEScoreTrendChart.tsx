@@ -39,8 +39,8 @@ function gradeColorClass(grade: string): string {
 
 function SEScoreTrendChartInner({
   serialNumbers,
-  currentScore,
-  currentGrade,
+  currentScore: _currentScore,
+  currentGrade: _currentGrade,
   seProfileId,
   activeTeamId,
 }: Props) {

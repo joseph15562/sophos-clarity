@@ -241,7 +241,7 @@ const ConfigUpload = () => {
         setPageState("ready");
         setUploadProgress(0);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+       
     },
     [token],
   );

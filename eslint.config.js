@@ -20,9 +20,8 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      // Phase G: escalate to "error" after burn-down (currently ~260 warnings across src + functions).
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -39,33 +38,7 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
-  // Tier 3 ESLint phased rollout — Track 5: lib-only strict unused-vars (expand to hooks → components later).
-  {
-    files: ["src/lib/**/*.{ts,tsx}"],
-    rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-        },
-      ],
-    },
-  },
-  {
-    files: ["src/hooks/**/*.{ts,tsx}"],
-    rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-        },
-      ],
-    },
-  },
+  // no-unused-vars is now "error" globally — per-directory overrides removed after burn-down.
   {
     files: [
       "src/components/ui/**/*.tsx",

@@ -20,7 +20,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { EstateOverview } from "@/components/EstateOverview";
 import { ReportUpsellStrip } from "@/components/ReportUpsellStrip";
 import { FindingsChanges } from "@/components/FindingsChanges";
-import { PriorityActions } from "@/components/PriorityActions";
 import { HeroOutcomePanel } from "@/components/HeroOutcomePanel";
 import { CriticalActionsPanel } from "@/components/CriticalActionsPanel";
 import { ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
@@ -91,9 +90,6 @@ const PriorityMatrix = lazy(() =>
 );
 const CentralEnrichment = lazy(() =>
   import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })),
-);
-const RiskSummaryCards = lazy(() =>
-  import("@/components/RiskSummaryCards").then((m) => ({ default: m.RiskSummaryCards })),
 );
 const ProtocolServiceWidget = lazy(() =>
   import("@/components/ProtocolServiceWidget").then((m) => ({ default: m.ProtocolServiceWidget })),

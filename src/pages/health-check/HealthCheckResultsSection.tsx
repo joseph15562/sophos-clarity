@@ -1,16 +1,13 @@
 import { lazy, Suspense } from "react";
 import {
   CheckCircle2,
-  ChevronDown,
   Download,
-  ExternalLink,
   FileText,
   Link2,
   Loader2,
   Lock,
   Copy,
   XCircle,
-  UserCheck,
   Send,
   CalendarClock,
   FileSpreadsheet,
@@ -24,7 +21,6 @@ import {
   SeDnsProtectionAckBar,
 } from "@/components/SeThreatResponseAckBar2";
 import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar2";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -45,11 +40,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useHealthCheckInnerModel, type HealthCheckInnerModel } from "./health-check-inner-context";
-import { guestHaGroupSelectValue } from "@/lib/guest-central-ha-groups";
-import { getFirewallDisplayName } from "@/lib/sophos-central";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SE_HEALTH_CHECK_BP_OVERRIDES_KEY } from "@/lib/se-health-check-bp-v2";
 

@@ -4,9 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Loader2,
   RefreshCw,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,19 +13,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadingState } from "@/components/LoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-interface DashboardRow {
-  id: string;
-  customer_name: string | null;
-  overall_score: number | null;
-  overall_grade: string | null;
-  findings_count: number | null;
-  firewall_count: number | null;
-  checked_at: string;
-  summary_json: Record<string, unknown> | null;
-  se_user_id: string;
-  se_profiles?: { display_name: string | null } | null;
-}
 
 interface Props {
   activeTeamId: string;

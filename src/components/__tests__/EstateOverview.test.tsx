@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within, renderWithProviders, userEvent } from "@/test/test-utils";
+import { screen, within, renderWithProviders, userEvent } from "@/test/test-utils";
 import type { AnalysisResult, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { EstateOverview } from "@/components/EstateOverview";
 

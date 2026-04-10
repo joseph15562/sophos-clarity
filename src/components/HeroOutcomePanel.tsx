@@ -68,7 +68,7 @@ function trimEvidence(evidence?: string, max = 88) {
 
 export function HeroOutcomePanel({
   analysisResults,
-  totalFindings,
+  totalFindings: _totalFindings,
   fileCount,
   extractionPct,
   hasComplianceFrameworks,

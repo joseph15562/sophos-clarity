@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export interface ProgressNarrativeProps {

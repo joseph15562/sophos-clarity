@@ -17,6 +17,7 @@ import {
   safeError,
 } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import { checkRateLimit, rateLimitFromEnv } from "../_shared/rate-limit.ts";
 import {
   captureEdgeException,
   initEdgeSentry,
@@ -24,12 +25,8 @@ import {
 import { persistedAssessmentCustomerName } from "../_shared/agent-assessment-customer.ts";
 
 initEdgeSentry({ functionName: "api-agent" });
-import {
-  sophosFetchFirewalls,
-  sophosFetchTenants,
-  sophosGetToken,
-  sophosWhoAmI,
-} from "../_shared/sophos-central-api.ts";
+
+const AGENT_RATE_MAX = rateLimitFromEnv("API_AGENT_RATE_LIMIT_PER_MIN", 60);
 
 function json(
   body: unknown,
@@ -422,6 +419,25 @@ export async function handleApiAgentRequest(
     if (!apiKey) {
       logJson("warn", "api_agent_missing_api_key", { route });
       return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);
+    }
+
+    const rlKey = `rl:api-agent:${apiKey.slice(0, 12)}`;
+    const rl = await checkRateLimit(rlKey, AGENT_RATE_MAX);
+    if (rl.limited) {
+      logJson("warn", "api_agent_rate_limited", {
+        keyPrefix: apiKey.slice(0, 8),
+      });
+      return new Response(
+        JSON.stringify({ error: "Too many requests — try again shortly" }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfterSeconds),
+          },
+        },
+      );
     }
 
     const agent = await authAgent(apiKey);

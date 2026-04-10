@@ -36,7 +36,7 @@ interface WeekData {
   count: number;
 }
 
-export function RemediationVelocity({ analysisResults }: Props) {
+export function RemediationVelocity({ analysisResults: _analysisResults }: Props) {
   const [weeklyData, setWeeklyData] = useState<WeekData[]>([]);
   const [loading, setLoading] = useState(true);
 

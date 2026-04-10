@@ -336,7 +336,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   },
 };
 
-function timeAgo(iso: string): string {
+function _timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";

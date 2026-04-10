@@ -3,7 +3,7 @@ import { renderWithProviders, screen } from "@/test/test-utils";
 import { ConfigDiff } from "@/components/ConfigDiff";
 import type { ExtractedSections } from "@/lib/extract-sections";
 
-const emptyTable = { headers: [] as string[], rows: [] as Record<string, string>[] };
+const _emptyTable = { headers: [] as string[], rows: [] as Record<string, string>[] };
 
 describe("ConfigDiff", () => {
   it("renders diff view", () => {

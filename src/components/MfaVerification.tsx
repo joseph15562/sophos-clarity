@@ -44,7 +44,7 @@ export function MfaVerification({ onVerified, onCancel, showPasskeyOption = true
       }
 
       setChallengeId(challenge.id);
-    } catch (err) {
+    } catch (_err) {
       toast.error("MFA setup error");
     }
   };

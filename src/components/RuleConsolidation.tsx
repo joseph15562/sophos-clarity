@@ -38,7 +38,7 @@ function getRules(files: Props["files"]): RuleRow[] {
     for (const [sectionKey, section] of Object.entries(extracted)) {
       if (!/firewall\s*rules?/i.test(sectionKey)) continue;
       for (const table of section.tables ?? []) {
-        table.rows?.forEach((row, i) => {
+        table.rows?.forEach((row, _i) => {
           rules.push({
             index: rules.length,
             name: extractField(row, "Rule Name", "Name", "Rule") || `Rule ${rules.length + 1}`,
@@ -135,7 +135,7 @@ function findConsolidationOpportunities(rules: RuleRow[]): ConsolidationSet[] {
 }
 
 export function RuleConsolidation({ files }: Props) {
-  const { opportunities, totalBefore, totalAfter } = useMemo(() => {
+  const { opportunities, totalBefore: _totalBefore, totalAfter } = useMemo(() => {
     const rules = getRules(files);
     const opportunities = findConsolidationOpportunities(rules);
     const rulesInSets = new Set(opportunities.flatMap((s) => s.rules.map((r) => r.index)));

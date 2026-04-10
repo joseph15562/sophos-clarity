@@ -14,7 +14,6 @@ import {
   safeError,
 } from "../_shared/db.ts";
 import {
-  buildCustomerUploadEmailHtml,
   buildSeNotificationEmailHtml,
   escapeHtml,
   isValidSophosXml,
@@ -29,6 +28,7 @@ import {
 } from "../_shared/sophos-central-api.ts";
 import { centralDecrypt, centralEncrypt } from "../_shared/crypto.ts";
 import { logJson } from "../_shared/logger.ts";
+import { checkRateLimit, rateLimitFromEnv } from "../_shared/rate-limit.ts";
 import {
   captureEdgeException,
   initEdgeSentry,
@@ -48,6 +48,13 @@ import { verifyAuthenticationResponse } from "npm:@simplewebauthn/server@13.2.2"
 import { isoBase64URL } from "npm:@simplewebauthn/server@13.2.2/helpers";
 
 initEdgeSentry({ functionName: "api-public" });
+
+const PUBLIC_RATE_MAX = rateLimitFromEnv("API_PUBLIC_RATE_LIMIT_PER_MIN", 30);
+
+function clientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("cf-connecting-ip") ?? "unknown";
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ??
@@ -800,6 +807,23 @@ export async function handleApiPublicRequest(req: Request): Promise<Response> {
   }
 
   try {
+    const ip = clientIp(req);
+    const rl = await checkRateLimit(`rl:api-public:${ip}`, PUBLIC_RATE_MAX);
+    if (rl.limited) {
+      logJson("warn", "api_public_rate_limited", { ip });
+      return new Response(
+        JSON.stringify({ error: "Too many requests — try again shortly" }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfterSeconds),
+          },
+        },
+      );
+    }
+
     const url = new URL(req.url);
     const path = url.pathname;
     const match = path.match(/\/api-public\/?(.*)$/);

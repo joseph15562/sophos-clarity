@@ -280,7 +280,7 @@ function severityBorder(s: ConfigChange["severity"]) {
 }
 
 function DriftMonitorInner() {
-  const { user, org, isGuest } = useAuth();
+  const { user: _user, org, isGuest } = useAuth();
   const isDark = useResolvedIsDark();
 
   const [selectedFirewall, setSelectedFirewall] = useState(FIREWALLS[0].id);
@@ -796,7 +796,7 @@ function DriftMonitorInner() {
                   style={{ zIndex: 0 }}
                 />
 
-                {snapshots.map((snap, i) => {
+                {snapshots.map((snap, _i) => {
                   const fill = scoreColor(snap.scoreBefore, snap.scoreAfter);
                   const isSelected = snap.id === selectedSnapshotId;
                   return (

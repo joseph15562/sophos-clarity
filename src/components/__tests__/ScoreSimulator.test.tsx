@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, renderWithProviders, userEvent } from "@/test/test-utils";
+import { screen, renderWithProviders, userEvent } from "@/test/test-utils";
 import type { AnalysisResult, Finding, InspectionPosture } from "@/lib/analyse-config";
 import type { RiskScoreResult } from "@/lib/risk-score";
 import { ScoreSimulator } from "@/components/ScoreSimulator";

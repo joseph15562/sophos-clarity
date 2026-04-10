@@ -31,7 +31,7 @@ function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: nu
   return `M ${x1} ${y1} A ${r} ${r} 0 ${large} ${sweep} ${x2} ${y2}`;
 }
 
-export function PolicyComplexity({ analysisResults, files }: Props) {
+export function PolicyComplexity({ analysisResults, files: _files }: Props) {
   const glowFilterId = useId().replace(/:/g, "");
 
   const { score, label, recommendations } = useMemo(() => {

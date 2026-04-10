@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity, LogIn } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
 import { Skeleton } from "@/components/ui/skeleton";
 

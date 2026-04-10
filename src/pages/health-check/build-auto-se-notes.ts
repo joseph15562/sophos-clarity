@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@/lib/analyse-config";
-import type { LicenceSelection, SophosBPScore } from "@/lib/sophos-licence";
+import type { LicenceSelection } from "@/lib/sophos-licence";
 import { computeSophosBPScore } from "@/lib/sophos-licence";
 import { loadSeHealthCheckBpOverrides, seCentralAutoForLabel } from "@/lib/se-health-check-bp-v2";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";

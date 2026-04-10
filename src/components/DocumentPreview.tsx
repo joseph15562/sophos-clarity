@@ -762,7 +762,6 @@ function ReportContent({
   analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
-  const isDark = useResolvedIsDark();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
@@ -770,7 +769,6 @@ function ReportContent({
   const [extractedOpen, setExtractedOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [geminiCooldownRemaining, setGeminiCooldownRemaining] = useState(0);
-  const exportTheme: ReportExportTheme = isDark ? "dark" : "light";
 
   useEffect(() => {
     if (!isFailed || !isGoogleGeminiRateLimitMessage(errorMessage)) {

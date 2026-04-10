@@ -20,7 +20,7 @@ import {
   type SophosBPScore,
 } from "@/lib/sophos-licence";
 import { loadSeHealthCheckBpOverrides, seCentralAutoForLabel } from "@/lib/se-health-check-bp-v2";
-import { evaluateBaseline, type BaselineResult } from "@/lib/policy-baselines";
+import type { BaselineResult } from "@/lib/policy-baselines";
 import { GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 
 const NO_SE_CENTRAL_HA_LABELS = new Set<string>();
@@ -223,7 +223,7 @@ export function HealthCheckDashboard({
   hideSophosBpCard = false,
   seCentralSession = false,
   seCentralHaLabels,
-  bpOverrideRevision = 0,
+  bpOverrideRevision: _bpOverrideRevision = 0,
   seThreatResponseAck,
   seExcludedBpChecks,
 }: HealthCheckDashboardProps) {

@@ -50,7 +50,7 @@ export function ReportTemplateSettings() {
     let parsed: unknown;
     try {
       parsed = JSON.parse(templateJson);
-    } catch (e) {
+    } catch (_e) {
       setError("Invalid JSON");
       return;
     }

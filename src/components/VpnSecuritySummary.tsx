@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-const VPN_SECTION_PATTERN =
+const _VPN_SECTION_PATTERN =
   /ipsec|site.?to.?site|vpn.*connection|vpn.*tunnel|ssl.*vpn|remote.*access.*vpn|VPNIPSecConnection|VPNProfile|SSLVPNPolicy/i;
 
 const WEAK_CIPHERS = /3des|des(?!3)|rc4|null|blowfish|cast/i;

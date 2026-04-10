@@ -57,7 +57,7 @@ function GaugeRing({
   const r = 54;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
-  const colors = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const _colors = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
   const hasProjection = projectedScore != null && projectedScore !== score;
 
   const strokeColor =
@@ -77,8 +77,8 @@ function GaugeRing({
   const gaugeId = `ring-${score}-${grade}`;
 
   const tipAngle = (score / 100) * 360 - 90;
-  const tipX = 60 + r * Math.cos((tipAngle * Math.PI) / 180);
-  const tipY = 60 + r * Math.sin((tipAngle * Math.PI) / 180);
+  const _tipX = 60 + r * Math.cos((tipAngle * Math.PI) / 180);
+  const _tipY = 60 + r * Math.sin((tipAngle * Math.PI) / 180);
 
   return (
     <div className="relative flex items-center justify-center w-52 h-52 group transition-transform duration-300 hover:scale-[1.06]">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRelativeTimeTick } from "@/hooks/use-relative-time-tick";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -160,7 +160,7 @@ function formatAlertRaisedLocal(iso: string): string {
 function MiniSparkline({
   data,
   color,
-  idSuffix,
+  idSuffix: _idSuffix,
 }: {
   data: { day: string; value: number }[];
   color: string;

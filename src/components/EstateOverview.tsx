@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
-import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
 import { downloadCsv, downloadFindingsPdf } from "@/lib/findings-export";
 import { playbookLibraryHrefForFindingTitle } from "@/lib/playbook-link";
@@ -47,7 +46,7 @@ interface EstateOverviewProps {
   onExplainFinding?: (title: string) => void;
 }
 
-const SEVERITY_COLOR: Record<Severity, string> = {
+const _SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-[#EA0022]",
   high: "text-[#b91c72] dark:text-[#F472B6]",
   medium: "text-[#c47800] dark:text-[#F29400]",
@@ -55,7 +54,7 @@ const SEVERITY_COLOR: Record<Severity, string> = {
   info: "text-[#0077cc] dark:text-[#009CFB]",
 };
 
-const SEVERITY_BORDER: Record<Severity, string> = {
+const _SEVERITY_BORDER: Record<Severity, string> = {
   critical: "border-l-[#EA0022]",
   high: "border-l-[#DB2777] dark:border-l-[#F472B6]",
   medium: "border-l-[#c47800] dark:border-l-[#F29400]",
@@ -551,7 +550,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   );
 }
 
-const SEV_DOT_BG: Record<Severity, string> = {
+const _SEV_DOT_BG: Record<Severity, string> = {
   critical: "bg-[#EA0022]",
   high: "bg-[#DB2777]",
   medium: "bg-[#F29400]",
@@ -559,7 +558,7 @@ const SEV_DOT_BG: Record<Severity, string> = {
   info: "bg-[#009CFB]",
 };
 
-const SEV_BADGE_INLINE: Record<Severity, string> = {
+const _SEV_BADGE_INLINE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
   high: "bg-[#DB2777]/15 text-[#b91c72] dark:text-[#F472B6] border-[#DB2777]/25",
   medium: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/25",

@@ -3,7 +3,6 @@ import { LayoutGrid, X, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   type WidgetPreferences,
-  type WidgetDef,
   getWidgetsForTab,
   isWidgetVisible,
   saveWidgetPreferences,

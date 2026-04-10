@@ -67,8 +67,8 @@ function GaugeSvg({
   const trackColorDark = "hsl(215 40% 22%)";
   const needleColor = "hsl(215 52% 25%)";
   const needleColorDark = "hsl(210 20% 65%)";
-  const textColor = "hsl(215 52% 14%)";
-  const textColorDark = "hsl(0 0% 96%)";
+  const _textColor = "hsl(215 52% 14%)";
+  const _textColorDark = "hsl(0 0% 96%)";
   const subtextColor = "hsl(210 25% 50%)";
   const subtextColorDark = "hsl(210 20% 65%)";
 
@@ -306,7 +306,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
   const activeFw = scores.perFirewall.find((fw) => fw.key === selectedFw) ?? null;
   const activeScore = activeFw ? activeFw.score : aggScore;
   const activeGrade = activeFw ? activeFw.grade : aggGrade;
-  const activeLabel = activeFw
+  const _activeLabel = activeFw
     ? activeFw.name
     : isSingle
       ? (scores.perFirewall[0]?.name ?? "Overall")
