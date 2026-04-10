@@ -391,7 +391,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
     return (
       <div
         key={label}
-        className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+        className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
         style={{ background: `linear-gradient(135deg, ${hex}0C, ${hex}03)` }}
       >
         <div className="absolute inset-0 pointer-events-none">
@@ -436,7 +436,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
       style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.015))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -474,7 +474,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {!posture.dpiEngineEnabled && posture.totalWanRules > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 flex items-start gap-3"
+          className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 flex items-start gap-3"
           style={{
             background: "linear-gradient(135deg, rgba(234,0,34,0.10), rgba(234,0,34,0.03))",
           }}
@@ -502,7 +502,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {posture.disabledWanRules > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
+          className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
           style={{
             background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
           }}
@@ -522,7 +522,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {posture.withSslInspection > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 space-y-1"
+          className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 space-y-1"
           style={{
             background: "linear-gradient(135deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
           }}
@@ -603,12 +603,16 @@ function FindingCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{
-        borderLeftColor: sevHex,
         background: `linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
       }}
     >
+      {/* Left accent bar (separate from border so corners stay uniformly rounded) */}
+      <div
+        className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl"
+        style={{ backgroundColor: sevHex }}
+      />
       <div className="absolute inset-0 pointer-events-none">
         <div
           className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-12"
@@ -618,7 +622,7 @@ function FindingCard({
       <div className="flex items-center gap-1.5">
         <button
           onClick={() => setOpen(!open)}
-          className="relative flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors min-w-0 group"
+          className="relative flex-1 flex items-center gap-3.5 pl-5 pr-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors min-w-0 group"
         >
           <span
             className="h-2.5 w-2.5 rounded-full shrink-0"
@@ -876,7 +880,7 @@ function FindingsPanel({
 
   return (
     <section
-      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
       style={{
         background:
           "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent) 0 0 / 100% 1px no-repeat, linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012)) 0 0 / 100% 100% no-repeat",
@@ -934,12 +938,16 @@ function FindingsPanel({
           return (
             <div
               key={g.section}
-              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
-                borderLeftColor: hex,
                 background: `linear-gradient(135deg, ${hex}08, ${hex}02)`,
               }}
             >
+              {/* Left accent bar */}
+              <div
+                className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl"
+                style={{ backgroundColor: hex }}
+              />
               <div className="absolute inset-0 pointer-events-none">
                 <div
                   className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-15"
@@ -952,7 +960,7 @@ function FindingsPanel({
               />
               <button
                 onClick={() => toggleSection(g.section)}
-                className="relative w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors group"
+                className="relative w-full flex items-center gap-3.5 pl-5 pr-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors group"
               >
                 <span className="inline-flex shrink-0" style={{ color: hex, opacity: 0.7 }}>
                   <Icon className="h-4 w-4 transition-colors" />
@@ -994,7 +1002,7 @@ function FindingsPanel({
                 />
               </button>
               {isOpen && (
-                <div className="relative px-3 pb-3 space-y-1.5 border-t border-slate-900/[0.10] dark:border-white/[0.06] pt-2.5">
+                <div className="relative pl-5 pr-3 pb-3 space-y-1.5 border-t border-slate-900/[0.10] dark:border-white/[0.06] pt-2.5">
                   {g.findings.map((f, i) => (
                     <FindingCard
                       key={`${f.firewall}-${f.id}-${i}`}
@@ -1040,7 +1048,7 @@ function EstateRiskComparison({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
+      className="group relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
       style={{
         background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
         boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",

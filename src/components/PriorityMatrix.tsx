@@ -250,7 +250,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 setActiveQuadrant(isActive ? null : q);
                 setSelected(null);
               }}
-              className={`text-[11px] font-bold px-3.5 py-2 rounded-xl transition-all duration-200 cursor-pointer hover:scale-[1.04] ${
+              className={`text-[11px] font-bold px-3.5 py-2 rounded-2xl transition-all duration-200 cursor-pointer hover:scale-[1.04] ${
                 isFaded ? "opacity-30" : ""
               }`}
               style={{
@@ -274,7 +274,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
               setActiveQuadrant(null);
               setSelected(null);
             }}
-            className="text-[11px] font-semibold px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer"
+            className="text-[11px] font-semibold px-3 py-2 rounded-2xl transition-all duration-200 cursor-pointer"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.08)",
@@ -288,7 +288,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
 
       {/* SVG Chart */}
       <div
-        className="relative w-full max-w-lg mx-auto rounded-xl p-1"
+        className="relative w-full max-w-lg mx-auto rounded-2xl p-1"
         style={{
           background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
           border: "1px solid rgba(255,255,255,0.06)",
@@ -321,7 +321,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             height={(H - 2 * PAD) / 2}
             fill="#00F2B3"
             opacity={!activeQuadrant || activeQuadrant === "quick-win" ? 0.06 : 0.015}
-            rx="1"
+            rx="3"
           />
           {/* Top-right: high impact, high effort → strategic */}
           <rect
@@ -331,7 +331,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             height={(H - 2 * PAD) / 2}
             fill="#F29400"
             opacity={!activeQuadrant || activeQuadrant === "strategic" ? 0.05 : 0.015}
-            rx="1"
+            rx="3"
           />
           {/* Bottom-left: low impact, low effort → low-priority */}
           <rect
@@ -341,7 +341,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             height={(H - 2 * PAD) / 2}
             fill="#009CFB"
             opacity={!activeQuadrant || activeQuadrant === "low-priority" ? 0.05 : 0.015}
-            rx="1"
+            rx="3"
           />
           {/* Bottom-right: low impact, high effort → thankless / reconsider */}
           <rect
@@ -351,7 +351,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             height={(H - 2 * PAD) / 2}
             fill="#888"
             opacity={!activeQuadrant || activeQuadrant === "thankless" ? 0.03 : 0.01}
-            rx="1"
+            rx="3"
           />
 
           {/* Axis lines */}
@@ -566,7 +566,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
           const selColor = SEV_DOT[selected.finding.severity] ?? "#999";
           return (
             <div
-              className="relative rounded-xl p-5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 overflow-hidden"
+              className="relative rounded-2xl p-5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 overflow-hidden"
               style={{
                 background: `linear-gradient(145deg, ${selColor}0c, ${selColor}04, transparent)`,
                 border: `1px solid ${selColor}20`,
@@ -653,7 +653,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 setActiveQuadrant(isActive ? null : q);
                 setSelected(null);
               }}
-              className={`group relative text-left rounded-xl p-5 sm:p-6 transition-all duration-200 cursor-pointer overflow-hidden hover:scale-[1.02] ${
+              className={`group relative text-left rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer overflow-hidden hover:scale-[1.02] ${
                 isFaded ? "opacity-25" : ""
               }`}
               style={{

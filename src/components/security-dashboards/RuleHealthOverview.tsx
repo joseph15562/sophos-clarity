@@ -116,7 +116,7 @@ export function RuleHealthOverview({
             <div key={c.key} className="relative group overflow-visible">
               <button
                 onClick={() => isMulti && setActiveCard(isActive ? null : c.key)}
-                className={`relative w-full rounded-xl border px-3 py-3.5 text-center transition-all duration-200 backdrop-blur-sm overflow-hidden ${
+                className={`relative w-full rounded-2xl border px-3 py-3.5 text-center transition-all duration-200 backdrop-blur-sm overflow-hidden ${
                   isActive
                     ? "scale-[1.06] shadow-elevated"
                     : "hover:scale-[1.06] hover:shadow-elevated hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
@@ -173,7 +173,7 @@ export function RuleHealthOverview({
 
       {activeCard && isMulti && (
         <div
-          className="mt-4 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
+          className="mt-4 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
           style={{ background: "rgba(255,255,255,0.02)" }}
         >
           <div
