@@ -342,6 +342,20 @@ The shift was to make compliance mapping entirely deterministic. Each of the 39 
 
 This separation — deterministic engine for facts, AI for narrative — turned out to be the most important architectural decision in the project. It means compliance evidence is reproducible, auditable, and defensible, while the reports still read naturally.
 
+### Sophos Config Exports Are Enormous — Getting Them Into an AI Context Window Was a Battle
+
+A Sophos XG/XGS firewall configuration export can be several megabytes of HTML or XML — hundreds of tables covering firewall rules, NAT policies, VPN tunnels, network objects, DHCP bindings, schedules, QoS profiles, web filter categories, certificate stores, and dozens more sections. Feeding this raw to an LLM would blow through context windows, cost a fortune in tokens, and produce unfocused reports because the model would give equal weight to DHCP lease tables and critical firewall rules.
+
+The solution was a multi-stage extraction and reduction pipeline, all running client-side in the browser:
+
+1. **Client-side DOM parsing** — the browser's native `DOMParser` handles even 5 MB HTML exports without loading them to a server. Tables, detail blocks, and text are extracted into a structured `ExtractedSections` object.
+2. **Section stripping** — over 80 low-value section types (DHCP, QoS, schedules, services, FQDN hosts, Let's Encrypt, parent proxies, admin profiles, etc.) are dropped before the payload leaves the browser, saving 30–50% of input tokens on a typical config.
+3. **Firewall rule capping** — configs with 200+ firewall rules get capped at 150 rows in the AI prompt, with a summary placeholder for the remainder, preventing the model from spending its entire output budget on rule tables.
+4. **Body size guard** — the edge function enforces a 5 MB payload limit, rejecting configs that are still too large after stripping.
+5. **Token budget in the prompt** — explicit instructions tell the model to balance depth across sections rather than front-loading detail into the first firewall's rules.
+
+Getting this balance right took many iterations. Too much stripping and the AI missed critical context (e.g. removing network objects meant VPN findings lacked subnet detail). Too little and reports trailed off mid-section when the model hit its output token limit. The current pipeline is the result of testing against dozens of real-world configs ranging from small branch offices (50 rules) to enterprise estates (800+ rules across multiple firewalls).
+
 ### Prompt Engineering for Domain-Specific Reports Is Ongoing Work
 
 Getting an LLM to produce a 15-page technical firewall assessment that a Sophos SE would actually present to a customer required extensive prompt iteration. Early outputs were generic ("consider enabling IPS"), missed critical findings, or hallucinated features that don't exist in SFOS. The prompts now include:
@@ -352,6 +366,35 @@ Getting an LLM to produce a 15-page technical firewall assessment that a Sophos 
 - Token budget guidance to balance depth across sections rather than front-loading detail
 
 Even so, AI report quality is a moving target. Model upgrades (Gemini 1.5 → 2.0 → 2.5) each changed output characteristics — some improved depth but regressed on formatting; others improved structure but produced shorter findings. The streaming architecture and model-agnostic endpoint (Gemini, Claude, ChatGPT via OpenAI-compatible API) help absorb these shifts, but prompt tuning remains a regular activity.
+
+### Multi-Format Export Is a Deeper Problem Than Expected
+
+Supporting PDF, Word, PowerPoint, HTML, CSV, JSON, ZIP, and email delivery sounds like a feature list. In practice each format has its own rendering model, and AI-generated markdown doesn't map cleanly to any of them.
+
+- **PDF** required three fallback layers: headless Chromium (server-rendered with proper fonts and layout), pdfmake (client-side, handles data-URI images but needs font bundles), and finally browser print as a last resort. Each handles tables, page breaks, and images differently.
+- **Word (.docx)** needed custom paragraph and table style mappings — markdown tables with merged cells, nested lists, and inline code don't have direct Word equivalents.
+- **Data-URI images** (company logos embedded as base64 in markdown) regularly broke across formats. A PNG logo that rendered fine in HTML would corrupt in pdfmake if the base64 was line-wrapped, or disappear in Word if the URI exceeded a length threshold. The `markdown-data-uri-normalize` module exists solely to repair these edge cases across all export paths.
+
+The lesson: if the product promises multi-format export, budget significant time for format-specific edge cases. The "last 10%" of making every export look professional took longer than building the first export path.
+
+### Streaming AI Responses Over SSE Needs Defensive Engineering
+
+A full technical report can take 60–90 seconds to stream from Gemini. That's a long time for things to go wrong — network interruptions, Supabase Edge Function timeouts (150s on free tier), Gemini rate limits (429s), and token budget exhaustion mid-sentence.
+
+The streaming layer evolved from a simple `fetch` + `ReadableStream` into a defensive pipeline:
+
+- **Wall-clock budget** (`PARSE_CONFIG_STREAM_BUDGET_MS`) that gracefully closes the stream before the hosting platform kills the worker, so the user gets a partial report rather than an error.
+- **De-anonymisation on the fly** — real values are restored as each SSE chunk arrives, so the user sees real hostnames appearing in real time, not tokens.
+- **Retry only on transient errors** (502/503/504), never on 429 — retrying a rate limit immediately burns more quota and confuses users.
+- **Client-side abort signal merging** — the user can cancel generation, and the abort propagates through to the fetch, the timeout controller, and the stream reader simultaneously.
+
+### E2E Testing a Client-Side SPA on CI Is Fragile by Nature
+
+The Playwright E2E suite runs 50+ tests against a Vite preview build on GitHub Actions free-tier runners. Several hard-won lessons:
+
+- **Environment parity matters** — the API hub test failed for weeks on CI because `VITE_SUPABASE_URL` wasn't set in the E2E build, causing a `.replace()` call on `undefined` deep inside a tab component. Locally it worked fine because the developer always has the env var set. Defensive fallbacks (`|| ""`) on every `import.meta.env` access in rendering paths are now mandatory.
+- **Timeouts must account for CI runner speed** — PDF generation via pdfmake that takes 5 seconds locally can take 120+ seconds on a constrained CI runner. Assertions need generous timeouts, and test-level timeouts need to be even more generous than assertion timeouts.
+- **Accessibility testing catches real bugs early** — axe-core assertions in E2E tests caught colour contrast failures, missing button labels, and links that weren't visually distinguishable from surrounding text — all genuine WCAG violations that would have shipped without automated checks.
 
 ---
 
