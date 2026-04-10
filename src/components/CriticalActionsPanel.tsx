@@ -136,12 +136,12 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
           return (
             <div
               key={`${f.id}-${i}`}
-              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
-                borderLeftColor: hex,
                 background: `linear-gradient(135deg, ${hex}0C, ${hex}03)`,
               }}
             >
+              <div className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: hex }} />
               <div className="absolute inset-0 pointer-events-none">
                 <div
                   className="absolute -top-4 -left-4 h-10 w-10 rounded-full blur-[20px] opacity-15"
@@ -154,7 +154,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               />
               <button
                 onClick={() => setExpandedIdx(expanded ? null : i)}
-                className="relative w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+                className="relative w-full flex items-start gap-3 pl-5 pr-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
               >
                 <span
                   className="shrink-0 text-xs font-black tabular-nums w-5 text-right mt-0.5"

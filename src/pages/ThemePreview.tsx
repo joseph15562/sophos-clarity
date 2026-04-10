@@ -346,9 +346,13 @@ export default function ThemePreview() {
           ].map((a, i) => (
             <div
               key={i}
-              className={`rounded-xl border border-white/[0.06] border-l-[3px] ${a.sev === "critical" ? "border-l-[#EA0022]" : "border-l-[#F29400]"} bg-[#001d4d] overflow-hidden`}
+              className="relative rounded-2xl border border-white/[0.06] bg-[#001d4d] overflow-hidden"
             >
-              <div className="flex items-start gap-3 px-4 py-3">
+              <div
+                className="absolute inset-y-0 left-0 w-[3px]"
+                style={{ backgroundColor: a.sev === "critical" ? "#EA0022" : "#F29400" }}
+              />
+              <div className="flex items-start gap-3 pl-5 pr-4 py-3">
                 <span className="shrink-0 text-xs font-black text-white/30 tabular-nums w-5 text-right mt-0.5">
                   {i + 1}
                 </span>

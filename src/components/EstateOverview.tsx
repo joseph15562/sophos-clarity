@@ -609,10 +609,7 @@ function FindingCard({
       }}
     >
       {/* Left accent bar (separate from border so corners stay uniformly rounded) */}
-      <div
-        className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl"
-        style={{ backgroundColor: sevHex }}
-      />
+      <div className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: sevHex }} />
       <div className="absolute inset-0 pointer-events-none">
         <div
           className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-12"
@@ -944,10 +941,7 @@ function FindingsPanel({
               }}
             >
               {/* Left accent bar */}
-              <div
-                className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl"
-                style={{ backgroundColor: hex }}
-              />
+              <div className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: hex }} />
               <div className="absolute inset-0 pointer-events-none">
                 <div
                   className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-15"

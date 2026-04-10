@@ -252,13 +252,16 @@ export function HeroOutcomePanel({
                 <div
                   key={`${action.title}-${i}`}
                   className={cn(
-                    "relative isolate overflow-hidden rounded-xl border border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
+                    "relative isolate overflow-hidden rounded-2xl border pl-5 pr-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
                     "border-slate-200/90 bg-card",
                     "dark:border-white/[0.10] dark:bg-white/[0.05]",
                     "hover:border-slate-300/90 dark:hover:border-white/[0.14]",
                   )}
-                  style={{ borderLeftColor: sevHex }}
                 >
+                  <div
+                    className="absolute inset-y-0 left-0 w-[3px]"
+                    style={{ backgroundColor: sevHex }}
+                  />
                   <div
                     className="pointer-events-none absolute inset-0 hidden dark:block opacity-50"
                     style={{
