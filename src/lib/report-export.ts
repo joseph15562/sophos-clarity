@@ -1011,31 +1011,29 @@ export function buildPdfHtml(
         page-break-inside: avoid;
       }
       table {
-        font-size: 8pt;
+        font-size: 6pt;
         min-width: 0 !important;
         width: 100% !important;
         table-layout: fixed !important;
         border-collapse: separate !important;
         border-spacing: 0 !important;
+        max-width: 100% !important;
       }
-      /*
-       * Medium/wide compliance-style tables: fixed layout splits width evenly and crushes long
-       * evidence columns. Auto layout lets the browser allocate width from cell content.
-       */
       table.pdf-table--medium,
-      table.pdf-table--wide {
+      table.pdf-table--wide,
+      table.pdf-table--xwide {
         table-layout: auto !important;
       }
-      table:not(.pdf-table--wide):not(.pdf-table--medium) tr {
+      table:not(.pdf-table--wide):not(.pdf-table--medium):not(.pdf-table--xwide) tr {
         page-break-inside: avoid;
       }
       th, td {
-        padding: 4px 6px !important;
+        padding: 3px 4px !important;
         vertical-align: top !important;
         word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-        word-break: normal !important;
-        hyphens: manual !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        hyphens: auto !important;
         white-space: normal !important;
       }
       th {
@@ -1047,36 +1045,45 @@ export function buildPdfHtml(
         font-weight: 600 !important;
         position: static !important;
         text-transform: none !important;
-        letter-spacing: 0.02em !important;
-        font-size: 7pt !important;
-        line-height: 1.25 !important;
-      }
-      table.pdf-table--wide th {
-        font-size: 6.5pt !important;
-        padding: 3px 4px !important;
+        letter-spacing: 0 !important;
+        font-size: 5.5pt !important;
         line-height: 1.2 !important;
       }
-      table.pdf-table--wide td {
-        font-size: 6.5pt !important;
-        padding: 3px 4px !important;
-      }
-      table.pdf-table--wide {
-        font-size: 6.5pt !important;
+      td {
+        font-size: 5.5pt !important;
+        line-height: 1.25 !important;
       }
       table.pdf-table--medium th {
-        font-size: 6.75pt !important;
-        padding: 3px 5px !important;
-        line-height: 1.22 !important;
+        font-size: 5.5pt !important;
+        padding: 2px 3px !important;
+        line-height: 1.15 !important;
       }
       table.pdf-table--medium td {
-        font-size: 6.75pt !important;
-        padding: 3px 5px !important;
+        font-size: 5.5pt !important;
+        padding: 2px 3px !important;
       }
       table.pdf-table--medium {
-        font-size: 6.75pt !important;
+        font-size: 5.5pt !important;
+      }
+      table.pdf-table--wide th,
+      table.pdf-table--xwide th {
+        font-size: 5pt !important;
+        padding: 2px 2px !important;
+        line-height: 1.1 !important;
+      }
+      table.pdf-table--wide td,
+      table.pdf-table--xwide td {
+        font-size: 5pt !important;
+        padding: 2px 2px !important;
+      }
+      table.pdf-table--wide,
+      table.pdf-table--xwide {
+        font-size: 5pt !important;
+        max-width: 100% !important;
       }
       .pdf-table--wide tr,
-      .pdf-table--medium tr {
+      .pdf-table--medium tr,
+      .pdf-table--xwide tr {
         page-break-inside: auto !important;
       }
       /* Backticks in markdown become <code>; in dense tables the pill style reads as heavy “tags”. */
@@ -1094,11 +1101,6 @@ export function buildPdfHtml(
         word-break: break-word !important;
         overflow-wrap: anywhere !important;
       }
-      table.pdf-table--medium td,
-      table.pdf-table--wide td {
-        overflow-wrap: anywhere !important;
-        word-break: break-word !important;
-      }
       td {
         border: 1px solid #cbd5e1 !important;
         color: #334155 !important;
@@ -1112,7 +1114,7 @@ export function buildPdfHtml(
         background: #ffffff !important;
       }
       .table-wrapper {
-        overflow: visible !important;
+        overflow: hidden !important;
         border-radius: 12px;
         max-width: 100% !important;
         border: 1px solid #cbd5e1;
@@ -1192,7 +1194,11 @@ export function buildPdfHtml(
       var row = t.rows[0];
       if (!row) return;
       var n = row.cells.length;
-      if (n >= 10) {
+      if (n >= 14) {
+        t.classList.add("pdf-table--xwide");
+        var wrapX = t.parentElement;
+        if (wrapX && wrapX.classList.contains("table-wrapper")) wrapX.classList.add("pdf-table-wrap--wide");
+      } else if (n >= 10) {
         t.classList.add("pdf-table--wide");
         var wrapW = t.parentElement;
         if (wrapW && wrapW.classList.contains("table-wrapper")) wrapW.classList.add("pdf-table-wrap--wide");

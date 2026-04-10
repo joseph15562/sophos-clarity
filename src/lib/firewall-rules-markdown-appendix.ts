@@ -1,6 +1,72 @@
 import type { ExtractedSections, TableData } from "@/lib/extract-sections";
 import { findFirewallRulesTable } from "@/lib/analysis/section-meta";
 
+/**
+ * Canonical columns for the PDF appendix, in display order.
+ * Keeps the table within landscape A4 bounds (~12 cols max).
+ */
+const PDF_APPENDIX_COLUMNS = [
+  "#",
+  "Rule Name",
+  "Status",
+  "Action",
+  "Source Zone",
+  "Destination Zone",
+  "Source Networks",
+  "Destination Networks",
+  "Service",
+  "Web Filter",
+  "IPS",
+  "Application Control",
+  "Log",
+];
+
+/**
+ * Alternate header names that map to the canonical column.
+ * The raw config table emits duplicates for SFOS version compat.
+ */
+const COLUMN_ALIASES: Record<string, string> = {
+  "Source Zones": "Source Zone",
+  "Destination Zones": "Destination Zone",
+  "IPS Policy": "IPS",
+  "Intrusion Prevention": "IPS",
+  "Log Traffic": "Log",
+};
+
+/**
+ * Prune the raw 23-column firewall rules table down to the essential
+ * columns that fit on a landscape A4 page. If the table doesn't contain
+ * any of the canonical columns (e.g. already a compact or custom table),
+ * it is returned unchanged.
+ */
+function trimTableForPdf(table: TableData): TableData {
+  const canonicalHeaders: string[] = [];
+  const seen = new Set<string>();
+  for (const h of table.headers) {
+    const canonical = COLUMN_ALIASES[h] ?? h;
+    if (!PDF_APPENDIX_COLUMNS.includes(canonical)) continue;
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    canonicalHeaders.push(canonical);
+  }
+
+  if (canonicalHeaders.length === 0) return table;
+
+  const rows = table.rows.map((row) => {
+    const out: Record<string, string> = {};
+    for (const h of canonicalHeaders) {
+      out[h] = row[h] ?? "";
+      if (!out[h]) {
+        const alias = Object.entries(COLUMN_ALIASES).find(([, v]) => v === h);
+        if (alias) out[h] = row[alias[0]] ?? "";
+      }
+    }
+    return out;
+  });
+
+  return { headers: canonicalHeaders, rows };
+}
+
 function isSeparatorRow(line: string): boolean {
   const t = line.trim();
   if (!t.startsWith("|")) return false;
@@ -80,7 +146,7 @@ export function maybeAppendFirewallRulesExportAppendix(
   const got = countFirewallRulesSectionTableDataRows(markdown);
   if (got < 0 || got >= expected) return markdown;
 
-  const tableMd = markdownTableFromFirewallRulesTable(table!);
+  const tableMd = markdownTableFromFirewallRulesTable(trimTableForPdf(table!));
   if (!tableMd) return markdown;
 
   const appendix = [

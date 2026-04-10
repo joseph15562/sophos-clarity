@@ -171,10 +171,11 @@ The [`docs/start-here/`](docs/start-here/) folder contains everything you need t
 | [AI Reports & Deliverables](docs/start-here/08-walkthrough-ai-reports.md)    | Report types, prompt engineering, export formats            |
 | [SE Health Check](docs/start-here/06-walkthrough-se-health-check.md)         | Request config, review on a call, deliver branded report    |
 
-### Product Brief
+### Product Brief (21 pages)
 
-- **[PDF](docs/Sophos%20FireComply%20—%20Product%20Brief.pdf)** — printable product brief
+- **[PDF](docs/Sophos%20FireComply%20—%20Product%20Brief.pdf)** — printable 21-page product brief covering AI reports, SE Health Check flow, prompt engineering, Sophos Central integration, client portals, connector agent, and integrations
 - **[HTML](docs/Sophos%20FireComply%20—%20Product%20Brief.html)** — interactive version with screenshots
+- **[Markdown](docs/Sophos%20FireComply%20—%20Product%20Brief.md)** — full product brief in markdown
 
 ### Technical & Operations
 
