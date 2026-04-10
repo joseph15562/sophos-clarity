@@ -20,9 +20,9 @@ type LifecycleStatus = "eol" | "eol-approaching" | "eos" | "current" | "unknown"
 
 function normalizeModelName(raw: string): string {
   const token = raw.split("_")[0].trim();
-  const m = token.match(/^(XGS?|SG|SF|SFVUNL)(\d+\w?)$/i);
+  const m = token.match(/^(XGS?|SG|SF)(\d+\w?)$/i);
   if (m) return `${m[1].toUpperCase()} ${m[2]}`;
-  return raw;
+  return token;
 }
 
 function lookupModel(model: string): LifecycleEntry | null {
