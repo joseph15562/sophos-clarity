@@ -3,21 +3,25 @@ import { findFirewallRulesTable } from "@/lib/analysis/section-meta";
 
 /**
  * Canonical columns for the PDF appendix, in display order.
- * Keeps the table within landscape A4 bounds (~12 cols max).
+ * Matches the AI-generated firewall rules table so the appendix
+ * is visually consistent with the narrative report.
  */
 const PDF_APPENDIX_COLUMNS = [
   "#",
   "Rule Name",
   "Status",
+  "Policy Type",
   "Action",
   "Source Zone",
-  "Destination Zone",
   "Source Networks",
+  "Destination Zone",
   "Destination Networks",
   "Service",
   "Web Filter",
-  "IPS",
+  "IPS Policy",
   "Application Control",
+  "Match Known Users",
+  "Identity",
   "Log",
 ];
 
@@ -28,8 +32,8 @@ const PDF_APPENDIX_COLUMNS = [
 const COLUMN_ALIASES: Record<string, string> = {
   "Source Zones": "Source Zone",
   "Destination Zones": "Destination Zone",
-  "IPS Policy": "IPS",
-  "Intrusion Prevention": "IPS",
+  IPS: "IPS Policy",
+  "Intrusion Prevention": "IPS Policy",
   "Log Traffic": "Log",
 };
 
