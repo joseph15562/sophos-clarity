@@ -379,17 +379,14 @@
   }
 
   /*
-   * Paint containment + opaque base for rounded clipping regions.
-   * 1. contain:paint stops CSS filter:blur() children from leaking past
-   *    the border-radius during GPU compositing.
-   * 2. background-color prevents parent glow/gradient from showing through
-   *    a card's semi-transparent border when the card has no explicit bg-*.
-   *    Any Tailwind bg-* utility (in @layer utilities) overrides this.
+   * Opaque fallback for rounded card containers.
+   * Cards with only a semi-transparent backgroundImage gradient (no bg-*)
+   * are transparent — the parent's colored glow divs shine through the
+   * semi-transparent border, creating visible colored edges.
+   * This sets an opaque base; any explicit Tailwind bg-* utility overrides it.
    */
   .overflow-hidden[class*="rounded-"],
   [class*="rounded-"].overflow-hidden {
-    contain: paint;
-    isolation: isolate;
     background-color: hsl(var(--card));
   }
 
@@ -408,13 +405,10 @@
 
   .panel-subtle {
     @apply rounded-2xl border border-border/60 bg-white/80 dark:bg-card/95 backdrop-blur-xl shadow-card transition-[box-shadow,border-color,background-color] duration-200;
-    isolation: isolate;
-    contain: paint;
   }
 
   .panel-elevated {
     @apply relative isolate rounded-2xl border border-border/60 bg-white/82 dark:bg-card/95 backdrop-blur-xl shadow-elevated transition-[box-shadow,border-color,background-color,transform] duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0 hover:border-primary/25 dark:hover:border-[#00EDFF]/35 hover:shadow-panel;
-    contain: paint;
   }
 
   .panel-elevated::before {
@@ -474,7 +468,6 @@
 
   .widget-card {
     @apply relative isolate overflow-hidden rounded-xl border border-border/60 bg-white/78 dark:bg-card p-5 backdrop-blur-lg shadow-card transition-[box-shadow,border-color,background-color,transform] duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0 hover:shadow-elevated hover:border-primary/20 dark:hover:border-[#00EDFF]/30 hover:bg-white/90 dark:hover:bg-card;
-    contain: paint;
   }
 
   .widget-card::before {

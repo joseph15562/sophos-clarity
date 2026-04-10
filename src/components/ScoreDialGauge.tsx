@@ -314,7 +314,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
   const activeColor = scoreToColor(activeScore);
 
   return (
-    <div className="relative isolate contain-paint overflow-hidden rounded-[20px] border border-border/30 dark:border-slate-900/[0.10] dark:border-white/[0.06] bg-gradient-to-b from-card/80 via-card/50 to-transparent dark:from-white/[0.03] dark:via-white/[0.01] dark:to-transparent p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(32,6,247,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.3)] space-y-5">
+    <div className="relative overflow-hidden rounded-[20px] border border-border/30 dark:border-slate-900/[0.10] dark:border-white/[0.06] bg-gradient-to-b from-card/80 via-card/50 to-transparent dark:from-white/[0.03] dark:via-white/[0.01] dark:to-transparent p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(32,6,247,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.3)] space-y-5">
       {/* Ambient score glow */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center -mt-8">
         <div
@@ -342,7 +342,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
           <div className="flex items-center gap-3">
             {/* Current posture box */}
             <div
-              className="relative isolate contain-paint overflow-hidden rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] bg-card px-6 py-5 text-right shadow-elevated"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] bg-card px-6 py-5 text-right shadow-elevated"
               style={{
                 backgroundImage: `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`,
               }}
@@ -379,7 +379,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
             {/* Average score box — only shown when multiple firewalls and one is selected */}
             {!isSingle && scores.perFirewall.length > 1 && (
               <div
-                className="relative isolate contain-paint overflow-hidden rounded-2xl border bg-card px-5 py-5 text-right shadow-elevated cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                className="relative overflow-hidden rounded-2xl border bg-card px-5 py-5 text-right shadow-elevated cursor-pointer transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   borderColor: !activeFw ? `${scoreToColor(aggScore)}30` : "rgba(255,255,255,0.06)",
                   backgroundImage: `linear-gradient(135deg, ${scoreToColor(aggScore)}12, ${scoreToColor(aggScore)}06)`,
@@ -557,7 +557,7 @@ function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGa
                 <button
                   key={key}
                   onClick={() => setSelectedFw(isSelected ? null : key)}
-                  className="group/fw relative isolate contain-paint overflow-hidden flex flex-col items-center gap-1.5 rounded-2xl border bg-card px-4 py-3 transition-all duration-200 hover:scale-[1.04] cursor-pointer"
+                  className="group/fw relative flex flex-col items-center gap-1.5 rounded-2xl border bg-card px-4 py-3 transition-all duration-200 hover:scale-[1.04] cursor-pointer"
                   style={{
                     borderColor: isSelected ? `${fwColor}40` : "rgba(255,255,255,0.06)",
                     backgroundImage: isSelected
@@ -710,7 +710,7 @@ function StatStrip({ analysisResults }: { analysisResults: Record<string, Analys
           <div
             key={item.label}
             className={cn(
-              "relative isolate contain-paint overflow-hidden rounded-xl border p-3.5 transition-all duration-200 hover:scale-[1.03]",
+              "relative overflow-hidden rounded-xl border p-3.5 transition-all duration-200 hover:scale-[1.03]",
               "border-slate-200/90 bg-card shadow-sm",
               "dark:border-white/[0.06] dark:bg-card dark:shadow-none",
               "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
