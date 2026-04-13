@@ -388,7 +388,7 @@ The entire flow from demo config to exported report takes under 2 minutes.
 | Production dependencies       | **65**                                                                        |
 | CI pipeline steps             | **9** (lint, typecheck, unit, Deno, build, bundle budget, audit, E2E, deploy) |
 
-The entire codebase — frontend, backend, edge functions, tests, infrastructure, documentation — was built by a single developer over approximately 16 months, starting January 2025.
+The entire codebase — frontend, backend, edge functions, tests, infrastructure, documentation — was built by a single developer over approximately 3 months, starting January 2025.
 
 ---
 
@@ -674,7 +674,7 @@ This project was built from the first commit with AI pair programming (Cursor + 
 
 **What AI made possible:**
 
-- Standing up 296 components, 52 hooks, and 14 edge functions in 16 months as a solo developer would not have been achievable with traditional development alone. AI accelerated boilerplate (forms, tables, CRUD routes), suggested patterns (streaming SSE, RLS policies), and caught bugs during development (type errors, missing edge cases).
+- Standing up 296 components, 52 hooks, and 14 edge functions in 3 months as a solo developer would not have been achievable with traditional development alone. AI accelerated boilerplate (forms, tables, CRUD routes), suggested patterns (streaming SSE, RLS policies), and caught bugs during development (type errors, missing edge cases).
 - The compliance mapping logic across 39 frameworks required understanding regulations I had no prior expertise in. AI helped research control requirements, but every mapping was then manually verified against the published framework documents — AI was the starting point, not the answer.
 - Test coverage at 626 automated tests was possible because AI generated test scaffolding quickly, freeing time to focus on the hard tests (E2E flows, edge function integration tests, accessibility assertions).
 
@@ -716,7 +716,7 @@ The application targets WCAG 2.1 AA conformance:
 
 ## What I Would Do Differently
 
-Building this project over 16 months as a solo developer taught me as much about what not to do as what to do. If I started again:
+Building this project over 3 months as a solo developer taught me as much about what not to do as what to do. If I started again:
 
 **Start with fewer features, ship them better.** The initial version tried to build everything at once — 50 pages, PSA integrations, drift detection, portfolio analytics, and compliance mapping for 39 frameworks. The war-room review revealed that breadth had come at the cost of polish: missing loading states, inconsistent error handling, half-built features that confused users. A tighter MVP with 5 polished surfaces would have been more impressive and more usable than 15 surfaces at 70%.
 
