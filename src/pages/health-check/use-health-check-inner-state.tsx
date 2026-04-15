@@ -163,10 +163,7 @@ export function useHealthCheckInnerState() {
     const ac = new AbortController();
     void (async () => {
       const { error } = await supabaseWithAbort(
-        supabase
-          .from("se_profiles")
-          .update({ health_check_prepared_by: legacy } as Record<string, unknown>)
-          .eq("id", p.id),
+        supabase.from("se_profiles").update({ health_check_prepared_by: legacy }).eq("id", p.id),
         ac.signal,
       );
       if (error) return;

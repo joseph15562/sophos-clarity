@@ -180,7 +180,7 @@ export function useHealthCheckSharing(options: {
           share_token: token,
           share_expires_at: expiresAt.toISOString(),
           shared_html: html,
-        } as Record<string, unknown>)
+        })
         .eq("id", savedCheckId);
 
       if (error) throw error;
@@ -205,7 +205,7 @@ export function useHealthCheckSharing(options: {
           share_token: null,
           share_expires_at: null,
           shared_html: null,
-        } as Record<string, unknown>)
+        })
         .eq("id", savedCheckId);
       setShareToken(null);
       setShareExpiry(null);

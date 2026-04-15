@@ -33,7 +33,7 @@ export function CompleteProfileGate({ seAuth }: CompleteProfileGateProps) {
       if (metaErr) throw metaErr;
       const { error: dbErr } = await supabase
         .from("se_profiles")
-        .update({ display_name: trimmed, profile_completed: true } as Record<string, unknown>)
+        .update({ display_name: trimmed, profile_completed: true })
         .eq("id", seAuth.seProfile!.id);
       if (dbErr) throw dbErr;
       await seAuth.reloadSeProfile();

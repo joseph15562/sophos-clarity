@@ -174,7 +174,7 @@ export function SeHealthCheckManagementDrawer({
         .update({
           health_check_prepared_by: trimmed || null,
           se_title: titleDraft.trim() || null,
-        } as Record<string, unknown>)
+        })
         .eq("id", seProfile.id);
       if (error) throw error;
       await reloadSeProfile();
